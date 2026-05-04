@@ -125,6 +125,69 @@
       "w": 200,
       "h": 60
     }
-  ]
+  ],
+  "content_area": {
+    "x": 32,
+    "y": 128,
+    "w": 1460,
+    "h": 870
+  },
+
+  "settings_page": {
+    "title": {
+      "text": "Settings",
+      "x": 90,
+      "y": 165,
+      "w": 400,
+      "h": 50,
+      "font_size": 32
+    },
+
+    "theme_label": {
+      "text": "Theme",
+      "x": 110,
+      "y": 245,
+      "w": 220,
+      "h": 40,
+      "font_size": 22
+    },
+
+    "theme_switch_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 340,
+      "y": 235,
+      "w": 300,
+      "h": 58,
+      "text": "Theme wechseln"
+    },
+
+    "debug_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 340,
+      "y": 320,
+      "w": 300,
+      "h": 58,
+      "text": "Debug öffnen"
+    },
+
+    "reload_cache_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 340,
+      "y": 405,
+      "w": 300,
+      "h": 58,
+      "text": "Cache neu laden"
+    },
+
+    "checkbox_debug_start": {
+      "asset_true": "icons/checkmark_true.jpg",
+      "asset_false": "icons/checkmark_false.jpg",
+      "x": 110,
+      "y": 510,
+      "w": 50,
+      "h": 50,
+      "text": "Debug beim Start anzeigen"
+    }
+  }
 
 }

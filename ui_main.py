@@ -88,8 +88,17 @@ class MainWindow(QMainWindow):
         self.current_reference_color_map = {}
         self.current_indirect_references = []
         self.current_main_section = "character"
+        self.settings_debug_on_start = False
         self.nav_buttons = {}
         self.settings_dialog = None
+        self.debug_dialog = None
+        self.theme_name_value_label = None
+        self.content_layer = None
+        self.settings_theme_label = None
+        self.settings_checkbox_icon_label = None
+        self.settings_checkbox_text_label = None
+        self._settings_checkbox_asset_true = "icons/checkmark_true.png"
+        self._settings_checkbox_asset_false = "icons/checkmark_false.png"
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -253,6 +262,7 @@ class MainWindow(QMainWindow):
         self.main_ui_layout_config = self.load_main_ui_layout_config()
         self.theme_style = self.main_ui_layout_config.get("theme_style", {})
         self.nav_buttons = {}
+        self.content_layer = None
 
         for child in self.game_canvas.findChildren(QWidget):
             child.deleteLater()
@@ -298,6 +308,16 @@ class MainWindow(QMainWindow):
             self.main_frame_label.show()
         else:
             self.main_frame_label.setStyleSheet("background-color: #1a1a1a;")
+
+        content_cfg = self.main_ui_layout_config.get("content_area", {})
+        content_x = int(content_cfg.get("x", 32))
+        content_y = int(content_cfg.get("y", 128))
+        content_w = int(content_cfg.get("w", 1460))
+        content_h = int(content_cfg.get("h", 870))
+        self.content_layer = QWidget(self.game_canvas)
+        self.content_layer.setGeometry(content_x, content_y, content_w, content_h)
+        self.content_layer.setStyleSheet("background: transparent;")
+        self.content_layer.show()
 
         title_cfg = self.main_ui_layout_config.get("title_text", {})
         if title_cfg:
@@ -465,32 +485,20 @@ class MainWindow(QMainWindow):
                 }
 
         self.update_main_nav_button_styles()
+        self.show_main_section(self.current_main_section)
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F3:
-            themes = self.theme_config.get("themes", ["diablo"])
-            if not isinstance(themes, list) or not themes:
-                themes = ["diablo"]
-                self.theme_config["themes"] = themes
-            active = self.get_active_theme()
-            try:
-                idx = themes.index(active)
-            except ValueError:
-                idx = 0
-            next_theme = themes[(idx + 1) % len(themes)]
-            self.theme_config["active_theme"] = next_theme
-            self.save_theme_config()
-            self.reload_theme()
-            print("[THEME] switched to:", next_theme)
+            self.switch_to_next_theme()
             event.accept()
             return
         super().keyPressEvent(event)
 
     def on_settings_button_clicked(self):
-        self.open_settings_dialog()
-        print("[UI] Settings opened")
+        self.show_main_section("settings")
+        print("[UI] section changed: settings")
 
     def open_settings_dialog(self):
         if self.settings_dialog is not None and self.settings_dialog.isVisible():
@@ -500,12 +508,44 @@ class MainWindow(QMainWindow):
 
         if self.settings_dialog is None:
             self.settings_dialog = QDialog(self)
-            self.settings_dialog.setWindowTitle("Settings / Debug")
-            self.settings_dialog.resize(1200, 800)
+            self.settings_dialog.setWindowTitle("Settings")
+            self.settings_dialog.resize(500, 420)
             dialog_layout = QVBoxLayout(self.settings_dialog)
             dialog_layout.setContentsMargins(8, 8, 8, 8)
             dialog_layout.setSpacing(8)
-            dialog_layout.addWidget(self.settings_tab)
+            header = QLabel("Adventure Time Tool - Settings")
+            header.setStyleSheet("font-size: 16px; font-weight: 700;")
+            dialog_layout.addWidget(header)
+
+            theme_row = QWidget()
+            theme_row_layout = QHBoxLayout(theme_row)
+            theme_row_layout.setContentsMargins(0, 0, 0, 0)
+            theme_row_layout.addWidget(QLabel("Aktuelles Theme:"))
+            self.theme_name_value_label = QLabel(self.get_active_theme())
+            theme_row_layout.addWidget(self.theme_name_value_label)
+            theme_row_layout.addStretch()
+            dialog_layout.addWidget(theme_row)
+
+            theme_switch_button = QPushButton("Theme wechseln (F3)")
+            theme_switch_button.clicked.connect(self.on_settings_switch_theme_clicked)
+            dialog_layout.addWidget(theme_switch_button)
+
+            cache_reload_button = QPushButton("Cache neu laden")
+            cache_reload_button.clicked.connect(self.on_settings_cache_reload_clicked)
+            dialog_layout.addWidget(cache_reload_button)
+
+            excel_import_button = QPushButton("Excel / Charakterbogen laden")
+            excel_import_button.clicked.connect(self.on_settings_excel_import_clicked)
+            dialog_layout.addWidget(excel_import_button)
+
+            debug_open_button = QPushButton("Debug öffnen")
+            debug_open_button.clicked.connect(self.open_debug_dialog)
+            dialog_layout.addWidget(debug_open_button)
+
+            close_button = QPushButton("Schließen")
+            close_button.clicked.connect(self.settings_dialog.close)
+            dialog_layout.addWidget(close_button)
+            dialog_layout.addStretch()
         else:
             self.settings_dialog.show()
             self.settings_dialog.raise_()
@@ -516,10 +556,252 @@ class MainWindow(QMainWindow):
         self.settings_dialog.raise_()
         self.settings_dialog.activateWindow()
 
+    def open_debug_dialog(self):
+        if self.debug_dialog is not None and self.debug_dialog.isVisible():
+            self.debug_dialog.raise_()
+            self.debug_dialog.activateWindow()
+            return
+
+        if self.debug_dialog is None:
+            self.debug_dialog = QDialog(self)
+            self.debug_dialog.setWindowTitle("Settings / Debug")
+            self.debug_dialog.resize(1200, 800)
+            dialog_layout = QVBoxLayout(self.debug_dialog)
+            dialog_layout.setContentsMargins(8, 8, 8, 8)
+            dialog_layout.setSpacing(8)
+            dialog_layout.addWidget(self.settings_tab)
+
+        self.debug_dialog.show()
+        self.debug_dialog.raise_()
+        self.debug_dialog.activateWindow()
+
+    def switch_to_next_theme(self):
+        current_section = self.current_main_section
+        themes = self.theme_config.get("themes", ["diablo"])
+        if not isinstance(themes, list) or not themes:
+            themes = ["diablo"]
+            self.theme_config["themes"] = themes
+        active = self.get_active_theme()
+        try:
+            idx = themes.index(active)
+        except ValueError:
+            idx = 0
+        next_theme = themes[(idx + 1) % len(themes)]
+        self.theme_config["active_theme"] = next_theme
+        self.save_theme_config()
+        self.reload_theme()
+        self.show_main_section(current_section)
+        if self.theme_name_value_label is not None:
+            self.theme_name_value_label.setText(self.get_active_theme())
+        if self.settings_theme_label is not None and current_section == "settings":
+            self.settings_theme_label.setText(f"Aktuelles Theme: {self.get_active_theme()}")
+        print("[THEME] switched to:", next_theme)
+
+    def on_settings_switch_theme_clicked(self):
+        self.switch_to_next_theme()
+
+    def on_settings_cache_reload_clicked(self):
+        if hasattr(self.loader, "load_cache_from_json"):
+            self.loader.load_cache_from_json()
+            print("[SETTINGS] Cache reload clicked")
+            return
+        print("[SETTINGS] Cache reload clicked")
+
+    def on_settings_excel_import_clicked(self):
+        try:
+            self.load_excel()
+        except Exception:
+            print("[SETTINGS] Excel import clicked")
+
     def on_main_nav_clicked(self, section_id):
+        self.show_main_section(section_id)
+        print("[UI] section changed:", section_id)
+
+    def clear_content_layer(self):
+        if self.content_layer is None:
+            return
+        for child in self.content_layer.findChildren(QWidget):
+            child.deleteLater()
+
+    def show_main_section(self, section_id):
         self.current_main_section = section_id
         self.update_main_nav_button_styles()
-        print("[UI] section changed:", section_id)
+        self.clear_content_layer()
+        if section_id == "settings":
+            self.render_settings_page()
+        self.window_close_button.raise_()
+        self.settings_button.raise_()
+
+    def create_asset_text_button(self, parent, cfg, default_text, callback):
+        x = int(cfg.get("x", 0))
+        y = int(cfg.get("y", 0))
+        w = int(cfg.get("w", 300))
+        h = int(cfg.get("h", 58))
+        text = str(cfg.get("text", default_text))
+        asset = str(cfg.get("asset", "")).strip()
+
+        container = QWidget(parent)
+        container.setGeometry(x, y, w, h)
+
+        bg_label = QLabel(container)
+        bg_label.setGeometry(0, 0, w, h)
+        bg_label.setStyleSheet("background: transparent;")
+        asset_path = self.resolve_ui_asset_path(asset) if asset else None
+        if asset_path is not None and asset_path.exists():
+            pixmap = QPixmap(str(asset_path))
+            if not pixmap.isNull():
+                bg_label.setPixmap(
+                    pixmap.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                )
+        bg_label.lower()
+
+        nav_style = self.theme_style.get("nav_button", {})
+        text_color = str(nav_style.get("active_color", "#f2d28b"))
+        text_label = QLabel(container)
+        text_label.setGeometry(0, 0, w, h)
+        text_label.setText(text)
+        text_label.setAlignment(Qt.AlignCenter)
+        text_label.setStyleSheet(
+            f"background: transparent; color: {text_color}; font-size: 20px; font-weight: 700;"
+        )
+        text_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+
+        click_button = QPushButton(container)
+        click_button.setGeometry(0, 0, w, h)
+        click_button.setText("")
+        click_button.setCursor(Qt.PointingHandCursor)
+        click_button.setStyleSheet(
+            "QPushButton { border: none; background: transparent; padding: 0px; }"
+        )
+        click_button.clicked.connect(callback)
+        click_button.raise_()
+        container.show()
+        return {"container": container, "bg": bg_label, "text": text_label, "button": click_button}
+
+    def render_settings_page(self):
+        if self.content_layer is None:
+            return
+        settings_page = self.main_ui_layout_config.get("settings_page", {})
+        default_text_style = self.theme_style.get("default_text", {})
+        default_color = str(default_text_style.get("color", "#e8e0c8"))
+
+        title_cfg = settings_page.get("title", {})
+        title_text = str(title_cfg.get("text", "Settings"))
+        title_x = int(title_cfg.get("x", 60))
+        title_y = int(title_cfg.get("y", 40))
+        title_w = int(title_cfg.get("w", 400))
+        title_h = int(title_cfg.get("h", 50))
+        title_font = int(title_cfg.get("font_size", 32))
+        title_label = QLabel(self.content_layer)
+        title_label.setGeometry(title_x, title_y, title_w, title_h)
+        title_label.setText(title_text)
+        title_label.setStyleSheet(
+            f"background: transparent; color: {default_color}; font-size: {title_font}px; font-weight: 700;"
+        )
+        title_label.show()
+
+        theme_label_cfg = settings_page.get("theme_label", {})
+        theme_label_x = int(theme_label_cfg.get("x", 80))
+        theme_label_y = int(theme_label_cfg.get("y", 120))
+        theme_label_w = int(theme_label_cfg.get("w", 420))
+        theme_label_h = int(theme_label_cfg.get("h", 40))
+        theme_label_font = int(theme_label_cfg.get("font_size", 22))
+        theme_text_prefix = str(theme_label_cfg.get("text", "Aktuelles Theme"))
+        self.settings_theme_label = QLabel(self.content_layer)
+        self.settings_theme_label.setGeometry(
+            theme_label_x, theme_label_y, theme_label_w, theme_label_h
+        )
+        self.settings_theme_label.setText(f"{theme_text_prefix}: {self.get_active_theme()}")
+        self.settings_theme_label.setStyleSheet(
+            f"background: transparent; color: {default_color}; font-size: {theme_label_font}px; font-weight: 500;"
+        )
+        self.settings_theme_label.show()
+
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("theme_switch_button", {}),
+            "Theme wechseln",
+            self.on_settings_switch_theme_clicked,
+        )
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("debug_button", {}),
+            "Debug öffnen",
+            self.open_debug_dialog,
+        )
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("reload_cache_button", {}),
+            "Cache neu laden",
+            self.on_settings_cache_reload_clicked,
+        )
+
+        checkbox_cfg = settings_page.get("checkbox_debug_start", {})
+        cb_x = int(checkbox_cfg.get("x", 80))
+        cb_y = int(checkbox_cfg.get("y", 300))
+        cb_w = int(checkbox_cfg.get("w", 50))
+        cb_h = int(checkbox_cfg.get("h", 50))
+        cb_text = str(checkbox_cfg.get("text", "Debug beim Start anzeigen"))
+        self._settings_checkbox_asset_true = str(
+            checkbox_cfg.get("asset_true", "icons/checkmark_true.png")
+        )
+        self._settings_checkbox_asset_false = str(
+            checkbox_cfg.get("asset_false", "icons/checkmark_false.png")
+        )
+
+        checkbox_container = QWidget(self.content_layer)
+        checkbox_container.setGeometry(cb_x, cb_y, 700, max(50, cb_h))
+
+        self.settings_checkbox_icon_label = QLabel(checkbox_container)
+        self.settings_checkbox_icon_label.setGeometry(0, 0, cb_w, cb_h)
+        self.settings_checkbox_icon_label.setStyleSheet("background: transparent;")
+
+        self.settings_checkbox_text_label = QLabel(checkbox_container)
+        self.settings_checkbox_text_label.setGeometry(cb_w + 16, 0, 620, cb_h)
+        self.settings_checkbox_text_label.setText(cb_text)
+        self.settings_checkbox_text_label.setStyleSheet(
+            f"background: transparent; color: {default_color}; font-size: 20px; font-weight: 500;"
+        )
+
+        click_overlay = QPushButton(checkbox_container)
+        click_overlay.setGeometry(0, 0, 700, max(50, cb_h))
+        click_overlay.setText("")
+        click_overlay.setCursor(Qt.PointingHandCursor)
+        click_overlay.setStyleSheet(
+            "QPushButton { border: none; background: transparent; padding: 0px; }"
+        )
+        click_overlay.clicked.connect(self.on_settings_debug_start_toggled)
+        click_overlay.raise_()
+        checkbox_container.show()
+
+        self.update_settings_checkbox_icon()
+
+    def update_settings_checkbox_icon(self):
+        if self.settings_checkbox_icon_label is None:
+            return
+        asset = (
+            self._settings_checkbox_asset_true
+            if self.settings_debug_on_start
+            else self._settings_checkbox_asset_false
+        )
+        pixmap = self.load_ui_pixmap(asset)
+        if pixmap is not None:
+            w = self.settings_checkbox_icon_label.width()
+            h = self.settings_checkbox_icon_label.height()
+            self.settings_checkbox_icon_label.setPixmap(
+                pixmap.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            )
+        else:
+            fallback = "☑" if self.settings_debug_on_start else "☐"
+            self.settings_checkbox_icon_label.setText(fallback)
+            self.settings_checkbox_icon_label.setStyleSheet(
+                "background: transparent; color: #ffffff; font-size: 28px;"
+            )
+
+    def on_settings_debug_start_toggled(self):
+        self.settings_debug_on_start = not self.settings_debug_on_start
+        self.update_settings_checkbox_icon()
+        print("[SETTINGS] debug on start:", self.settings_debug_on_start)
 
     def update_main_nav_button_styles(self):
         nav_style = self.theme_style.get("nav_button", {})
