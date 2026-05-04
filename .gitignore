@@ -1,0 +1,12 @@
+.vscode/launch.json
+data/character_cache.json
+data/Nakano Kurokawa-character-sheet.xlsx
+__pycache__/data_loader.cpython-312.pyc
+__pycache__/data_loader.cpython-314.pyc
+__pycache__/formula_parser.cpython-312.pyc
+__pycache__/formula_parser.cpython-314.pyc
+__pycache__/main.cpython-314.pyc
+__pycache__/ui_main.cpython-312.pyc
+__pycache__/ui_main.cpython-314.pyc
+ui_tabs/__pycache__/sheet_tab.cpython-312.pyc
+ui_tabs/__pycache__/sheet_tab.cpython-314.pyc
