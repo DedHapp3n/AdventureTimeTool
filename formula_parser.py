@@ -1,10 +1,11 @@
 import re
+from typing import Any, Callable
 
 
 class FormulaParser:
     def __init__(self):
-        self.formulas = {}
-        self.cell_cache = {}
+        self.formulas: dict[str, dict[str, str]] = {}
+        self.cell_cache: dict[str, dict[str, dict[str, Any]]] = {}
 
     def extract_formulas(self, sheet_name, sheet):
         if sheet_name not in self.formulas:
@@ -150,7 +151,7 @@ class FormulaParser:
     def convert_sum_to_python(self, formula):
         return formula
 
-    def resolve_references(self, sheet_name, expression, value_getter, visited=None):
+    def resolve_references(self, sheet_name, expression, value_getter: Callable[[str, str], Any], visited=None):
         if not isinstance(expression, str):
             return None
         if visited is None:
@@ -190,7 +191,7 @@ class FormulaParser:
         except Exception:
             return None
 
-    def _resolve_cell_value(self, sheet_name, cell_ref, value_getter, visited):
+    def _resolve_cell_value(self, sheet_name, cell_ref, value_getter: Callable[[str, str], Any], visited):
         visit_key = (sheet_name, cell_ref)
         if visit_key in visited:
             return None
@@ -217,7 +218,7 @@ class FormulaParser:
             return None
         return text_value
 
-    def _replace_sum_functions(self, sheet_name, expression, value_getter, visited):
+    def _replace_sum_functions(self, sheet_name, expression, value_getter: Callable[[str, str], Any], visited):
         result = expression
         while True:
             match = re.search(r"SUM\(", result, flags=re.IGNORECASE)
@@ -297,7 +298,7 @@ class FormulaParser:
             result = chr(ord("A") + remainder) + result
         return result
 
-    def evaluate_formula(self, sheet_name, formula, value_getter, cell_ref=None):
+    def evaluate_formula(self, sheet_name, formula, value_getter: Callable[[str, str], Any], cell_ref=None):
         if not formula:
             return ""
 

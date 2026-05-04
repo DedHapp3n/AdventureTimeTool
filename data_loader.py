@@ -1,13 +1,14 @@
 import json
 import os
 import re
+from typing import Any
 
 from openpyxl import load_workbook
 
 class DataLoader:
     def __init__(self):
         self.workbook = None
-        self.cell_cache = {}
+        self.cell_cache: dict[str, dict[str, dict[str, Any]]] = {}
         self.load_cache_from_json()
 
     def load_file(self, file_path):
@@ -78,6 +79,9 @@ class DataLoader:
             return False
 
     def _build_cache(self):
+        if self.workbook is None:
+            self.cell_cache = {}
+            return
         self.cell_cache = {}
         for sheet_name in self.workbook.sheetnames:
             sheet = self.workbook[sheet_name]

@@ -1,0 +1,130 @@
+{
+  "theme_style": {
+    "title": {
+      "color": "#7D5ACD",
+      "shadow_color": "#000000"
+    },
+    "nav_button": {
+      "active_color": "#B3ABE5",
+      "inactive_color": "#5A70CD",
+      "hover_color": "#4635B0",
+      "shadow_color": "#000000"
+    },
+    "default_text": {
+      "color": "#e8e0c8",
+      "shadow_color": "#000000"
+    }
+  },
+  "canvas": {
+    "width": 1527,
+    "height": 1030
+  },
+  "main_frame": {
+    "asset": "panels/main_Frame.png",
+    "x": 0,
+    "y": 0,
+    "w": 1527,
+    "h": 1030
+  },
+  "drag_area": {
+    "x": 0,
+    "y": 0,
+    "w": 1527,
+    "h": 115
+  },
+  "title_text": {
+    "text": "Adventure Time Tool",
+    "x": 525,
+    "y": 18,
+    "w": 480,
+    "h": 54,
+    "font_size": 28
+  },
+  "window_close_button": {
+    "asset": "icons/x.jpg",
+    "x": 1480,
+    "y": 24,
+    "w": 32,
+    "h": 32
+  },
+    "settings_button": {
+    "asset": "buttons/settings_button.png",
+    "x": 12,
+    "y": 23,
+    "w": 36,
+    "h": 35,
+    "text": "Settings"
+  },
+  "menu_button_small": {
+    "asset": "buttons/menu_button_small.png",
+    "w": 729,
+    "h": 179
+  },
+  "menu_button_medium": {
+    "asset": "buttons/menu_button_medium.png",
+    "w": 1087,
+    "h": 179
+  },
+  "menu_button_wide": {
+    "asset": "buttons/menu_button_wide.png",
+    "w": 1377,
+    "h": 179
+  },
+  "main_nav_buttons": [
+    {
+      "id": "character",
+      "text": "Charakter",
+      "asset": "buttons/menu_button_small.png",
+      "x": 80,
+      "y": 63,
+      "w": 200,
+      "h": 60
+    },
+    {
+      "id": "skills",
+      "text": "Fertigkeiten",
+      "asset": "buttons/menu_button_small.png",
+      "x": 300,
+      "y": 63,
+      "w": 200,
+      "h": 60
+    },
+    {
+      "id": "inventory",
+      "text": "Inventar",
+      "asset": "buttons/menu_button_small.png",
+      "x": 580,
+      "y": 81,
+      "w": 155,
+      "h": 40
+    },
+    {
+      "id": "equipment",
+      "text": "Ausrüstung",
+      "asset": "buttons/menu_button_small.png",
+      "x": 800,
+      "y": 81,
+      "w": 155,
+      "h": 40
+    },
+    {
+      "id": "magic",
+      "text": "Magie",
+      "asset": "buttons/menu_button_small.png",
+      "x": 1025,
+      "y": 63,
+      "w": 200,
+      "h": 60
+    },
+    {
+      "id": "notes",
+      "text": "Notizen",
+      "asset": "buttons/menu_button_small.png",
+      "x": 1245,
+      "y": 63,
+      "w": 200,
+      "h": 60
+    }
+  ]
+
+}

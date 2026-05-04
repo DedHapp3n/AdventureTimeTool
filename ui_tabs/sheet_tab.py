@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any
 
 
 class SheetTab:
@@ -8,7 +9,7 @@ class SheetTab:
         self.sheet = sheet
         self.parser = parser
         self.sheet_tabs_provider = sheet_tabs_provider
-        self.cell_cache = {self.sheet_name: {}}
+        self.cell_cache: dict[str, dict[str, dict[str, Any]]] = {self.sheet_name: {}}
         self._build_cell_cache()
 
     def _build_cell_cache(self):
