@@ -1,12 +1,15 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
-    QLabel, QTextEdit, QStyledItemDelegate
+    QLabel, QTextEdit, QStyledItemDelegate, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPen
+from PySide6.QtGui import QColor, QPen, QPixmap, QIcon
 import re
+import os
+import json
+from pathlib import Path
 
 from data_loader import DataLoader
 from formula_parser import FormulaParser
@@ -53,11 +56,13 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Excel Viewer")
+        self.setWindowTitle("Adventure Time Tool")
         self.resize(800, 600)
+        self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
 
         self.loader = DataLoader()
         self.parser = FormulaParser()
+        self.base_dir = Path(__file__).resolve().parent
         self.sheet_tabs = {}
         self.formula_changes = {}
         self.formula_data = {}
@@ -79,10 +84,179 @@ class MainWindow(QMainWindow):
         self.current_reference_color_map = {}
         self.current_indirect_references = []
 
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
+        self.main_ui_layout_config = self.load_main_ui_layout_config()
 
-        self.layout = QVBoxLayout(self.central_widget)
+        canvas_cfg = self.main_ui_layout_config.get("canvas", {})
+        canvas_width = int(canvas_cfg.get("width", 1024))
+        canvas_height = int(canvas_cfg.get("height", 768))
+        print(f"[UI_LAYOUT] canvas: {canvas_width}x{canvas_height}")
+        print(f"[UI] canvas size: {canvas_width} {canvas_height}")
+        self.setFixedSize(canvas_width, canvas_height)
+
+        self.game_canvas = QWidget()
+        self.game_canvas.setFixedSize(canvas_width, canvas_height)
+        self.game_canvas.setStyleSheet("background-color: #101010;")
+        self.setCentralWidget(self.game_canvas)
+
+        frame_cfg = self.main_ui_layout_config.get("main_frame", {})
+        frame_x = int(frame_cfg.get("x", 0))
+        frame_y = int(frame_cfg.get("y", 0))
+        frame_w = int(frame_cfg.get("w", canvas_width))
+        frame_h = int(frame_cfg.get("h", canvas_height))
+        frame_asset = frame_cfg.get("asset", "")
+        print(f"[UI] main_frame geometry: {frame_x} {frame_y} {frame_w} {frame_h}")
+        frame_asset_path = self.resolve_ui_asset_path(frame_asset) if frame_asset else None
+        print(
+            f"[UI_ASSET] main_frame: {frame_asset_path} "
+            f"{frame_asset_path.exists() if frame_asset_path else False}"
+        )
+
+        self.main_frame_label = QLabel(self.game_canvas)
+        self.main_frame_label.setGeometry(frame_x, frame_y, frame_w, frame_h)
+        self.main_frame_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        frame_pixmap = self.load_ui_pixmap(frame_asset) if frame_asset else None
+        if frame_pixmap is not None:
+            if frame_pixmap.width() == frame_w and frame_pixmap.height() == frame_h:
+                self.main_frame_label.setPixmap(frame_pixmap)
+            else:
+                self.main_frame_label.setPixmap(
+                    frame_pixmap.scaled(
+                        frame_w,
+                        frame_h,
+                        Qt.IgnoreAspectRatio,
+                        Qt.SmoothTransformation,
+                    )
+                )
+            self.main_frame_label.lower()
+            self.main_frame_label.show()
+            print(f"[UI] main_frame geometry: {self.main_frame_label.geometry()}")
+            print(f"[UI] main_frame pixmap size: {frame_pixmap.size()}")
+        else:
+            self.main_frame_label.setStyleSheet("background-color: #1a1a1a;")
+            missing_path = str(frame_asset_path) if frame_asset_path is not None else "(kein asset in JSON)"
+            self.main_frame_error_label = QLabel(self.game_canvas)
+            self.main_frame_error_label.setGeometry(frame_x + 10, frame_y + 10, max(220, frame_w - 20), 120)
+            self.main_frame_error_label.setStyleSheet(
+                "color: #ff4d4d; background: transparent; font-size: 14px; font-weight: bold;"
+            )
+            self.main_frame_error_label.setWordWrap(True)
+            self.main_frame_error_label.setText(f"main_Frame.jpg nicht geladen\n{missing_path}")
+            self.main_frame_error_label.raise_()
+            self.main_frame_error_label.show()
+
+        title_cfg = self.main_ui_layout_config.get("title_text", {})
+        if title_cfg:
+            title_text = str(title_cfg.get("text", ""))
+            title_x = int(title_cfg.get("x", 0))
+            title_y = int(title_cfg.get("y", 0))
+            title_w = int(title_cfg.get("w", 320))
+            title_h = int(title_cfg.get("h", 48))
+            title_font_size = int(title_cfg.get("font_size", 28))
+            title_color = str(title_cfg.get("color", "#f2d28b"))
+            title_shadow_color = str(title_cfg.get("shadow_color", "#000000"))
+
+            self.title_shadow_label = QLabel(self.game_canvas)
+            self.title_shadow_label.setGeometry(title_x + 2, title_y + 2, title_w, title_h)
+            self.title_shadow_label.setText(title_text)
+            self.title_shadow_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.title_shadow_label.setStyleSheet(
+                f"background: transparent; color: {title_shadow_color}; "
+                f"font-size: {title_font_size}px; font-weight: 700;"
+            )
+            self.title_shadow_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            self.title_shadow_label.show()
+
+            self.title_label = QLabel(self.game_canvas)
+            self.title_label.setGeometry(title_x, title_y, title_w, title_h)
+            self.title_label.setText(title_text)
+            self.title_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.title_label.setStyleSheet(
+                f"background: transparent; color: {title_color}; "
+                f"font-size: {title_font_size}px; font-weight: 700;"
+            )
+            self.title_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            self.title_shadow_label.raise_()
+            self.title_label.raise_()
+            self.title_label.show()
+
+        close_cfg = self.main_ui_layout_config.get("window_close_button", {})
+        close_x = int(close_cfg.get("x", 0))
+        close_y = int(close_cfg.get("y", 0))
+        close_w = int(close_cfg.get("w", 32))
+        close_h = int(close_cfg.get("h", 32))
+        close_asset = close_cfg.get("asset", "")
+        close_asset_path = self.resolve_ui_asset_path(close_asset) if close_asset else None
+
+        self.window_close_button = QPushButton(self.game_canvas)
+        self.window_close_button.setGeometry(close_x, close_y, close_w, close_h)
+        self.window_close_button.setText("")
+        self.window_close_button.setCursor(Qt.PointingHandCursor)
+        self.window_close_button.setStyleSheet(
+            "QPushButton { border: none; background: transparent; padding: 0px; }"
+        )
+
+        if close_asset_path is not None and close_asset_path.exists():
+            close_pixmap = QPixmap(str(close_asset_path))
+            if not close_pixmap.isNull():
+                button_icon = QIcon(
+                    close_pixmap.scaled(
+                        close_w,
+                        close_h,
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation,
+                    )
+                )
+                self.window_close_button.setIcon(button_icon)
+                self.window_close_button.setIconSize(self.window_close_button.size())
+            else:
+                print(f"[UI_ASSET] close button pixmap invalid: {close_asset_path}")
+        else:
+            print(f"[UI_ASSET] close button asset missing: {close_asset_path}")
+
+        self.window_close_button.clicked.connect(self.close)
+        self.window_close_button.raise_()
+        self.window_close_button.show()
+
+        settings_cfg = self.main_ui_layout_config.get("settings_button", {})
+        settings_x = int(settings_cfg.get("x", 0))
+        settings_y = int(settings_cfg.get("y", 0))
+        settings_w = int(settings_cfg.get("w", 64))
+        settings_h = int(settings_cfg.get("h", 64))
+        settings_asset = settings_cfg.get("asset", "")
+        settings_asset_path = self.resolve_ui_asset_path(settings_asset) if settings_asset else None
+
+        self.settings_button = QPushButton(self.game_canvas)
+        self.settings_button.setGeometry(settings_x, settings_y, settings_w, settings_h)
+        self.settings_button.setText("")
+        self.settings_button.setCursor(Qt.PointingHandCursor)
+        self.settings_button.setStyleSheet(
+            "QPushButton { border: none; background: transparent; padding: 0px; }"
+        )
+
+        if settings_asset_path is not None and settings_asset_path.exists():
+            settings_pixmap = QPixmap(str(settings_asset_path))
+            if not settings_pixmap.isNull():
+                settings_icon = QIcon(
+                    settings_pixmap.scaled(
+                        settings_w,
+                        settings_h,
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation,
+                    )
+                )
+                self.settings_button.setIcon(settings_icon)
+                self.settings_button.setIconSize(self.settings_button.size())
+            else:
+                print(f"[UI_ASSET] settings button pixmap invalid: {settings_asset_path}")
+        else:
+            print(f"[UI_ASSET] settings button asset missing: {settings_asset_path}")
+
+        self.settings_button.clicked.connect(self.on_settings_button_clicked)
+        self.settings_button.raise_()
+        self.settings_button.show()
+
+        self.settings_tab = QWidget()
+        self.settings_layout = QVBoxLayout(self.settings_tab)
 
         # Button
         self.load_button = QPushButton("Excel laden")
@@ -129,13 +303,47 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.right_splitter)
         self.splitter.setSizes([600, 200])
 
-        self.layout.addWidget(self.load_button)
-        self.layout.addWidget(self.debug_button)
-        self.layout.addWidget(self.splitter)
+        self.settings_layout.addWidget(self.load_button)
+        self.settings_layout.addWidget(self.debug_button)
+        self.settings_layout.addWidget(self.splitter)
+
         self.right_splitter.setVisible(False)
 
         if self.loader.cell_cache:
             self.create_tabs_from_cache()
+
+    def resolve_ui_asset_path(self, filename):
+        if not filename:
+            return None
+        return self.base_dir / "assets" / "ui" / filename
+
+    def load_ui_pixmap(self, filename):
+        if not filename:
+            return None
+        asset_path = self.resolve_ui_asset_path(filename)
+        if asset_path is not None and asset_path.exists():
+            pixmap = QPixmap(str(asset_path))
+            print(f"[UI_ASSET] pixmap null: {pixmap.isNull()} {pixmap.size()}")
+            if not pixmap.isNull():
+                return pixmap
+        return None
+
+    def load_main_ui_layout_config(self):
+        layout_path = self.base_dir / "assets" / "config" / "ui_layout.json"
+        print(f"[UI_LAYOUT] layout: {layout_path} {layout_path.exists()}")
+        try:
+            if not layout_path.exists():
+                return {}
+            with open(layout_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            return {}
+        return {}
+
+    def on_settings_button_clicked(self):
+        print("[UI] Settings clicked")
 
     def load_excel(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -229,6 +437,16 @@ class MainWindow(QMainWindow):
         formulas = []
         if sheet_tab is not None:
             sheet_cache = sheet_tab.get_cell_cache().get(sheet_name, {})
+            for cell_ref, cell_info in sheet_cache.items():
+                formula = cell_info.get("formula")
+                if formula:
+                    formulas.append((cell_ref, formula))
+                    self.formula_data[sheet_name][cell_ref] = {
+                        "formula": formula,
+                        "references": cell_info.get("references", []),
+                    }
+        else:
+            sheet_cache = self.loader.cell_cache.get(sheet_name, {})
             for cell_ref, cell_info in sheet_cache.items():
                 formula = cell_info.get("formula")
                 if formula:
@@ -503,7 +721,13 @@ class MainWindow(QMainWindow):
         sheet_name = self.tabs.tabText(sheet_index)
         sheet_tab = self.sheet_tabs.get(sheet_name)
         if sheet_tab is None:
-            return "Nicht unterstützt"
+            if self.current_formula_cell is None:
+                return "Nicht unterstützt"
+            cell_data = self.loader.cell_cache.get(sheet_name, {}).get(self.current_formula_cell)
+            if not cell_data:
+                return "Nicht unterstützt"
+            cached_value = cell_data.get("value")
+            return str(cached_value) if cached_value is not None else "Nicht unterstützt"
         result = sheet_tab.parser.evaluate_formula(
             sheet_name,
             formula,

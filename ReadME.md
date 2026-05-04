@@ -81,6 +81,8 @@ Aufgaben:
 * Excel laden
 * Sheets auslesen
 * Zellwerte extrahieren
+* Speichern/Laden Sheet Chache
+
 
 ---
 

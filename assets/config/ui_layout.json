@@ -1,0 +1,59 @@
+{
+  "canvas": {
+    "width": 1527,
+    "height": 1030
+  },
+  "main_frame": {
+    "asset": "panels/main_Frame.png",
+    "x": 0,
+    "y": 0,
+    "w": 1527,
+    "h": 1030
+  },
+  "drag_area": {
+    "x": 0,
+    "y": 0,
+    "w": 1527,
+    "h": 115
+  },
+  "title_text": {
+    "text": "Adventure Time Tool",
+    "x": 525,
+    "y": 10,
+    "w": 480,
+    "h": 54,
+    "font_size": 28,
+    "color": "#f2d28b",
+    "shadow_color": "#000000"
+  },
+  "window_close_button": {
+    "asset": "icons/x.jpg",
+    "x": 1482,
+    "y": 16,
+    "w": 32,
+    "h": 32
+  },
+  "menu_button_small": {
+    "asset": "buttons/menu_button_small.png",
+    "w": 729,
+    "h": 179
+  },
+  "menu_button_medium": {
+    "asset": "buttons/menu_button_medium.png",
+    "w": 1087,
+    "h": 179
+  },
+  "menu_button_wide": {
+    "asset": "buttons/menu_button_wide.png",
+    "w": 1377,
+    "h": 179
+  },
+  "settings_button": {
+    "asset": "buttons/settings_button.png",
+    "x": 16,
+    "y": 16,
+    "w": 36,
+    "h": 36,
+    "text": "Settings"
+  }
+}
