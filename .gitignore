@@ -4,3 +4,4 @@ __pycache__/*
 ui_tabs/__pycache__/*
 .usefullfles/*
 
+data/current_character.json
