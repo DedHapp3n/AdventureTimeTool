@@ -132,6 +132,107 @@
     "w": 1460,
     "h": 870
   },
+  "character_front": {
+    "x": 80,
+    "y": 180,
+    "w": 420,
+    "h": 520,
+    "title": {
+      "x": 30,
+      "y": 25,
+      "font_size": 28,
+      "color": "#f2d28b"
+    },
+    "info_labels": {
+      "x": 30,
+      "start_y": 110,
+      "row_gap": 36,
+      "font_size": 18,
+      "color": "#d8d0c0"
+    },
+    "info_values": {
+      "x": 220,
+      "start_y": 110,
+      "row_gap": 36,
+      "font_size": 18,
+      "color": "#ffffff"
+    },
+    "stats_labels": {
+      "x": 30,
+      "start_y": 260,
+      "row_gap": 58,
+      "font_size": 18,
+      "color": "#d8d0c0"
+    },
+    "stats_values": {
+      "x": 260,
+      "start_y": 250,
+      "row_gap": 58,
+      "font_size": 26,
+      "color": "#ffffff"
+    },
+    "hp_bar": {
+      "enabled": true,
+      "x": 30,
+      "y": 320,
+      "w": 260,
+      "h": 12,
+      "color": "#cc4444"
+    },
+    "mp_bar": {
+      "enabled": true,
+      "x": 30,
+      "y": 378,
+      "w": 260,
+      "h": 12,
+      "color": "#4477cc"
+    }
+  },
+  "character_screen": {
+    "panels": {
+      "character_info_panel": {
+        "x": 40,
+        "y": 40,
+        "w": 360,
+        "h": 300
+      },
+      "attribute_panel": {
+        "asset": "panels/attribute_panel.png",
+        "x": 430,
+        "y": 40,
+        "w": 510,
+        "h": 450
+      },
+      "perk_panel": {
+        "asset": "panels/perk_panel.png",
+        "x": 980,
+        "y": 40,
+        "w": 440,
+        "h": 780
+      }
+    },
+    "text_layout": {
+      "attributes": {
+        "body": {
+          "x": 35,
+          "y": 35,
+          "w": 200,
+          "h": 360
+        },
+        "mind": {
+          "x": 275,
+          "y": 35,
+          "w": 200,
+          "h": 360
+        },
+        "header_font_size": 24,
+        "row_font_size": 18,
+        "value_font_size": 20,
+        "row_start_y": 75,
+        "row_gap": 52
+      }
+    }
+  },
   "settings_page": {
     "title": {
       "text": "Settings",

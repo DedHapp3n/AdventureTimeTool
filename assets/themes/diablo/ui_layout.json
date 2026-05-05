@@ -15,6 +15,12 @@
       "shadow_color": "#000000"
     }
   },
+
+
+ 
+
+
+
   "canvas": {
     "width": 1527,
     "height": 1030
@@ -258,5 +264,300 @@
       "h": 58,
       "text": "Cache neu laden"
     }
+  },
+
+
+
+
+
+  
+  "character_screen": {
+    "panels": {
+      "character_info_panel": {
+        "asset": "panels/character_info_panel.png",
+        "x": 40,
+        "y": 40,
+        "w": 360,
+        "h": 300
+      },
+      "attribute_panel": {
+        "asset": "panels/attribute_panel.png",
+        "x": 430,
+        "y": 40,
+        "w": 460,
+        "h": 380
+      },
+      "perk_panel": {
+        "asset": "panels/perk_panel.png",
+        "x": 980,
+        "y": 40,
+        "w": 440,
+        "h": 780
+      }
+    },
+
+    "data_map": {
+      "sheet": "Charakterbogen",
+
+      "basic": {
+        "name": "G1",
+        "race": "G3",
+        "size": "G5",
+        "weight": "G7",
+        "hp_current": "B10",
+        "hp_max": "F10",
+        "mp_current": "B13",
+        "mp_max": "F13",
+        "exp_current": "B16",
+        "exp_max": "F16"
+      },
+
+      "attributes": {
+        "body": {
+          "label": "Körper",
+          "value": "AG4",
+          "items": [
+            { "id": "kraft", "label": "Kraft", "value": "AG7" },
+            { "id": "geschick", "label": "Geschick", "value": "AG9" },
+            { "id": "zaehigkeit", "label": "Zähigkeit", "value": "AG11" },
+            { "id": "reflex", "label": "Reflex", "value": "AG13" }
+          ]
+        },
+        "mind": {
+          "label": "Geist",
+          "value": "AR4",
+          "items": [
+            { "id": "intelligenz", "label": "Intelligenz", "value": "AR7" },
+            { "id": "willenskraft", "label": "Willenskraft", "value": "AR9" },
+            { "id": "charisma", "label": "Charisma", "value": "AR11" },
+            { "id": "sinne", "label": "Sinne", "value": "AR13" }
+          ]
+        }
+      },
+
+      "perks": {
+        "title": "Perks",
+        "start_row": 4,
+        "end_row": 23,
+        "name_col": "AV",
+        "bp_col": "BB",
+        "effect_col": "BD"
+      },
+
+      "disadvantages": {
+        "title": "Nachteile",
+        "start_row": 4,
+        "end_row": 23,
+        "name_col": "BS",
+        "bp_col": "BY",
+        "effect_col": "CA"
+      }
+    },
+
+    "text_style": {
+      "title_color": "#f2d28b",
+      "label_color": "#f0e6c8",
+      "value_color": "#ffffff",
+      "muted_color": "#b8aa8a",
+      "hp_color": "#d84646",
+      "mp_color": "#4f82e6",
+      "border_color": "#8a6a32",
+      "shadow_color": "#000000"
+    },
+
+    "text_layout": {
+      "character_info_panel": {
+        "title": {
+          "x": 26,
+          "y": 24,
+          "w": 308,
+          "h": 40,
+          "font_size": 25,
+          "color": "#f2d28b",
+          "bold": true
+        },
+
+        "basic_rows": {
+          "font_size": 16,
+          "label_color": "#f0e6c8",
+          "value_color": "#ffffff",
+          "rows": [
+            {
+              "id": "race",
+              "label": "Rasse",
+              "label_rect": { "x": 28, "y": 84, "w": 120, "h": 24 },
+              "value_rect": { "x": 170, "y": 84, "w": 150, "h": 24 }
+            },
+            {
+              "id": "size",
+              "label": "Größe",
+              "label_rect": { "x": 28, "y": 116, "w": 120, "h": 24 },
+              "value_rect": { "x": 170, "y": 116, "w": 150, "h": 24 }
+            },
+            {
+              "id": "weight",
+              "label": "Gewicht",
+              "label_rect": { "x": 28, "y": 148, "w": 120, "h": 24 },
+              "value_rect": { "x": 170, "y": 148, "w": 150, "h": 24 }
+            }
+          ]
+        },
+
+        "stat_rows": {
+          "label_font_size": 17,
+          "value_font_size": 22,
+          "label_color": "#f0e6c8",
+          "value_color": "#ffffff",
+          "rows": [
+            {
+              "id": "hp",
+              "label": "HP",
+              "label_rect": { "x": 28, "y": 198, "w": 80, "h": 30 },
+              "value_rect": { "x": 150, "y": 194, "w": 170, "h": 34 },
+              "format": "{current} / {max}"
+            },
+            {
+              "id": "mp",
+              "label": "MP",
+              "label_rect": { "x": 28, "y": 236, "w": 80, "h": 30 },
+              "value_rect": { "x": 150, "y": 232, "w": 170, "h": 34 },
+              "format": "{current} / {max}"
+            },
+            {
+              "id": "exp",
+              "label": "EXP",
+              "label_rect": { "x": 28, "y": 270, "w": 80, "h": 26 },
+              "value_rect": { "x": 150, "y": 268, "w": 170, "h": 28 },
+              "format": "{current} / {max}"
+            }
+          ]
+        }
+      },
+
+      "attribute_panel": {
+        "panel_title": {
+          "text": "Attribute",
+          "x": 0,
+          "y": 30,
+          "w": 510,
+          "h": 32,
+          "font_size": 30,
+          "color": "#f2d28b",
+          "bold": true,
+          "align": "center"
+        },
+
+        "header_font_size": 20,
+        "label_font_size": 15,
+        "value_font_size": 18,
+        "header_color": "#f2d28b",
+        "label_color": "#ffffff",
+        "value_color": "#ffffff",
+
+        "body_header": {
+          "label_rect": { "x": 60, "y": 85, "w": 120, "h": 30 },
+          "value_rect": { "x": 164, "y": 70, "w": 55, "h": 55 },
+          "label_align": "center",
+          "value_align": "center"
+        },
+
+        "mind_header": {
+          "label_rect": { "x": 285, "y": 85, "w": 120, "h": 30 },
+          "value_rect": { "x": 241, "y": 70, "w": 55, "h": 55 }
+        },
+
+        "body_rows": {
+          "kraft": {
+            "label_rect": { "x": 90, "y": 145, "w": 120, "h": 24 },
+            "value_rect": { "x": 164, "y": 130, "w": 55, "h": 55 }
+          },
+          "geschick": {
+            "label_rect": { "x": 75, "y": 200, "w": 120, "h": 24 },
+            "value_rect": { "x": 164, "y": 185, "w": 55, "h": 55 }
+          },
+          "zaehigkeit": {
+            "label_rect": { "x": 75, "y": 255, "w": 120, "h": 24 },
+            "value_rect": { "x": 164, "y": 240, "w": 55, "h": 55 }
+          },
+          "reflex": {
+            "label_rect": { "x": 90, "y": 312, "w": 120, "h": 24 },
+            "value_rect": { "x": 164, "y": 297, "w": 55, "h": 55 }
+          }
+        },
+
+        "mind_rows": {
+          "intelligenz": {
+            "label_rect": { "x": 300, "y": 145, "w": 140, "h": 24 },
+            "value_rect": { "x": 241, "y": 130, "w": 55, "h": 55 }
+          },
+          "willenskraft": {
+            "label_rect": { "x": 300, "y": 200, "w": 140, "h": 24 },
+            "value_rect": { "x": 241, "y": 185, "w": 55, "h": 55 }
+          },
+          "charisma": {
+            "label_rect": { "x": 300, "y": 255, "w": 140, "h": 24 },
+            "value_rect": { "x": 241, "y": 240, "w": 55, "h": 55 }
+          },
+          "sinne": {
+            "label_rect": { "x": 320, "y": 312, "w": 140, "h": 24 },
+            "value_rect": { "x": 241, "y": 297, "w": 55, "h": 55 }
+          }
+        }
+      },
+
+      "perk_panel": {
+        "title": {
+          "x": 24,
+          "y": 22,
+          "w": 390,
+          "h": 32,
+          "font_size": 22,
+          "color": "#f2d28b"
+        },
+
+        "table": {
+          "header_y": 62,
+          "start_y": 92,
+          "row_h": 30,
+          "font_size": 12,
+          "header_font_size": 13,
+          "name_x": 24,
+          "name_w": 125,
+          "bp_x": 155,
+          "bp_w": 36,
+          "effect_x": 200,
+          "effect_w": 210,
+          "max_rows": 9
+        },
+
+        "disadvantage_title": {
+          "x": 24,
+          "y": 402,
+          "w": 390,
+          "h": 32,
+          "font_size": 22,
+          "color": "#f2d28b"
+        },
+
+        "disadvantage_table": {
+          "header_y": 442,
+          "start_y": 472,
+          "row_h": 30,
+          "font_size": 12,
+          "header_font_size": 13,
+          "name_x": 24,
+          "name_w": 125,
+          "bp_x": 155,
+          "bp_w": 36,
+          "effect_x": 200,
+          "effect_w": 210,
+          "max_rows": 9
+        }
+      }
+    }
+
+
+
+
   }
 }

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from openpyxl import load_workbook
+from formula_parser import FormulaParser
 
 class DataLoader:
     def __init__(self):
@@ -25,6 +26,7 @@ class DataLoader:
         self.workbook = load_workbook(file_path, data_only=False)
         self.source_file_path = file_path
         self._build_cache()
+        FormulaParser().recalculate_cache(self.cell_cache)
         self.save_cache_to_json()
         print("[CACHE] built:", len(self.cell_cache))
 
@@ -213,6 +215,7 @@ class DataLoader:
                         "value": raw_value,
                         "formula": formula,
                         "references": references,
+                        "error": None,
                     }
 
     def _extract_references(self, formula):

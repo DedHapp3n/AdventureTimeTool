@@ -2,6 +2,12 @@ import re
 from typing import Any, Callable
 
 
+class FormulaEvaluationError(Exception):
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
 class FormulaParser:
     def __init__(self):
         self.formulas: dict[str, dict[str, str]] = {}
@@ -30,14 +36,45 @@ class FormulaParser:
     def set_cell_cache(self, cell_cache):
         self.cell_cache = cell_cache
 
+    def recalculate_cache(self, cell_cache):
+        self.set_cell_cache(cell_cache)
+        if not isinstance(cell_cache, dict):
+            return cell_cache
+
+        for sheet_name, sheet_cache in cell_cache.items():
+            if not isinstance(sheet_cache, dict):
+                continue
+            for cell_ref, cell_info in sheet_cache.items():
+                if not isinstance(cell_info, dict):
+                    continue
+                formula = cell_info.get("formula")
+                if not isinstance(formula, str) or not formula.startswith("="):
+                    cell_info["error"] = None
+                    continue
+                try:
+                    result = self._evaluate_cache_cell(sheet_name, cell_ref, set())
+                    cell_info["value"] = result
+                    cell_info["error"] = None
+                    print("[CALC]", sheet_name, cell_ref, formula, "->", result)
+                except FormulaEvaluationError as exc:
+                    cell_info["error"] = exc.code
+                    if exc.code == "cycle":
+                        cell_info["value"] = None
+                    print("[CALC ERROR]", sheet_name, cell_ref, formula, exc.code)
+                except Exception as exc:
+                    cell_info["error"] = "unsupported"
+                    print("[CALC ERROR]", sheet_name, cell_ref, formula, exc)
+
+        return cell_cache
+
     def extract_references(self, formula):
         if not isinstance(formula, str):
             return []
-        refs = re.findall(r"[A-Za-z]+[0-9]+", formula)
+        refs = re.findall(r"\$?([A-Za-z]+\$?[0-9]+)", formula)
         unique = []
         seen = set()
         for ref in refs:
-            ref_upper = ref.upper()
+            ref_upper = ref.replace("$", "").upper()
             if ref_upper not in seen:
                 seen.add(ref_upper)
                 unique.append(ref_upper)
@@ -72,11 +109,8 @@ class FormulaParser:
         if not isinstance(formula, str):
             return formula
 
-        # 1) Normalize Excel-DE syntax first
         expression = self.normalize_excel_de_syntax(formula)
-        # 2) Remove leading '='
         expression = expression[1:] if expression.startswith("=") else expression
-        # 3) Convert Excel syntax to Python syntax
         expression = self.convert_sum_to_python(expression)
         expression = self.convert_if_to_python(expression)
         return expression
@@ -86,7 +120,13 @@ class FormulaParser:
             return formula
 
         normalized = formula.strip()
-        normalized = normalized.replace("WENN(", "IF(")
+        uses_semicolon_args = ";" in normalized
+        if uses_semicolon_args:
+            normalized = re.sub(r"(?<=\d),(?=\d)", ".", normalized)
+        normalized = normalized.replace("$", "")
+        normalized = re.sub(r"\bSUMME\s*\(", "SUM(", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\bWENN\s*\(", "IF(", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\bVERGLEICH\s*\(", "MATCH(", normalized, flags=re.IGNORECASE)
         normalized = normalized.replace(";", ",")
         return normalized
 
@@ -145,6 +185,7 @@ class FormulaParser:
         return -1
 
     def _convert_condition(self, condition):
+        condition = condition.replace("<>", "!=")
         converted = re.sub(r"(?<![<>=!])=(?![=])", "==", condition)
         return converted
 
@@ -159,15 +200,16 @@ class FormulaParser:
 
         try:
             expression = self._replace_sum_functions(sheet_name, expression, value_getter, visited)
+        except FormulaEvaluationError:
+            raise
         except Exception:
             return None
 
-        # Resolve cross-sheet refs first: SheetName!A1
-        cross_pattern = r"([A-Za-z0-9_]+)!([A-Za-z]+[0-9]+)"
+        cross_pattern = r"(?:'([^']+)'|([A-Za-z0-9_ äöüÄÖÜß.-]+))!([A-Za-z]+[0-9]+)"
 
         def replace_cross_ref(match):
-            ref_sheet = match.group(1)
-            ref_cell = match.group(2)
+            ref_sheet = match.group(1) or match.group(2)
+            ref_cell = match.group(3)
             resolved = self._resolve_cell_value(ref_sheet, ref_cell, value_getter, visited)
             if resolved is None:
                 raise ValueError("Unsupported cell value")
@@ -176,6 +218,8 @@ class FormulaParser:
         expression_with_cross = expression
         try:
             expression_with_cross = re.sub(cross_pattern, replace_cross_ref, expression_with_cross)
+        except FormulaEvaluationError:
+            raise
         except Exception:
             return None
 
@@ -188,15 +232,22 @@ class FormulaParser:
 
         try:
             return re.sub(r"[A-Za-z]+[0-9]+", replace_ref, expression_with_cross)
+        except FormulaEvaluationError:
+            raise
         except Exception:
             return None
 
     def _resolve_cell_value(self, sheet_name, cell_ref, value_getter: Callable[[str, str], Any], visited):
-        visit_key = (sheet_name, cell_ref)
-        if visit_key in visited:
-            return None
+        resolved_sheet = self._resolve_sheet_name(sheet_name)
+        if resolved_sheet is None:
+            return "0"
 
-        value = value_getter(sheet_name, cell_ref)
+        normalized_cell = cell_ref.replace("$", "").upper()
+        visit_key = (resolved_sheet, normalized_cell)
+        if visit_key in visited:
+            raise FormulaEvaluationError("cycle")
+
+        value = value_getter(resolved_sheet, normalized_cell)
         if value is None or value == "":
             return "0"
 
@@ -204,14 +255,20 @@ class FormulaParser:
             visited.add(visit_key)
             nested_expression = self.preprocess_formula_for_eval(value)
             resolved_nested = self.resolve_references(
-                sheet_name, nested_expression, value_getter, visited
+                resolved_sheet, nested_expression, value_getter, visited
             )
             visited.remove(visit_key)
             if resolved_nested is None:
                 return None
             return f"({resolved_nested})"
 
-        text_value = str(value).strip().replace(",", ".")
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        if isinstance(value, (int, float)):
+            return str(value)
+
+        text_value = str(value).strip()
+        text_value = re.sub(r"(?<=\d),(?=\d)", ".", text_value)
         if text_value == "":
             return "0"
         if not re.fullmatch(r"-?\d+(\.\d+)?", text_value):
@@ -240,11 +297,13 @@ class FormulaParser:
                 if clean_arg == "":
                     continue
 
-                range_match = re.fullmatch(r"([A-Z]+[0-9]+):([A-Z]+[0-9]+)", clean_arg, flags=re.IGNORECASE)
+                range_sheet, range_start, range_end = self._parse_range_arg(clean_arg)
+                range_match = range_start is not None and range_end is not None
                 if range_match:
-                    cells = self._expand_range(range_match.group(1), range_match.group(2))
+                    target_sheet = range_sheet or sheet_name
+                    cells = self._expand_range(range_start, range_end)
                     for cell in cells:
-                        resolved_value = self._resolve_cell_value(sheet_name, cell, value_getter, visited)
+                        resolved_value = self._resolve_cell_value(target_sheet, cell, value_getter, visited)
                         if resolved_value is None:
                             raise ValueError("Unsupported range value")
                         collected_parts.append(resolved_value)
@@ -259,6 +318,28 @@ class FormulaParser:
             result = result[:start] + replacement + result[end + 1:]
 
         return result
+
+    def _parse_range_arg(self, arg):
+        sheet_name = None
+        range_text = arg.strip()
+        sheet_match = re.fullmatch(
+            r"(?:'([^']+)'|([A-Za-z0-9_ äöüÄÖÜß.-]+))!([A-Z]+[0-9]+):(?:[A-Za-z0-9_ äöüÄÖÜß.-]+!)?([A-Z]+[0-9]+)",
+            range_text,
+            flags=re.IGNORECASE,
+        )
+        if sheet_match:
+            sheet_name = sheet_match.group(1) or sheet_match.group(2)
+            return sheet_name, sheet_match.group(3).upper(), sheet_match.group(4).upper()
+
+        range_match = re.fullmatch(
+            r"([A-Z]+[0-9]+):([A-Z]+[0-9]+)",
+            range_text,
+            flags=re.IGNORECASE,
+        )
+        if range_match:
+            return None, range_match.group(1).upper(), range_match.group(2).upper()
+
+        return None, None, None
 
     def _expand_range(self, start_cell, end_cell):
         start_col_letters, start_row = self._split_cell_ref(start_cell)
@@ -308,22 +389,22 @@ class FormulaParser:
         if not formula.startswith("="):
             return formula
 
-        # 1) preprocess_formula_for_eval()
         expression = self.preprocess_formula_for_eval(formula)
         if not isinstance(expression, str):
             return "Nicht unterstützt"
 
-        # 2) resolve_references()
-        resolved = self.resolve_references(sheet_name, expression, value_getter, set())
-        if resolved is None:
-            return "Nicht unterstützt"
-
-        if not re.fullmatch(r"[0-9+\-*/().\s<>=!a-zA-Z:]+", resolved):
-            return "Nicht unterstützt"
-
-        # 3) eval()
         try:
-            result = str(eval(resolved, {"__builtins__": {}}, {}))
+            resolved = self.resolve_references(sheet_name, expression, value_getter, set())
+            if resolved is None:
+                return "Nicht unterstützt"
+        except FormulaEvaluationError:
+            return "Nicht unterstützt"
+
+        if not re.fullmatch(r"[0-9+\-*/().\s<>=!a-zA-Z_]+", resolved):
+            return "Nicht unterstützt"
+
+        try:
+            result = eval(resolved, {"__builtins__": {}}, {})
             if cell_ref and sheet_name in self.cell_cache and cell_ref in self.cell_cache[sheet_name]:
                 self.cell_cache[sheet_name][cell_ref]["value"] = result
                 self.cell_cache[sheet_name][cell_ref]["formula"] = formula
@@ -331,3 +412,63 @@ class FormulaParser:
             return result
         except Exception:
             return "Nicht unterstützt"
+
+    def _evaluate_cache_cell(self, sheet_name, cell_ref, stack):
+        resolved_sheet = self._resolve_sheet_name(sheet_name)
+        if resolved_sheet is None:
+            raise FormulaEvaluationError("unsupported")
+
+        normalized_cell = cell_ref.replace("$", "").upper()
+        sheet_cache = self.cell_cache.get(resolved_sheet, {})
+        cell_info = sheet_cache.get(normalized_cell)
+        if not isinstance(cell_info, dict):
+            return 0
+
+        formula = cell_info.get("formula")
+        value = cell_info.get("value")
+        if not isinstance(formula, str) or not formula.startswith("="):
+            return self._coerce_numeric_value(value)
+
+        visit_key = (resolved_sheet, normalized_cell)
+        if visit_key in stack:
+            cell_info["error"] = "cycle"
+            raise FormulaEvaluationError("cycle")
+
+        stack.add(visit_key)
+
+        def value_getter(ref_sheet, ref_cell):
+            return self._evaluate_cache_cell(ref_sheet, ref_cell, stack)
+
+        try:
+            result = self.evaluate_formula(resolved_sheet, formula, value_getter, cell_ref=normalized_cell)
+        finally:
+            stack.remove(visit_key)
+
+        if result == "Nicht unterstützt":
+            raise FormulaEvaluationError("unsupported")
+        return result
+
+    def _coerce_numeric_value(self, value):
+        if value is None or value == "":
+            return 0
+        if isinstance(value, bool):
+            return 1 if value else 0
+        if isinstance(value, (int, float)):
+            return value
+        text_value = str(value).strip()
+        text_value = re.sub(r"(?<=\d),(?=\d)", ".", text_value)
+        if not text_value:
+            return 0
+        if re.fullmatch(r"-?\d+(\.\d+)?", text_value):
+            number = float(text_value)
+            return int(number) if number.is_integer() else number
+        return value
+
+    def _resolve_sheet_name(self, sheet_name):
+        if sheet_name in self.cell_cache:
+            return sheet_name
+        wanted = str(sheet_name).strip()
+        for existing in self.cell_cache.keys():
+            if str(existing).strip().lower() == wanted.lower():
+                return existing
+        return None
