@@ -47,7 +47,7 @@
     "w": 32,
     "h": 32
   },
-    "settings_button": {
+  "settings_button": {
     "asset": "buttons/settings_button.png",
     "x": 12,
     "y": 18,
@@ -132,62 +132,131 @@
     "w": 1460,
     "h": 870
   },
-
   "settings_page": {
     "title": {
       "text": "Settings",
       "x": 90,
-      "y": 165,
+      "y": 70,
       "w": 400,
       "h": 50,
       "font_size": 32
     },
-
-    "theme_label": {
+    "theme_section_title": {
       "text": "Theme",
-      "x": 110,
-      "y": 245,
-      "w": 220,
-      "h": 40,
-      "font_size": 22
+      "x": 100,
+      "y": 145,
+      "w": 300,
+      "h": 35,
+      "font_size": 24
     },
-
+    "theme_label": {
+      "text": "Aktuelles Theme:",
+      "x": 110,
+      "y": 190,
+      "w": 220,
+      "h": 32,
+      "font_size": 18
+    },
+    "theme_value": {
+      "x": 320,
+      "y": 190,
+      "w": 260,
+      "h": 32,
+      "font_size": 18
+    },
     "theme_switch_button": {
       "asset": "buttons/menu_button_medium.png",
-      "x": 340,
+      "x": 110,
       "y": 235,
       "w": 300,
       "h": 58,
       "text": "Theme wechseln"
     },
-
+    "character_section_title": {
+      "text": "Charakter",
+      "x": 100,
+      "y": 330,
+      "w": 300,
+      "h": 35,
+      "font_size": 24
+    },
+    "active_character_label": {
+      "text": "Aktiver Charakter:",
+      "x": 110,
+      "y": 375,
+      "w": 220,
+      "h": 32,
+      "font_size": 18
+    },
+    "active_character_value": {
+      "x": 320,
+      "y": 375,
+      "w": 420,
+      "h": 32,
+      "font_size": 18
+    },
+    "character_select": {
+      "x": 110,
+      "y": 420,
+      "w": 620,
+      "h": 38
+    },
+    "character_load_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 110,
+      "y": 475,
+      "w": 260,
+      "h": 54,
+      "text": "Charakter laden"
+    },
+    "character_refresh_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 400,
+      "y": 475,
+      "w": 260,
+      "h": 54,
+      "text": "Liste aktualisieren"
+    },
+    "debug_section_title": {
+      "text": "Debug",
+      "x": 100,
+      "y": 570,
+      "w": 300,
+      "h": 35,
+      "font_size": 24
+    },
     "debug_button": {
       "asset": "buttons/menu_button_medium.png",
-      "x": 340,
-      "y": 320,
+      "x": 110,
+      "y": 615,
       "w": 300,
       "h": 58,
       "text": "Debug öffnen"
     },
-
-    "reload_cache_button": {
-      "asset": "buttons/menu_button_medium.png",
-      "x": 340,
-      "y": 405,
-      "w": 300,
-      "h": 58,
-      "text": "Cache neu laden"
-    },
-
     "checkbox_debug_start": {
-      "asset_true": "icons/checkmark_true.jpg",
-      "asset_false": "icons/checkmark_false.jpg",
+      "asset_true": "icons/checkmark_true.png",
+      "asset_false": "icons/checkmark_false.png",
       "x": 110,
-      "y": 510,
+      "y": 695,
       "w": 50,
       "h": 50,
       "text": "Debug beim Start anzeigen"
+    },
+    "data_section_title": {
+      "text": "Daten",
+      "x": 100,
+      "y": 785,
+      "w": 300,
+      "h": 35,
+      "font_size": 24
+    },
+    "reload_cache_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 110,
+      "y": 830,
+      "w": 300,
+      "h": 58,
+      "text": "Cache neu laden"
     }
   }
-
 }

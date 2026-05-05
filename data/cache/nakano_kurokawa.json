@@ -1,0 +1,4501 @@
+{
+  "Charakterbogen": {
+    "B1": {
+      "value": "Name",
+      "formula": null,
+      "references": []
+    },
+    "G1": {
+      "value": "Nakano Kurokawa",
+      "formula": null,
+      "references": []
+    },
+    "Q1": {
+      "value": "=#VALUE!",
+      "formula": "=#VALUE!",
+      "references": []
+    },
+    "Y1": {
+      "value": "Attribute",
+      "formula": null,
+      "references": []
+    },
+    "AV1": {
+      "value": "Perk",
+      "formula": null,
+      "references": []
+    },
+    "BB1": {
+      "value": "BP",
+      "formula": null,
+      "references": []
+    },
+    "BD1": {
+      "value": "Effekt",
+      "formula": null,
+      "references": []
+    },
+    "BS1": {
+      "value": "Nachteile",
+      "formula": null,
+      "references": []
+    },
+    "BY1": {
+      "value": "BP",
+      "formula": null,
+      "references": []
+    },
+    "CA1": {
+      "value": "Effekt",
+      "formula": null,
+      "references": []
+    },
+    "B3": {
+      "value": "Rasse",
+      "formula": null,
+      "references": []
+    },
+    "G3": {
+      "value": "Kitsune",
+      "formula": null,
+      "references": []
+    },
+    "AV3": {
+      "value": "Feines Gehör 2",
+      "formula": null,
+      "references": []
+    },
+    "BD3": {
+      "value": " 2 Vorteil bei Hören ",
+      "formula": null,
+      "references": []
+    },
+    "BS3": {
+      "value": "Böse aura(stufe 2)",
+      "formula": null,
+      "references": []
+    },
+    "BY3": {
+      "value": "3/6",
+      "formula": null,
+      "references": []
+    },
+    "CA3": {
+      "value": "Leute die mich zum ersten mal Treffen aben  ",
+      "formula": null,
+      "references": []
+    },
+    "Y4": {
+      "value": "Körper",
+      "formula": null,
+      "references": []
+    },
+    "AG4": {
+      "value": "=(AG7+AG9+AG11+AG13)/4",
+      "formula": "=(AG7+AG9+AG11+AG13)/4",
+      "references": [
+        "AG7",
+        "AG9",
+        "AG11",
+        "AG13"
+      ]
+    },
+    "AJ4": {
+      "value": "Geist",
+      "formula": null,
+      "references": []
+    },
+    "AR4": {
+      "value": "=(AR7+AR9+AR11+AR13)/4",
+      "formula": "=(AR7+AR9+AR11+AR13)/4",
+      "references": [
+        "AR7",
+        "AR9",
+        "AR11",
+        "AR13"
+      ]
+    },
+    "CA4": {
+      "value": "eine 30% mich zu meiden/nicht mögen",
+      "formula": null,
+      "references": []
+    },
+    "B5": {
+      "value": "Größe",
+      "formula": null,
+      "references": []
+    },
+    "G5": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "AV5": {
+      "value": "3tes Auge",
+      "formula": null,
+      "references": []
+    },
+    "BD5": {
+      "value": "Wenn Zauber verlangt ein auge zu schließen kann man",
+      "formula": null,
+      "references": []
+    },
+    "BD6": {
+      "value": "das 3 auge verwenden und beide augen sind noch offen",
+      "formula": null,
+      "references": []
+    },
+    "B7": {
+      "value": "Gewicht",
+      "formula": null,
+      "references": []
+    },
+    "G7": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "Y7": {
+      "value": "Kraft",
+      "formula": null,
+      "references": []
+    },
+    "AG7": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AJ7": {
+      "value": "Intelligenz",
+      "formula": null,
+      "references": []
+    },
+    "AR7": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "AV7": {
+      "value": "Illusion Magie schule",
+      "formula": null,
+      "references": []
+    },
+    "BD7": {
+      "value": "Einfacher illusions zauber für sich selbst",
+      "formula": null,
+      "references": []
+    },
+    "BS7": {
+      "value": "Unglück",
+      "formula": null,
+      "references": []
+    },
+    "BY7": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "Y9": {
+      "value": "Geschick",
+      "formula": null,
+      "references": []
+    },
+    "AG9": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "AJ9": {
+      "value": "Willenskraft",
+      "formula": null,
+      "references": []
+    },
+    "AR9": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AV9": {
+      "value": "Schlangenmensch ",
+      "formula": null,
+      "references": []
+    },
+    "BB9": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "BS9": {
+      "value": "Nahrungseinschränkung/Wählerischer Esser",
+      "formula": null,
+      "references": []
+    },
+    "BY9": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "CA9": {
+      "value": "Kann wehnig bis nix Gemüse nur Fleisch zu sich nehmen",
+      "formula": null,
+      "references": []
+    },
+    "B10": {
+      "value": 32,
+      "formula": null,
+      "references": []
+    },
+    "E10": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "F10": {
+      "value": "=(1+G5+(AG4*G5)+(F16/10))",
+      "formula": "=(1+G5+(AG4*G5)+(F16/10))",
+      "references": [
+        "G5",
+        "AG4",
+        "F16"
+      ]
+    },
+    "I10": {
+      "value": "HP",
+      "formula": null,
+      "references": []
+    },
+    "BD10": {
+      "value": "Griff, Umschlingung zu befreien erhalten sind im Vorteil",
+      "formula": null,
+      "references": []
+    },
+    "Q11": {
+      "value": "Bildoption",
+      "formula": null,
+      "references": []
+    },
+    "Y11": {
+      "value": "Zähigkeit",
+      "formula": null,
+      "references": []
+    },
+    "AG11": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AJ11": {
+      "value": "Charisma",
+      "formula": null,
+      "references": []
+    },
+    "AR11": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AV11": {
+      "value": "Balance ",
+      "formula": null,
+      "references": []
+    },
+    "BB11": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "BD11": {
+      "value": "atlethik+1d20",
+      "formula": null,
+      "references": []
+    },
+    "BS11": {
+      "value": "Rage ",
+      "formula": null,
+      "references": []
+    },
+    "BY11": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "CA11": {
+      "value": "RAge bei hit on 5+hp",
+      "formula": null,
+      "references": []
+    },
+    "BD12": {
+      "value": " Sturzschaden einen Punkt (ein Level) abziehen",
+      "formula": null,
+      "references": []
+    },
+    "CA12": {
+      "value": "d4 runden ",
+      "formula": null,
+      "references": []
+    },
+    "B13": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "E13": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "F13": {
+      "value": "=(AR7+AR9+AR18)",
+      "formula": "=(AR7+AR9+AR18)",
+      "references": [
+        "AR7",
+        "AR9",
+        "AR18"
+      ]
+    },
+    "I13": {
+      "value": "MP",
+      "formula": null,
+      "references": []
+    },
+    "M13": {
+      "value": "Sprachen",
+      "formula": null,
+      "references": []
+    },
+    "Y13": {
+      "value": "Reflex",
+      "formula": null,
+      "references": []
+    },
+    "AG13": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "AJ13": {
+      "value": "Sinne",
+      "formula": null,
+      "references": []
+    },
+    "AR13": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AV13": {
+      "value": "Zauberhaar ",
+      "formula": null,
+      "references": []
+    },
+    "BB13": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "BD13": {
+      "value": "Unwissend !!",
+      "formula": null,
+      "references": []
+    },
+    "BD14": {
+      "value": "Rückenlange Haare ,26-50cm,+3 Aetherspeicher",
+      "formula": null,
+      "references": []
+    },
+    "M15": {
+      "value": "common",
+      "formula": null,
+      "references": []
+    },
+    "B16": {
+      "value": 15,
+      "formula": null,
+      "references": []
+    },
+    "E16": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "F16": {
+      "value": 256,
+      "formula": null,
+      "references": []
+    },
+    "I16": {
+      "value": "Exp",
+      "formula": null,
+      "references": []
+    },
+    "M16": {
+      "value": "Kitsune",
+      "formula": null,
+      "references": []
+    },
+    "AD16": {
+      "value": "Initiative:",
+      "formula": null,
+      "references": []
+    },
+    "AG16": {
+      "value": "=IF(G5=3,0+AG4/2,IF(G5=2,1+AG4/2,IF(G5=1,2+AG4/2,IF(G5=0,4+AG4/2,IF(G5=4,-1+AG4/2,IF(G5=5,-2+AG4/2,-4+AG4/2))))))+AG18+4",
+      "formula": "=IF(G5=3,0+AG4/2,IF(G5=2,1+AG4/2,IF(G5=1,2+AG4/2,IF(G5=0,4+AG4/2,IF(G5=4,-1+AG4/2,IF(G5=5,-2+AG4/2,-4+AG4/2))))))+AG18+4",
+      "references": [
+        "G5",
+        "AG4",
+        "AG18"
+      ]
+    },
+    "AJ16": {
+      "value": "Magie-Typus:",
+      "formula": null,
+      "references": []
+    },
+    "AV17": {
+      "value": "Tierform",
+      "formula": null,
+      "references": []
+    },
+    "BB17": {
+      "value": 6,
+      "formula": null,
+      "references": []
+    },
+    "BS17": {
+      "value": "Tierform",
+      "formula": null,
+      "references": []
+    },
+    "AD18": {
+      "value": "Bonus:",
+      "formula": null,
+      "references": []
+    },
+    "AG18": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AO18": {
+      "value": "Bonus:",
+      "formula": null,
+      "references": []
+    },
+    "AR18": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AV19": {
+      "value": "Flink ",
+      "formula": null,
+      "references": []
+    },
+    "BB19": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "BD19": {
+      "value": "Initiative +4",
+      "formula": null,
+      "references": []
+    },
+    "B20": {
+      "value": "Paradigmen",
+      "formula": null,
+      "references": []
+    },
+    "BD20": {
+      "value": "Athletik Würfe zum bestimmen der Mobilität werden im Vorteil geworfen",
+      "formula": null,
+      "references": []
+    },
+    "Y21": {
+      "value": "Wohlbefinden",
+      "formula": null,
+      "references": []
+    },
+    "AM21": {
+      "value": "Lifeforce",
+      "formula": null,
+      "references": []
+    },
+    "AV21": {
+      "value": "Eiserner Wille ",
+      "formula": null,
+      "references": []
+    },
+    "BB21": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "BD21": {
+      "value": "[Willenstärke]-Verteidigen werden im Vorteil geworfen.",
+      "formula": null,
+      "references": []
+    },
+    "E22": {
+      "value": "It is what it is",
+      "formula": null,
+      "references": []
+    },
+    "K22": {
+      "value": "Arkanes",
+      "formula": null,
+      "references": []
+    },
+    "Q22": {
+      "value": "All or Nothing",
+      "formula": null,
+      "references": []
+    },
+    "BD22": {
+      "value": "Willensbeeinflussungen Erfolg geringer",
+      "formula": null,
+      "references": []
+    },
+    "AB23": {
+      "value": " -1 Würfel",
+      "formula": null,
+      "references": []
+    },
+    "AM23": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AO23": {
+      "value": "=((1+AU9)+(G5))",
+      "formula": "=((1+AU9)+(G5))",
+      "references": [
+        "AU9",
+        "G5"
+      ]
+    },
+    "B24": {
+      "value": "Grad",
+      "formula": null,
+      "references": []
+    },
+    "E24": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "G24": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "K24": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "Q24": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "S24": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB24": {
+      "value": "-1 Vorteil",
+      "formula": null,
+      "references": []
+    },
+    "AQ24": {
+      "value": "bei wurf +0",
+      "formula": null,
+      "references": []
+    },
+    "AS24": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "B25": {
+      "value": "Brand",
+      "formula": null,
+      "references": []
+    },
+    "S25": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB25": {
+      "value": "-1 Wurf Geist",
+      "formula": null,
+      "references": []
+    },
+    "AM25": {
+      "value": "Sanity",
+      "formula": null,
+      "references": []
+    },
+    "B26": {
+      "value": "Daily",
+      "formula": null,
+      "references": []
+    },
+    "E26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "F26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "G26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "H26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "Q26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "R26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "S26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "T26": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB27": {
+      "value": "-1 Wurf Körper",
+      "formula": null,
+      "references": []
+    },
+    "AM27": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "AO27": {
+      "value": "=1+AR4+AR4",
+      "formula": "=1+AR4+AR4",
+      "references": [
+        "AR4"
+      ]
+    },
+    "B28": {
+      "value": "SE´s",
+      "formula": null,
+      "references": []
+    },
+    "AB29": {
+      "value": "Bewegung - 1/3",
+      "formula": null,
+      "references": []
+    },
+    "AM29": {
+      "value": "Faith",
+      "formula": null,
+      "references": []
+    },
+    "B30": {
+      "value": "Schleichen",
+      "formula": null,
+      "references": []
+    },
+    "J30": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B31": {
+      "value": "Medizin",
+      "formula": null,
+      "references": []
+    },
+    "J31": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "AB31": {
+      "value": "Initiative im Nachteil",
+      "formula": null,
+      "references": []
+    },
+    "AM31": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "AO31": {
+      "value": "=((1)+(AR7+AR9+AR11)/2)",
+      "formula": "=((1)+(AR7+AR9+AR11)/2)",
+      "references": [
+        "AR7",
+        "AR9",
+        "AR11"
+      ]
+    },
+    "B32": {
+      "value": "Etikette und Redegewandheit",
+      "formula": null,
+      "references": []
+    },
+    "J32": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B33": {
+      "value": "Klettern , Athletik",
+      "formula": null,
+      "references": []
+    },
+    "J33": {
+      "value": 20,
+      "formula": null,
+      "references": []
+    },
+    "AA33": {
+      "value": "x",
+      "formula": null,
+      "references": []
+    },
+    "AB33": {
+      "value": "+/- 0",
+      "formula": null,
+      "references": []
+    },
+    "B34": {
+      "value": "Feinschliff und Präzisionsmechanik",
+      "formula": null,
+      "references": []
+    },
+    "J34": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "AA34": {
+      "value": "x",
+      "formula": null,
+      "references": []
+    },
+    "B35": {
+      "value": "Stadtleben",
+      "formula": null,
+      "references": []
+    },
+    "J35": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "AA35": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB35": {
+      "value": "Initiative im Vorteil",
+      "formula": null,
+      "references": []
+    },
+    "B36": {
+      "value": "Religion, Götter und Dämonen",
+      "formula": null,
+      "references": []
+    },
+    "J36": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AA36": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "B37": {
+      "value": "Willensstärke",
+      "formula": null,
+      "references": []
+    },
+    "J37": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "AA37": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB37": {
+      "value": "Bewegung +1/3",
+      "formula": null,
+      "references": []
+    },
+    "B38": {
+      "value": "Nahkampf",
+      "formula": null,
+      "references": []
+    },
+    "J38": {
+      "value": 26,
+      "formula": null,
+      "references": []
+    },
+    "AA38": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "B39": {
+      "value": "Gaukelei und Trickbetrug",
+      "formula": null,
+      "references": []
+    },
+    "J39": {
+      "value": 16,
+      "formula": null,
+      "references": []
+    },
+    "AA39": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB39": {
+      "value": "+1 Wurf Körper/Geist",
+      "formula": null,
+      "references": []
+    },
+    "B40": {
+      "value": "Mustern und Menschenkenntnis",
+      "formula": null,
+      "references": []
+    },
+    "J40": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "AA40": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "B41": {
+      "value": "Handel und Wertgegenstände",
+      "formula": null,
+      "references": []
+    },
+    "J41": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "AB41": {
+      "value": "+1 Wurf Geist",
+      "formula": null,
+      "references": []
+    },
+    "B42": {
+      "value": "Schreiber, Maler und Kartograph",
+      "formula": null,
+      "references": []
+    },
+    "J42": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B43": {
+      "value": "Ausweichen",
+      "formula": null,
+      "references": []
+    },
+    "J43": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AB43": {
+      "value": " +1 Würfel",
+      "formula": null,
+      "references": []
+    },
+    "AB44": {
+      "value": "-1 Nachteil",
+      "formula": null,
+      "references": []
+    },
+    "B46": {
+      "value": "Freie BP ",
+      "formula": null,
+      "references": []
+    },
+    "J46": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B50": {
+      "value": "Se gesammt : ",
+      "formula": null,
+      "references": []
+    },
+    "J50": {
+      "value": "=SUM(J29:K45,U29:V45)",
+      "formula": "=SUM(J29:K45,U29:V45)",
+      "references": [
+        "J29",
+        "K45",
+        "U29",
+        "V45"
+      ]
+    }
+  },
+  "BeastForm": {
+    "L4": {
+      "value": "Aktivierung geht immer muss nur via Willenstärke getestet werden ob ich das kontrollieren darf",
+      "formula": null,
+      "references": []
+    },
+    "B6": {
+      "value": "=20",
+      "formula": "=20",
+      "references": []
+    },
+    "E6": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "F6": {
+      "value": "=SUM((Charakterbogen!AG4+Charakterbogen!AR4)*6)",
+      "formula": "=SUM((Charakterbogen!AG4+Charakterbogen!AR4)*6)",
+      "references": [
+        "AG4",
+        "AR4"
+      ]
+    },
+    "I6": {
+      "value": "HP",
+      "formula": null,
+      "references": []
+    },
+    "M7": {
+      "value": "Dunkle Paradigmen",
+      "formula": null,
+      "references": []
+    },
+    "B9": {
+      "value": "=Charakterbogen!B13",
+      "formula": "=Charakterbogen!B13",
+      "references": [
+        "B13"
+      ]
+    },
+    "E9": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "F9": {
+      "value": "=Charakterbogen!F13",
+      "formula": "=Charakterbogen!F13",
+      "references": [
+        "F13"
+      ]
+    },
+    "I9": {
+      "value": "MP / Zeit",
+      "formula": null,
+      "references": []
+    },
+    "P9": {
+      "value": "Slaughter",
+      "formula": null,
+      "references": []
+    },
+    "AB9": {
+      "value": "All or Nothing",
+      "formula": null,
+      "references": []
+    },
+    "M11": {
+      "value": "Grad",
+      "formula": null,
+      "references": []
+    },
+    "P11": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "R11": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "V11": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AB11": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "AD11": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "B12": {
+      "value": "=Charakterbogen!B16",
+      "formula": "=Charakterbogen!B16",
+      "references": [
+        "B16"
+      ]
+    },
+    "E12": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "F12": {
+      "value": "=Charakterbogen!F16",
+      "formula": "=Charakterbogen!F16",
+      "references": [
+        "F16"
+      ]
+    },
+    "I12": {
+      "value": "Exp",
+      "formula": null,
+      "references": []
+    },
+    "M12": {
+      "value": "Brand",
+      "formula": null,
+      "references": []
+    },
+    "M13": {
+      "value": "Daily",
+      "formula": null,
+      "references": []
+    },
+    "AA15": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B16": {
+      "value": "Perk",
+      "formula": null,
+      "references": []
+    },
+    "H16": {
+      "value": "BP",
+      "formula": null,
+      "references": []
+    },
+    "J16": {
+      "value": "Effekt",
+      "formula": null,
+      "references": []
+    },
+    "B18": {
+      "value": "=Charakterbogen!AV3",
+      "formula": "=Charakterbogen!AV3",
+      "references": [
+        "AV3"
+      ]
+    },
+    "H18": {
+      "value": "=Charakterbogen!BB3",
+      "formula": "=Charakterbogen!BB3",
+      "references": [
+        "BB3"
+      ]
+    },
+    "J18": {
+      "value": "=Charakterbogen!BD3",
+      "formula": "=Charakterbogen!BD3",
+      "references": [
+        "BD3"
+      ]
+    },
+    "J19": {
+      "value": "=Charakterbogen!BD4",
+      "formula": "=Charakterbogen!BD4",
+      "references": [
+        "BD4"
+      ]
+    },
+    "B20": {
+      "value": "=Charakterbogen!AV5",
+      "formula": "=Charakterbogen!AV5",
+      "references": [
+        "AV5"
+      ]
+    },
+    "H20": {
+      "value": "=Charakterbogen!BB5",
+      "formula": "=Charakterbogen!BB5",
+      "references": [
+        "BB5"
+      ]
+    },
+    "J20": {
+      "value": "=Charakterbogen!BD5",
+      "formula": "=Charakterbogen!BD5",
+      "references": [
+        "BD5"
+      ]
+    },
+    "J21": {
+      "value": "=Charakterbogen!BD6",
+      "formula": "=Charakterbogen!BD6",
+      "references": [
+        "BD6"
+      ]
+    },
+    "B22": {
+      "value": "=Charakterbogen!AV7",
+      "formula": "=Charakterbogen!AV7",
+      "references": [
+        "AV7"
+      ]
+    },
+    "H22": {
+      "value": "=Charakterbogen!BB7",
+      "formula": "=Charakterbogen!BB7",
+      "references": [
+        "BB7"
+      ]
+    },
+    "J22": {
+      "value": "=Charakterbogen!BD7",
+      "formula": "=Charakterbogen!BD7",
+      "references": [
+        "BD7"
+      ]
+    },
+    "J23": {
+      "value": "=Charakterbogen!BD8",
+      "formula": "=Charakterbogen!BD8",
+      "references": [
+        "BD8"
+      ]
+    },
+    "B24": {
+      "value": "=Charakterbogen!AV9",
+      "formula": "=Charakterbogen!AV9",
+      "references": [
+        "AV9"
+      ]
+    },
+    "H24": {
+      "value": "=Charakterbogen!BB9",
+      "formula": "=Charakterbogen!BB9",
+      "references": [
+        "BB9"
+      ]
+    },
+    "J24": {
+      "value": "=Charakterbogen!BD9",
+      "formula": "=Charakterbogen!BD9",
+      "references": [
+        "BD9"
+      ]
+    },
+    "J25": {
+      "value": "=Charakterbogen!BD10",
+      "formula": "=Charakterbogen!BD10",
+      "references": [
+        "BD10"
+      ]
+    },
+    "B26": {
+      "value": "=Charakterbogen!AV11",
+      "formula": "=Charakterbogen!AV11",
+      "references": [
+        "AV11"
+      ]
+    },
+    "H26": {
+      "value": "=Charakterbogen!BB11",
+      "formula": "=Charakterbogen!BB11",
+      "references": [
+        "BB11"
+      ]
+    },
+    "J26": {
+      "value": "=Charakterbogen!BD11",
+      "formula": "=Charakterbogen!BD11",
+      "references": [
+        "BD11"
+      ]
+    },
+    "J27": {
+      "value": "=Charakterbogen!BD12",
+      "formula": "=Charakterbogen!BD12",
+      "references": [
+        "BD12"
+      ]
+    },
+    "B28": {
+      "value": "=Charakterbogen!AV13",
+      "formula": "=Charakterbogen!AV13",
+      "references": [
+        "AV13"
+      ]
+    },
+    "H28": {
+      "value": "=Charakterbogen!BB13",
+      "formula": "=Charakterbogen!BB13",
+      "references": [
+        "BB13"
+      ]
+    },
+    "J28": {
+      "value": "=Charakterbogen!BD13",
+      "formula": "=Charakterbogen!BD13",
+      "references": [
+        "BD13"
+      ]
+    },
+    "J29": {
+      "value": "=Charakterbogen!BD14",
+      "formula": "=Charakterbogen!BD14",
+      "references": [
+        "BD14"
+      ]
+    },
+    "B30": {
+      "value": "=Charakterbogen!AV15",
+      "formula": "=Charakterbogen!AV15",
+      "references": [
+        "AV15"
+      ]
+    },
+    "H30": {
+      "value": "=Charakterbogen!BB15",
+      "formula": "=Charakterbogen!BB15",
+      "references": [
+        "BB15"
+      ]
+    },
+    "J30": {
+      "value": "=Charakterbogen!BD15",
+      "formula": "=Charakterbogen!BD15",
+      "references": [
+        "BD15"
+      ]
+    },
+    "J31": {
+      "value": "=Charakterbogen!BD16",
+      "formula": "=Charakterbogen!BD16",
+      "references": [
+        "BD16"
+      ]
+    },
+    "B32": {
+      "value": "=Charakterbogen!AV17",
+      "formula": "=Charakterbogen!AV17",
+      "references": [
+        "AV17"
+      ]
+    },
+    "H32": {
+      "value": "=Charakterbogen!BB17",
+      "formula": "=Charakterbogen!BB17",
+      "references": [
+        "BB17"
+      ]
+    },
+    "J32": {
+      "value": "=Charakterbogen!BD17",
+      "formula": "=Charakterbogen!BD17",
+      "references": [
+        "BD17"
+      ]
+    },
+    "J33": {
+      "value": "=Charakterbogen!BD18",
+      "formula": "=Charakterbogen!BD18",
+      "references": [
+        "BD18"
+      ]
+    },
+    "B34": {
+      "value": "=Charakterbogen!AV19",
+      "formula": "=Charakterbogen!AV19",
+      "references": [
+        "AV19"
+      ]
+    },
+    "H34": {
+      "value": "=Charakterbogen!BB19",
+      "formula": "=Charakterbogen!BB19",
+      "references": [
+        "BB19"
+      ]
+    },
+    "J34": {
+      "value": "=Charakterbogen!BD19",
+      "formula": "=Charakterbogen!BD19",
+      "references": [
+        "BD19"
+      ]
+    },
+    "J35": {
+      "value": "=Charakterbogen!BD20",
+      "formula": "=Charakterbogen!BD20",
+      "references": [
+        "BD20"
+      ]
+    },
+    "B36": {
+      "value": "=Charakterbogen!AV21",
+      "formula": "=Charakterbogen!AV21",
+      "references": [
+        "AV21"
+      ]
+    },
+    "H36": {
+      "value": "=Charakterbogen!BB21",
+      "formula": "=Charakterbogen!BB21",
+      "references": [
+        "BB21"
+      ]
+    },
+    "J36": {
+      "value": "=Charakterbogen!BD21",
+      "formula": "=Charakterbogen!BD21",
+      "references": [
+        "BD21"
+      ]
+    },
+    "J37": {
+      "value": "=Charakterbogen!BD22",
+      "formula": "=Charakterbogen!BD22",
+      "references": [
+        "BD22"
+      ]
+    },
+    "B38": {
+      "value": "=Charakterbogen!AV23",
+      "formula": "=Charakterbogen!AV23",
+      "references": [
+        "AV23"
+      ]
+    },
+    "H38": {
+      "value": "=Charakterbogen!BB23",
+      "formula": "=Charakterbogen!BB23",
+      "references": [
+        "BB23"
+      ]
+    },
+    "J38": {
+      "value": "=Charakterbogen!BD23",
+      "formula": "=Charakterbogen!BD23",
+      "references": [
+        "BD23"
+      ]
+    },
+    "J39": {
+      "value": "=Charakterbogen!BD24",
+      "formula": "=Charakterbogen!BD24",
+      "references": [
+        "BD24"
+      ]
+    },
+    "B40": {
+      "value": "=Charakterbogen!AV25",
+      "formula": "=Charakterbogen!AV25",
+      "references": [
+        "AV25"
+      ]
+    },
+    "H40": {
+      "value": "=Charakterbogen!BB25",
+      "formula": "=Charakterbogen!BB25",
+      "references": [
+        "BB25"
+      ]
+    },
+    "J40": {
+      "value": "=Charakterbogen!BD25",
+      "formula": "=Charakterbogen!BD25",
+      "references": [
+        "BD25"
+      ]
+    },
+    "J41": {
+      "value": "=Charakterbogen!BD26",
+      "formula": "=Charakterbogen!BD26",
+      "references": [
+        "BD26"
+      ]
+    },
+    "B42": {
+      "value": "=Charakterbogen!AV27",
+      "formula": "=Charakterbogen!AV27",
+      "references": [
+        "AV27"
+      ]
+    },
+    "H42": {
+      "value": "=Charakterbogen!BB27",
+      "formula": "=Charakterbogen!BB27",
+      "references": [
+        "BB27"
+      ]
+    },
+    "J42": {
+      "value": "=Charakterbogen!BD27",
+      "formula": "=Charakterbogen!BD27",
+      "references": [
+        "BD27"
+      ]
+    },
+    "J43": {
+      "value": "=Charakterbogen!BD28",
+      "formula": "=Charakterbogen!BD28",
+      "references": [
+        "BD28"
+      ]
+    },
+    "B44": {
+      "value": "=Charakterbogen!AV29",
+      "formula": "=Charakterbogen!AV29",
+      "references": [
+        "AV29"
+      ]
+    },
+    "H44": {
+      "value": "=Charakterbogen!BB29",
+      "formula": "=Charakterbogen!BB29",
+      "references": [
+        "BB29"
+      ]
+    },
+    "J44": {
+      "value": "=Charakterbogen!BD29",
+      "formula": "=Charakterbogen!BD29",
+      "references": [
+        "BD29"
+      ]
+    },
+    "J45": {
+      "value": "=Charakterbogen!BD30",
+      "formula": "=Charakterbogen!BD30",
+      "references": [
+        "BD30"
+      ]
+    },
+    "B46": {
+      "value": "=Charakterbogen!AV31",
+      "formula": "=Charakterbogen!AV31",
+      "references": [
+        "AV31"
+      ]
+    },
+    "H46": {
+      "value": "=Charakterbogen!BB31",
+      "formula": "=Charakterbogen!BB31",
+      "references": [
+        "BB31"
+      ]
+    },
+    "J46": {
+      "value": "=Charakterbogen!BD31",
+      "formula": "=Charakterbogen!BD31",
+      "references": [
+        "BD31"
+      ]
+    },
+    "J47": {
+      "value": "=Charakterbogen!BD32",
+      "formula": "=Charakterbogen!BD32",
+      "references": [
+        "BD32"
+      ]
+    },
+    "B48": {
+      "value": "=Charakterbogen!AV33",
+      "formula": "=Charakterbogen!AV33",
+      "references": [
+        "AV33"
+      ]
+    },
+    "H48": {
+      "value": "=Charakterbogen!BB33",
+      "formula": "=Charakterbogen!BB33",
+      "references": [
+        "BB33"
+      ]
+    },
+    "J48": {
+      "value": "=Charakterbogen!BD33",
+      "formula": "=Charakterbogen!BD33",
+      "references": [
+        "BD33"
+      ]
+    },
+    "J49": {
+      "value": "=Charakterbogen!BD34",
+      "formula": "=Charakterbogen!BD34",
+      "references": [
+        "BD34"
+      ]
+    },
+    "B50": {
+      "value": "=Charakterbogen!AV35",
+      "formula": "=Charakterbogen!AV35",
+      "references": [
+        "AV35"
+      ]
+    },
+    "H50": {
+      "value": "=Charakterbogen!BB35",
+      "formula": "=Charakterbogen!BB35",
+      "references": [
+        "BB35"
+      ]
+    },
+    "J50": {
+      "value": "=Charakterbogen!BD35",
+      "formula": "=Charakterbogen!BD35",
+      "references": [
+        "BD35"
+      ]
+    },
+    "J51": {
+      "value": "=Charakterbogen!BD36",
+      "formula": "=Charakterbogen!BD36",
+      "references": [
+        "BD36"
+      ]
+    },
+    "B52": {
+      "value": "=Charakterbogen!AV37",
+      "formula": "=Charakterbogen!AV37",
+      "references": [
+        "AV37"
+      ]
+    },
+    "H52": {
+      "value": "=Charakterbogen!BB37",
+      "formula": "=Charakterbogen!BB37",
+      "references": [
+        "BB37"
+      ]
+    },
+    "J52": {
+      "value": "=Charakterbogen!BD37",
+      "formula": "=Charakterbogen!BD37",
+      "references": [
+        "BD37"
+      ]
+    },
+    "J53": {
+      "value": "=Charakterbogen!BD38",
+      "formula": "=Charakterbogen!BD38",
+      "references": [
+        "BD38"
+      ]
+    },
+    "B54": {
+      "value": "=Charakterbogen!AV39",
+      "formula": "=Charakterbogen!AV39",
+      "references": [
+        "AV39"
+      ]
+    },
+    "H54": {
+      "value": "=Charakterbogen!BB39",
+      "formula": "=Charakterbogen!BB39",
+      "references": [
+        "BB39"
+      ]
+    },
+    "J54": {
+      "value": "=Charakterbogen!BD39",
+      "formula": "=Charakterbogen!BD39",
+      "references": [
+        "BD39"
+      ]
+    },
+    "J55": {
+      "value": "=Charakterbogen!BD40",
+      "formula": "=Charakterbogen!BD40",
+      "references": [
+        "BD40"
+      ]
+    },
+    "B56": {
+      "value": "=Charakterbogen!AV41",
+      "formula": "=Charakterbogen!AV41",
+      "references": [
+        "AV41"
+      ]
+    },
+    "H56": {
+      "value": "=Charakterbogen!BB41",
+      "formula": "=Charakterbogen!BB41",
+      "references": [
+        "BB41"
+      ]
+    },
+    "J56": {
+      "value": "=Charakterbogen!BD41",
+      "formula": "=Charakterbogen!BD41",
+      "references": [
+        "BD41"
+      ]
+    },
+    "J57": {
+      "value": "=Charakterbogen!BD42",
+      "formula": "=Charakterbogen!BD42",
+      "references": [
+        "BD42"
+      ]
+    },
+    "B58": {
+      "value": "=Charakterbogen!AV43",
+      "formula": "=Charakterbogen!AV43",
+      "references": [
+        "AV43"
+      ]
+    },
+    "H58": {
+      "value": "=Charakterbogen!BB43",
+      "formula": "=Charakterbogen!BB43",
+      "references": [
+        "BB43"
+      ]
+    },
+    "J58": {
+      "value": "=Charakterbogen!BD43",
+      "formula": "=Charakterbogen!BD43",
+      "references": [
+        "BD43"
+      ]
+    },
+    "J59": {
+      "value": "=Charakterbogen!BD44",
+      "formula": "=Charakterbogen!BD44",
+      "references": [
+        "BD44"
+      ]
+    },
+    "B60": {
+      "value": "=Charakterbogen!AV45",
+      "formula": "=Charakterbogen!AV45",
+      "references": [
+        "AV45"
+      ]
+    },
+    "H60": {
+      "value": "=Charakterbogen!BB45",
+      "formula": "=Charakterbogen!BB45",
+      "references": [
+        "BB45"
+      ]
+    },
+    "J60": {
+      "value": "=Charakterbogen!BD45",
+      "formula": "=Charakterbogen!BD45",
+      "references": [
+        "BD45"
+      ]
+    },
+    "J61": {
+      "value": "=Charakterbogen!BD46",
+      "formula": "=Charakterbogen!BD46",
+      "references": [
+        "BD46"
+      ]
+    },
+    "B62": {
+      "value": "=Charakterbogen!AV47",
+      "formula": "=Charakterbogen!AV47",
+      "references": [
+        "AV47"
+      ]
+    },
+    "H62": {
+      "value": "=Charakterbogen!BB47",
+      "formula": "=Charakterbogen!BB47",
+      "references": [
+        "BB47"
+      ]
+    },
+    "J62": {
+      "value": "=Charakterbogen!BD47",
+      "formula": "=Charakterbogen!BD47",
+      "references": [
+        "BD47"
+      ]
+    },
+    "J63": {
+      "value": "=Charakterbogen!BD48",
+      "formula": "=Charakterbogen!BD48",
+      "references": [
+        "BD48"
+      ]
+    }
+  },
+  "Fertigkeiten": {
+    "E5": {
+      "value": "Allgemein",
+      "formula": null,
+      "references": []
+    },
+    "V7": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "X7": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "Z7": {
+      "value": 25,
+      "formula": null,
+      "references": []
+    },
+    "AB7": {
+      "value": 125,
+      "formula": null,
+      "references": []
+    },
+    "AD7": {
+      "value": "SE benötigt",
+      "formula": null,
+      "references": []
+    },
+    "V9": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "X9": {
+      "value": 20,
+      "formula": null,
+      "references": []
+    },
+    "Z9": {
+      "value": 100,
+      "formula": null,
+      "references": []
+    },
+    "AB9": {
+      "value": 375,
+      "formula": null,
+      "references": []
+    },
+    "AD9": {
+      "value": "EXP benötigt",
+      "formula": null,
+      "references": []
+    },
+    "D12": {
+      "value": "Fertigkeit",
+      "formula": null,
+      "references": []
+    },
+    "V12": {
+      "value": "Attribut",
+      "formula": null,
+      "references": []
+    },
+    "AD12": {
+      "value": "+ / -",
+      "formula": null,
+      "references": []
+    },
+    "AG12": {
+      "value": "Spezialisierung",
+      "formula": null,
+      "references": []
+    },
+    "BE12": {
+      "value": "Notizen",
+      "formula": null,
+      "references": []
+    },
+    "BW13": {
+      "value": "WAFFE:",
+      "formula": null,
+      "references": []
+    },
+    "BY13": {
+      "value": "=Ausrüstung!K35",
+      "formula": "=Ausrüstung!K35",
+      "references": [
+        "K35"
+      ]
+    },
+    "D15": {
+      "value": "Klettern , Athletik , Ini-Wurf",
+      "formula": null,
+      "references": []
+    },
+    "V15": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "X15": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD15": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da3ae4e60>",
+      "formula": null,
+      "references": []
+    },
+    "AG15": {
+      "value": "Parcour, eigen Bewegung",
+      "formula": null,
+      "references": []
+    },
+    "BE15": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT15": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "BW15": {
+      "value": "K",
+      "formula": null,
+      "references": []
+    },
+    "BX15": {
+      "value": "=Charakterbogen!$AG$7",
+      "formula": "=Charakterbogen!$AG$7",
+      "references": []
+    },
+    "BW16": {
+      "value": "G",
+      "formula": null,
+      "references": []
+    },
+    "BX16": {
+      "value": "=Charakterbogen!$AG$9",
+      "formula": "=Charakterbogen!$AG$9",
+      "references": []
+    },
+    "D17": {
+      "value": "Schwimmen",
+      "formula": null,
+      "references": []
+    },
+    "V17": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "AD17": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da034d4f0>",
+      "formula": null,
+      "references": []
+    },
+    "AG17": {
+      "value": "Wasserimprovisation",
+      "formula": null,
+      "references": []
+    },
+    "BE17": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT17": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "BW17": {
+      "value": "Z",
+      "formula": null,
+      "references": []
+    },
+    "BX17": {
+      "value": "=Charakterbogen!$AG$11",
+      "formula": "=Charakterbogen!$AG$11",
+      "references": []
+    },
+    "BW18": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "BX18": {
+      "value": "=Charakterbogen!$AG$13",
+      "formula": "=Charakterbogen!$AG$13",
+      "references": []
+    },
+    "D19": {
+      "value": "Tanz und Akrobatik",
+      "formula": null,
+      "references": []
+    },
+    "AD19": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0354da0>",
+      "formula": null,
+      "references": []
+    },
+    "BE19": {
+      "value": "Anfangsattribut: Körper oder Charisma",
+      "formula": null,
+      "references": []
+    },
+    "BW19": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "BX19": {
+      "value": "=Charakterbogen!$AR$7",
+      "formula": "=Charakterbogen!$AR$7",
+      "references": []
+    },
+    "BW20": {
+      "value": "W",
+      "formula": null,
+      "references": []
+    },
+    "BX20": {
+      "value": "=Charakterbogen!$AR$9",
+      "formula": "=Charakterbogen!$AR$9",
+      "references": []
+    },
+    "D21": {
+      "value": "Gesang und Musizieren",
+      "formula": null,
+      "references": []
+    },
+    "AD21": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0387530>",
+      "formula": null,
+      "references": []
+    },
+    "BE21": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "BW21": {
+      "value": "C",
+      "formula": null,
+      "references": []
+    },
+    "BX21": {
+      "value": "=Charakterbogen!$AR$11",
+      "formula": "=Charakterbogen!$AR$11",
+      "references": []
+    },
+    "BW22": {
+      "value": "S",
+      "formula": null,
+      "references": []
+    },
+    "BX22": {
+      "value": "=Charakterbogen!$AR$13",
+      "formula": "=Charakterbogen!$AR$13",
+      "references": []
+    },
+    "D23": {
+      "value": "Gaukelei und Trickbetrug ",
+      "formula": null,
+      "references": []
+    },
+    "V23": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "X23": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD23": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da034e600>",
+      "formula": null,
+      "references": []
+    },
+    "AG23": {
+      "value": "Slight of Hand,Schummeln +3WennWürfeln/SlightofHand",
+      "formula": null,
+      "references": []
+    },
+    "BE23": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT23": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "BW24": {
+      "value": "=Charakterbogen!$AG$4",
+      "formula": "=Charakterbogen!$AG$4",
+      "references": []
+    },
+    "BY24": {
+      "value": "B",
+      "formula": null,
+      "references": []
+    },
+    "D25": {
+      "value": "Mustern und Menschenkenntnis",
+      "formula": null,
+      "references": []
+    },
+    "V25": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD25": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da3ae6d80>",
+      "formula": null,
+      "references": []
+    },
+    "AG25": {
+      "value": "Lauschen ",
+      "formula": null,
+      "references": []
+    },
+    "BE25": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BW26": {
+      "value": "=Charakterbogen!$AR$4",
+      "formula": "=Charakterbogen!$AR$4",
+      "references": []
+    },
+    "BY26": {
+      "value": "M",
+      "formula": null,
+      "references": []
+    },
+    "D27": {
+      "value": "Etikette und Redegewandheit",
+      "formula": null,
+      "references": []
+    },
+    "AD27": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0378590>",
+      "formula": null,
+      "references": []
+    },
+    "BE27": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BW28": {
+      "value": "=Charakterbogen!$AR$11",
+      "formula": "=Charakterbogen!$AR$11",
+      "references": []
+    },
+    "BY28": {
+      "value": "CH",
+      "formula": null,
+      "references": []
+    },
+    "D29": {
+      "value": "Reiten",
+      "formula": null,
+      "references": []
+    },
+    "AD29": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da037a270>",
+      "formula": null,
+      "references": []
+    },
+    "AG29": {
+      "value": "              ",
+      "formula": null,
+      "references": []
+    },
+    "BE29": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT29": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D31": {
+      "value": "Fahrzeug lenken und Geräte bedienen",
+      "formula": null,
+      "references": []
+    },
+    "AD31": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da03782c0>",
+      "formula": null,
+      "references": []
+    },
+    "BE31": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT31": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D33": {
+      "value": "Schleichen, Verstecken und Heimlichkeit",
+      "formula": null,
+      "references": []
+    },
+    "V33": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "X33": {
+      "value": "S",
+      "formula": null,
+      "references": []
+    },
+    "AD33": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0368830>",
+      "formula": null,
+      "references": []
+    },
+    "AG33": {
+      "value": "Tarnen,Verstecken",
+      "formula": null,
+      "references": []
+    },
+    "BE33": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT33": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D35": {
+      "value": "Willensstärke",
+      "formula": null,
+      "references": []
+    },
+    "V35": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "X35": {
+      "value": "r",
+      "formula": null,
+      "references": []
+    },
+    "AD35": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da036bb60>",
+      "formula": null,
+      "references": []
+    },
+    "AG35": {
+      "value": "Stoische Gelassenheit , Durchalten",
+      "formula": null,
+      "references": []
+    },
+    "BE35": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "AG37": {
+      "value": "(ruhe bewahren was kommt )",
+      "formula": null,
+      "references": []
+    },
+    "E39": {
+      "value": "Kampf",
+      "formula": null,
+      "references": []
+    },
+    "V41": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "X41": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "Z41": {
+      "value": 25,
+      "formula": null,
+      "references": []
+    },
+    "AB41": {
+      "value": 125,
+      "formula": null,
+      "references": []
+    },
+    "AD41": {
+      "value": "SE benötigt",
+      "formula": null,
+      "references": []
+    },
+    "V43": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "X43": {
+      "value": 20,
+      "formula": null,
+      "references": []
+    },
+    "Z43": {
+      "value": 100,
+      "formula": null,
+      "references": []
+    },
+    "AB43": {
+      "value": 375,
+      "formula": null,
+      "references": []
+    },
+    "AD43": {
+      "value": "EXP benötigt",
+      "formula": null,
+      "references": []
+    },
+    "D46": {
+      "value": "Fähigkeiten",
+      "formula": null,
+      "references": []
+    },
+    "V46": {
+      "value": "Attribut",
+      "formula": null,
+      "references": []
+    },
+    "AD46": {
+      "value": "+ / -",
+      "formula": null,
+      "references": []
+    },
+    "AG46": {
+      "value": "Spezialisierung",
+      "formula": null,
+      "references": []
+    },
+    "BE46": {
+      "value": "Notizen",
+      "formula": null,
+      "references": []
+    },
+    "D49": {
+      "value": "Ausweichen",
+      "formula": null,
+      "references": []
+    },
+    "V49": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "AD49": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da03c4bc0>",
+      "formula": null,
+      "references": []
+    },
+    "AG49": {
+      "value": "Close Range",
+      "formula": null,
+      "references": []
+    },
+    "BE49": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT49": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D51": {
+      "value": "Nahkampf",
+      "formula": null,
+      "references": []
+    },
+    "V51": {
+      "value": "R",
+      "formula": null,
+      "references": []
+    },
+    "X51": {
+      "value": "G",
+      "formula": null,
+      "references": []
+    },
+    "AD51": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0212c30>",
+      "formula": null,
+      "references": []
+    },
+    "AG51": {
+      "value": "Close Range , Stichwaffen",
+      "formula": null,
+      "references": []
+    },
+    "BE51": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT51": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D53": {
+      "value": "Fernkampf",
+      "formula": null,
+      "references": []
+    },
+    "AD53": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da03c41a0>",
+      "formula": null,
+      "references": []
+    },
+    "BE53": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT53": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D55": {
+      "value": "Führen, Taktik und Kriegskunst",
+      "formula": null,
+      "references": []
+    },
+    "AD55": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da03d7f20>",
+      "formula": null,
+      "references": []
+    },
+    "BE55": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT55": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D57": {
+      "value": "Blocken mit Schilden",
+      "formula": null,
+      "references": []
+    },
+    "AD57": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da01ff620>",
+      "formula": null,
+      "references": []
+    },
+    "BE57": {
+      "value": "Anfangsattribut: Körper",
+      "formula": null,
+      "references": []
+    },
+    "BT57": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D59": {
+      "value": "Kriegsmaschinerie",
+      "formula": null,
+      "references": []
+    },
+    "AD59": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0206d50>",
+      "formula": null,
+      "references": []
+    },
+    "BE59": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D61": {
+      "value": "Magieanwendung",
+      "formula": null,
+      "references": []
+    },
+    "AD61": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0212450>",
+      "formula": null,
+      "references": []
+    },
+    "BE61": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT61": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "E65": {
+      "value": "Wissen",
+      "formula": null,
+      "references": []
+    },
+    "V67": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "X67": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "Z67": {
+      "value": 25,
+      "formula": null,
+      "references": []
+    },
+    "AB67": {
+      "value": 125,
+      "formula": null,
+      "references": []
+    },
+    "AD67": {
+      "value": "SE benötigt",
+      "formula": null,
+      "references": []
+    },
+    "V69": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "X69": {
+      "value": 20,
+      "formula": null,
+      "references": []
+    },
+    "Z69": {
+      "value": 100,
+      "formula": null,
+      "references": []
+    },
+    "AB69": {
+      "value": 375,
+      "formula": null,
+      "references": []
+    },
+    "AD69": {
+      "value": "EXP benötigt",
+      "formula": null,
+      "references": []
+    },
+    "D72": {
+      "value": "Fähigkeiten",
+      "formula": null,
+      "references": []
+    },
+    "V72": {
+      "value": "Attribut",
+      "formula": null,
+      "references": []
+    },
+    "AD72": {
+      "value": "+ / -",
+      "formula": null,
+      "references": []
+    },
+    "AG72": {
+      "value": "Spezialisierung",
+      "formula": null,
+      "references": []
+    },
+    "BE72": {
+      "value": "Notizen",
+      "formula": null,
+      "references": []
+    },
+    "D75": {
+      "value": "Religion, Götter und Dämonen",
+      "formula": null,
+      "references": []
+    },
+    "V75": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD75": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da02132c0>",
+      "formula": null,
+      "references": []
+    },
+    "AG75": {
+      "value": "Unmenschlich",
+      "formula": null,
+      "references": []
+    },
+    "BE75": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT75": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D77": {
+      "value": "Heraldik, Rechts- und Altertumskunde",
+      "formula": null,
+      "references": []
+    },
+    "AD77": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0253b30>",
+      "formula": null,
+      "references": []
+    },
+    "BE77": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT77": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D79": {
+      "value": "Handel und Wertgegenstände",
+      "formula": null,
+      "references": []
+    },
+    "V79": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD79": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0273230>",
+      "formula": null,
+      "references": []
+    },
+    "AG79": {
+      "value": "Bewerten",
+      "formula": null,
+      "references": []
+    },
+    "BE79": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT79": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D81": {
+      "value": "Monster und Unwesenskunde",
+      "formula": null,
+      "references": []
+    },
+    "AD81": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da02b9550>",
+      "formula": null,
+      "references": []
+    },
+    "BE81": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT81": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D83": {
+      "value": "Magische Phänomene",
+      "formula": null,
+      "references": []
+    },
+    "AD83": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0272fc0>",
+      "formula": null,
+      "references": []
+    },
+    "BE83": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT83": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D85": {
+      "value": "Wildnis, Navigation und Wetterkunde",
+      "formula": null,
+      "references": []
+    },
+    "AD85": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0251640>",
+      "formula": null,
+      "references": []
+    },
+    "BE85": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT85": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D87": {
+      "value": "Stadtleben und Gassenwissen",
+      "formula": null,
+      "references": []
+    },
+    "V87": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD87": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0271010>",
+      "formula": null,
+      "references": []
+    },
+    "AG87": {
+      "value": "Zwielichtige Kontankte ",
+      "formula": null,
+      "references": []
+    },
+    "BE87": {
+      "value": "Anfangsattribut: Geist",
+      "formula": null,
+      "references": []
+    },
+    "BT87": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "E91": {
+      "value": "Handwerk",
+      "formula": null,
+      "references": []
+    },
+    "V93": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "X93": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "Z93": {
+      "value": 25,
+      "formula": null,
+      "references": []
+    },
+    "AB93": {
+      "value": 125,
+      "formula": null,
+      "references": []
+    },
+    "AD93": {
+      "value": "SE benötigt",
+      "formula": null,
+      "references": []
+    },
+    "V95": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "X95": {
+      "value": 20,
+      "formula": null,
+      "references": []
+    },
+    "Z95": {
+      "value": 100,
+      "formula": null,
+      "references": []
+    },
+    "AB95": {
+      "value": 375,
+      "formula": null,
+      "references": []
+    },
+    "AD95": {
+      "value": "EXP benötigt",
+      "formula": null,
+      "references": []
+    },
+    "D98": {
+      "value": "Fähigkeiten",
+      "formula": null,
+      "references": []
+    },
+    "V98": {
+      "value": "Attribut",
+      "formula": null,
+      "references": []
+    },
+    "AD98": {
+      "value": "+ / -",
+      "formula": null,
+      "references": []
+    },
+    "AG98": {
+      "value": "Spezialisierung",
+      "formula": null,
+      "references": []
+    },
+    "BE98": {
+      "value": "Notizen",
+      "formula": null,
+      "references": []
+    },
+    "D101": {
+      "value": "Schreiber, Maler und Kartograph",
+      "formula": null,
+      "references": []
+    },
+    "AD101": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da02b9580>",
+      "formula": null,
+      "references": []
+    },
+    "BE101": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "BT101": {
+      "value": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!$J$14",
+      "references": []
+    },
+    "D103": {
+      "value": "Holzfäller, Zimmermann und Schnitzer",
+      "formula": null,
+      "references": []
+    },
+    "AD103": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da02eacf0>",
+      "formula": null,
+      "references": []
+    },
+    "BE103": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D105": {
+      "value": "Schmied, Gießer und Metallurgie",
+      "formula": null,
+      "references": []
+    },
+    "AD105": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0114470>",
+      "formula": null,
+      "references": []
+    },
+    "BE105": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D107": {
+      "value": "Bergbau und Steinmetz",
+      "formula": null,
+      "references": []
+    },
+    "AD107": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0117b30>",
+      "formula": null,
+      "references": []
+    },
+    "BE107": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D109": {
+      "value": "Weber, Schneider und Färber",
+      "formula": null,
+      "references": []
+    },
+    "AD109": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da011f230>",
+      "formula": null,
+      "references": []
+    },
+    "BE109": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D111": {
+      "value": "Jäger und Kürschner",
+      "formula": null,
+      "references": []
+    },
+    "AD111": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0164890>",
+      "formula": null,
+      "references": []
+    },
+    "BE111": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D113": {
+      "value": "Tierkunde und Abrichten",
+      "formula": null,
+      "references": []
+    },
+    "AD113": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da011ed80>",
+      "formula": null,
+      "references": []
+    },
+    "BE113": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D115": {
+      "value": "Chemiker und Glasbläser",
+      "formula": null,
+      "references": []
+    },
+    "AD115": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da02ebbc0>",
+      "formula": null,
+      "references": []
+    },
+    "BE115": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "BT115": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D117": {
+      "value": "Kochen",
+      "formula": null,
+      "references": []
+    },
+    "V117": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD117": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0117530>",
+      "formula": null,
+      "references": []
+    },
+    "AG117": {
+      "value": "Grillen",
+      "formula": null,
+      "references": []
+    },
+    "BE117": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D119": {
+      "value": "Ritualistik",
+      "formula": null,
+      "references": []
+    },
+    "AD119": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da01552b0>",
+      "formula": null,
+      "references": []
+    },
+    "BE119": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D121": {
+      "value": "Pflanzenkunde und Landwirtschaft",
+      "formula": null,
+      "references": []
+    },
+    "AD121": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da01564b0>",
+      "formula": null,
+      "references": []
+    },
+    "BE121": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "BT121": {
+      "value": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!$W$14",
+      "references": []
+    },
+    "D123": {
+      "value": "Medizin und Heilkunde",
+      "formula": null,
+      "references": []
+    },
+    "V123": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD123": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0136900>",
+      "formula": null,
+      "references": []
+    },
+    "AG123": {
+      "value": "Erste Hilfe",
+      "formula": null,
+      "references": []
+    },
+    "BE123": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    },
+    "D125": {
+      "value": "Feinschliff und Präzisionsmechanik",
+      "formula": null,
+      "references": []
+    },
+    "V125": {
+      "value": "I",
+      "formula": null,
+      "references": []
+    },
+    "AD125": {
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7f6da0127830>",
+      "formula": null,
+      "references": []
+    },
+    "AG125": {
+      "value": "Mechanism",
+      "formula": null,
+      "references": []
+    },
+    "BE125": {
+      "value": "Anfangsattribut: freie Wahl",
+      "formula": null,
+      "references": []
+    }
+  },
+  "Inventar": {
+    "B2": {
+      "value": "Inventar",
+      "formula": null,
+      "references": []
+    },
+    "B5": {
+      "value": "Geldbeutel",
+      "formula": null,
+      "references": []
+    },
+    "B7": {
+      "value": "Gulden",
+      "formula": null,
+      "references": []
+    },
+    "E7": {
+      "value": "Schilling",
+      "formula": null,
+      "references": []
+    },
+    "H7": {
+      "value": "Heller",
+      "formula": null,
+      "references": []
+    },
+    "K7": {
+      "value": "Pfifferling",
+      "formula": null,
+      "references": []
+    },
+    "B9": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "E9": {
+      "value": 7,
+      "formula": null,
+      "references": []
+    },
+    "H9": {
+      "value": 30,
+      "formula": null,
+      "references": []
+    },
+    "B12": {
+      "value": "Im Inventar",
+      "formula": null,
+      "references": []
+    },
+    "P12": {
+      "value": "PL",
+      "formula": null,
+      "references": []
+    },
+    "Q12": {
+      "value": "Anzahl",
+      "formula": null,
+      "references": []
+    },
+    "AH12": {
+      "value": "PL",
+      "formula": null,
+      "references": []
+    },
+    "AI12": {
+      "value": "Anzahl",
+      "formula": null,
+      "references": []
+    },
+    "AL12": {
+      "value": "Bücher",
+      "formula": null,
+      "references": []
+    },
+    "AZ12": {
+      "value": "PL",
+      "formula": null,
+      "references": []
+    },
+    "BA12": {
+      "value": "Anzahl",
+      "formula": null,
+      "references": []
+    },
+    "B14": {
+      "value": "Gürtel , 2 quickslots",
+      "formula": null,
+      "references": []
+    },
+    "P14": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "Q14": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "T14": {
+      "value": " MON \"Altes Geld\" pl irrelevant",
+      "formula": null,
+      "references": []
+    },
+    "AH14": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AI14": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "B16": {
+      "value": "Rucksack , bis zu 5 schwere\"große\" Items vs",
+      "formula": null,
+      "references": []
+    },
+    "P16": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "Q16": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "T16": {
+      "value": "Gürtel",
+      "formula": null,
+      "references": []
+    },
+    "B18": {
+      "value": "Lichtquelle magische Klopflicht (Irrlicht farbe)",
+      "formula": null,
+      "references": []
+    },
+    "P18": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "Q18": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "T18": {
+      "value": "Süßigkeiten Popcorn",
+      "formula": null,
+      "references": []
+    },
+    "AH18": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "AI18": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B20": {
+      "value": "Ein schlafkissen",
+      "formula": null,
+      "references": []
+    },
+    "P20": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "Q20": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "T20": {
+      "value": "                                 ",
+      "formula": null,
+      "references": []
+    },
+    "AH20": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "B22": {
+      "value": "Rationen fleisch",
+      "formula": null,
+      "references": []
+    },
+    "P22": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "Q22": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "T22": {
+      "value": "Grants Carry",
+      "formula": null,
+      "references": []
+    },
+    "AH22": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "AI22": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "B24": {
+      "value": "Feldflasche (d&D) wasser 0/0",
+      "formula": null,
+      "references": []
+    },
+    "P24": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "Q24": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "T24": {
+      "value": "Pepper-Berries",
+      "formula": null,
+      "references": []
+    },
+    "T26": {
+      "value": "Knochenwürfel +3 auf gaukelei bei nutzung",
+      "formula": null,
+      "references": []
+    },
+    "B28": {
+      "value": "Kette Silber mit Geschlossenen Lotus nach aufwertung 6 gukden wert",
+      "formula": null,
+      "references": []
+    },
+    "T28": {
+      "value": "PL: (unbestimmt) / Wupple-Fibre-Kadaver (mit Loot)",
+      "formula": null,
+      "references": []
+    },
+    "T32": {
+      "value": "Quallen Pilz Durchsichtig . wobblig stamm leichte fäden ",
+      "formula": null,
+      "references": []
+    },
+    "AH32": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "AI32": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    }
+  },
+  "Ausrüstung": {
+    "C2": {
+      "value": "Ausrüstung",
+      "formula": null,
+      "references": []
+    },
+    "C5": {
+      "value": "Rüstung",
+      "formula": null,
+      "references": []
+    },
+    "M5": {
+      "value": "Physische-Resistenzen",
+      "formula": null,
+      "references": []
+    },
+    "U5": {
+      "value": "Elementare-Resistenzen",
+      "formula": null,
+      "references": []
+    },
+    "C7": {
+      "value": "Wo getragen:",
+      "formula": null,
+      "references": []
+    },
+    "G7": {
+      "value": "Name",
+      "formula": null,
+      "references": []
+    },
+    "K7": {
+      "value": "PL",
+      "formula": null,
+      "references": []
+    },
+    "M7": {
+      "value": "Kopf",
+      "formula": null,
+      "references": []
+    },
+    "O7": {
+      "value": "Brust",
+      "formula": null,
+      "references": []
+    },
+    "Q7": {
+      "value": "Arme",
+      "formula": null,
+      "references": []
+    },
+    "S7": {
+      "value": "Beine",
+      "formula": null,
+      "references": []
+    },
+    "U7": {
+      "value": "Feuer",
+      "formula": null,
+      "references": []
+    },
+    "W7": {
+      "value": "Wasser",
+      "formula": null,
+      "references": []
+    },
+    "Y7": {
+      "value": "Erde",
+      "formula": null,
+      "references": []
+    },
+    "AA7": {
+      "value": "Wind",
+      "formula": null,
+      "references": []
+    },
+    "AC7": {
+      "value": "Blitz",
+      "formula": null,
+      "references": []
+    },
+    "AE7": {
+      "value": "Eis",
+      "formula": null,
+      "references": []
+    },
+    "AG7": {
+      "value": "Säure",
+      "formula": null,
+      "references": []
+    },
+    "AI7": {
+      "value": "Licht",
+      "formula": null,
+      "references": []
+    },
+    "AK7": {
+      "value": "Dunkel",
+      "formula": null,
+      "references": []
+    },
+    "AM7": {
+      "value": "Haltbarkeit",
+      "formula": null,
+      "references": []
+    },
+    "AR7": {
+      "value": "Attribute / Sonderfertigkeiten",
+      "formula": null,
+      "references": []
+    },
+    "C9": {
+      "value": "Brust arme Beine",
+      "formula": null,
+      "references": []
+    },
+    "G9": {
+      "value": "Leder rüstung",
+      "formula": null,
+      "references": []
+    },
+    "K9": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "O9": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "Q9": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "S9": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AG9": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AM9": {
+      "value": 25,
+      "formula": null,
+      "references": []
+    },
+    "AO9": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AP9": {
+      "value": 25,
+      "formula": null,
+      "references": []
+    },
+    "AO11": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO13": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO15": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO17": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO19": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO21": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO23": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO25": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "C27": {
+      "value": "Summe",
+      "formula": null,
+      "references": []
+    },
+    "M27": {
+      "value": "=SUM(M9,M11,M13,M15,M17,M21,M23,M25)",
+      "formula": "=SUM(M9,M11,M13,M15,M17,M21,M23,M25)",
+      "references": [
+        "M9",
+        "M11",
+        "M13",
+        "M15",
+        "M17",
+        "M21",
+        "M23",
+        "M25"
+      ]
+    },
+    "O27": {
+      "value": "=SUM(O9,O11,O13,O15,O17,O21,O23,O25)",
+      "formula": "=SUM(O9,O11,O13,O15,O17,O21,O23,O25)",
+      "references": [
+        "O9",
+        "O11",
+        "O13",
+        "O15",
+        "O17",
+        "O21",
+        "O23",
+        "O25"
+      ]
+    },
+    "Q27": {
+      "value": "=SUM(Q9,Q11,Q13,Q15,Q17,Q21,Q23,Q25)",
+      "formula": "=SUM(Q9,Q11,Q13,Q15,Q17,Q21,Q23,Q25)",
+      "references": [
+        "Q9",
+        "Q11",
+        "Q13",
+        "Q15",
+        "Q17",
+        "Q21",
+        "Q23",
+        "Q25"
+      ]
+    },
+    "S27": {
+      "value": "=SUM(S9,S11,S13,S15,S17,S21,S23,S25)",
+      "formula": "=SUM(S9,S11,S13,S15,S17,S21,S23,S25)",
+      "references": [
+        "S9",
+        "S11",
+        "S13",
+        "S15",
+        "S17",
+        "S21",
+        "S23",
+        "S25"
+      ]
+    },
+    "U27": {
+      "value": "=SUM(U9,U11,U13,U15,U17,U21,U23,U25)",
+      "formula": "=SUM(U9,U11,U13,U15,U17,U21,U23,U25)",
+      "references": [
+        "U9",
+        "U11",
+        "U13",
+        "U15",
+        "U17",
+        "U21",
+        "U23",
+        "U25"
+      ]
+    },
+    "W27": {
+      "value": "=SUM(W9,W11,W13,W17,W15,W21,W23,W25)",
+      "formula": "=SUM(W9,W11,W13,W17,W15,W21,W23,W25)",
+      "references": [
+        "W9",
+        "W11",
+        "W13",
+        "W17",
+        "W15",
+        "W21",
+        "W23",
+        "W25"
+      ]
+    },
+    "Y27": {
+      "value": "=SUM(Y9,Y11,Y13,Y15,Y17,Y21,Y23,Y25)",
+      "formula": "=SUM(Y9,Y11,Y13,Y15,Y17,Y21,Y23,Y25)",
+      "references": [
+        "Y9",
+        "Y11",
+        "Y13",
+        "Y15",
+        "Y17",
+        "Y21",
+        "Y23",
+        "Y25"
+      ]
+    },
+    "AA27": {
+      "value": "=SUM(AA9,AA11,AA13,AA15,AA17,AA21,AA23,AA25)",
+      "formula": "=SUM(AA9,AA11,AA13,AA15,AA17,AA21,AA23,AA25)",
+      "references": [
+        "AA9",
+        "AA11",
+        "AA13",
+        "AA15",
+        "AA17",
+        "AA21",
+        "AA23",
+        "AA25"
+      ]
+    },
+    "AC27": {
+      "value": "=SUM(AC9,AC11,AC13,AC15,AC17,AC21,AC23,AC25)",
+      "formula": "=SUM(AC9,AC11,AC13,AC15,AC17,AC21,AC23,AC25)",
+      "references": [
+        "AC9",
+        "AC11",
+        "AC13",
+        "AC15",
+        "AC17",
+        "AC21",
+        "AC23",
+        "AC25"
+      ]
+    },
+    "AE27": {
+      "value": "=SUM(AE9,AE11,AE13,AE15,AE17,AE21,AE23,AE25)",
+      "formula": "=SUM(AE9,AE11,AE13,AE15,AE17,AE21,AE23,AE25)",
+      "references": [
+        "AE9",
+        "AE11",
+        "AE13",
+        "AE15",
+        "AE17",
+        "AE21",
+        "AE23",
+        "AE25"
+      ]
+    },
+    "AG27": {
+      "value": "=SUM(AG9,AG11,AG13,AG15,AG17,AG21,AG23,AG25)",
+      "formula": "=SUM(AG9,AG11,AG13,AG15,AG17,AG21,AG23,AG25)",
+      "references": [
+        "AG9",
+        "AG11",
+        "AG13",
+        "AG15",
+        "AG17",
+        "AG21",
+        "AG23",
+        "AG25"
+      ]
+    },
+    "AI27": {
+      "value": "=SUM(AI9,AI11,AI13,AI15,AI17,AI21,AI23,AI25)",
+      "formula": "=SUM(AI9,AI11,AI13,AI15,AI17,AI21,AI23,AI25)",
+      "references": [
+        "AI9",
+        "AI11",
+        "AI13",
+        "AI15",
+        "AI17",
+        "AI21",
+        "AI23",
+        "AI25"
+      ]
+    },
+    "AK27": {
+      "value": "=SUM(AK9,AK11,AK13,AK15,AK17,AK21,AK23,AK25)",
+      "formula": "=SUM(AK9,AK11,AK13,AK15,AK17,AK21,AK23,AK25)",
+      "references": [
+        "AK9",
+        "AK11",
+        "AK13",
+        "AK15",
+        "AK17",
+        "AK21",
+        "AK23",
+        "AK25"
+      ]
+    },
+    "C31": {
+      "value": "Waffe",
+      "formula": null,
+      "references": []
+    },
+    "M31": {
+      "value": "Schadensart",
+      "formula": null,
+      "references": []
+    },
+    "T31": {
+      "value": "Physisch",
+      "formula": null,
+      "references": []
+    },
+    "AA31": {
+      "value": "Elementar",
+      "formula": null,
+      "references": []
+    },
+    "C33": {
+      "value": "Name",
+      "formula": null,
+      "references": []
+    },
+    "G33": {
+      "value": "Waffentyp",
+      "formula": null,
+      "references": []
+    },
+    "K33": {
+      "value": "PL",
+      "formula": null,
+      "references": []
+    },
+    "M33": {
+      "value": "Schnitt",
+      "formula": null,
+      "references": []
+    },
+    "O33": {
+      "value": "Stoß",
+      "formula": null,
+      "references": []
+    },
+    "Q33": {
+      "value": "Stich",
+      "formula": null,
+      "references": []
+    },
+    "T33": {
+      "value": "Würfel",
+      "formula": null,
+      "references": []
+    },
+    "X33": {
+      "value": "Bonus",
+      "formula": null,
+      "references": []
+    },
+    "AA33": {
+      "value": "Würfel",
+      "formula": null,
+      "references": []
+    },
+    "AE33": {
+      "value": "Element(e)",
+      "formula": null,
+      "references": []
+    },
+    "AI33": {
+      "value": "Bonus",
+      "formula": null,
+      "references": []
+    },
+    "AL33": {
+      "value": "Haltbarkeit",
+      "formula": null,
+      "references": []
+    },
+    "AQ33": {
+      "value": "Attribute / Sonderfertigkeiten",
+      "formula": null,
+      "references": []
+    },
+    "C35": {
+      "value": " Silber Rapier",
+      "formula": null,
+      "references": []
+    },
+    "K35": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "Q35": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "T35": {
+      "value": "1d8",
+      "formula": null,
+      "references": []
+    },
+    "X35": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AL35": {
+      "value": 35,
+      "formula": null,
+      "references": []
+    },
+    "AN35": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AO35": {
+      "value": 35,
+      "formula": null,
+      "references": []
+    },
+    "AQ35": {
+      "value": "Parry ,effi2,Anti Unheilig/Magisch",
+      "formula": null,
+      "references": []
+    },
+    "C37": {
+      "value": "Faustschlag",
+      "formula": null,
+      "references": []
+    },
+    "G37": {
+      "value": "Melle ",
+      "formula": null,
+      "references": []
+    },
+    "K37": {
+      "value": 0,
+      "formula": null,
+      "references": []
+    },
+    "O37": {
+      "value": "X",
+      "formula": null,
+      "references": []
+    },
+    "T37": {
+      "value": "1d6",
+      "formula": null,
+      "references": []
+    },
+    "X37": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "AN37": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AN39": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AN41": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AN43": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AN45": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AN47": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "AN49": {
+      "value": "/",
+      "formula": null,
+      "references": []
+    },
+    "M53": {
+      "value": "Elementare-Boni / Affinitäten",
+      "formula": null,
+      "references": []
+    },
+    "G54": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "M55": {
+      "value": "Feuer",
+      "formula": null,
+      "references": []
+    },
+    "O55": {
+      "value": "Wasser",
+      "formula": null,
+      "references": []
+    },
+    "Q55": {
+      "value": "Erde",
+      "formula": null,
+      "references": []
+    },
+    "S55": {
+      "value": "Wind",
+      "formula": null,
+      "references": []
+    },
+    "U55": {
+      "value": "Blitz",
+      "formula": null,
+      "references": []
+    },
+    "W55": {
+      "value": "Eis",
+      "formula": null,
+      "references": []
+    },
+    "Y55": {
+      "value": "Säure",
+      "formula": null,
+      "references": []
+    },
+    "AA55": {
+      "value": "Licht",
+      "formula": null,
+      "references": []
+    },
+    "AC55": {
+      "value": "Dunkel",
+      "formula": null,
+      "references": []
+    }
+  },
+  "Magie": {
+    "B2": {
+      "value": "Upgrade Tabelle",
+      "formula": null,
+      "references": []
+    },
+    "F5": {
+      "value": "Base",
+      "formula": null,
+      "references": []
+    },
+    "J5": {
+      "value": "Dice Up I",
+      "formula": null,
+      "references": []
+    },
+    "N5": {
+      "value": "Dice Up II",
+      "formula": null,
+      "references": []
+    },
+    "R5": {
+      "value": "Dice Up III",
+      "formula": null,
+      "references": []
+    },
+    "V5": {
+      "value": "Dice Up IV",
+      "formula": null,
+      "references": []
+    },
+    "Z5": {
+      "value": "Dice Up V",
+      "formula": null,
+      "references": []
+    },
+    "B7": {
+      "value": "Base",
+      "formula": null,
+      "references": []
+    },
+    "F7": {
+      "value": "1d4",
+      "formula": null,
+      "references": []
+    },
+    "J7": {
+      "value": "1d6+1",
+      "formula": null,
+      "references": []
+    },
+    "N7": {
+      "value": "1d8+2",
+      "formula": null,
+      "references": []
+    },
+    "R7": {
+      "value": "1d10+3",
+      "formula": null,
+      "references": []
+    },
+    "V7": {
+      "value": "1d12+4",
+      "formula": null,
+      "references": []
+    },
+    "Z7": {
+      "value": "1d20+5",
+      "formula": null,
+      "references": []
+    },
+    "B9": {
+      "value": "Scale Up I",
+      "formula": null,
+      "references": []
+    },
+    "F9": {
+      "value": "2d4",
+      "formula": null,
+      "references": []
+    },
+    "J9": {
+      "value": "2d6+1",
+      "formula": null,
+      "references": []
+    },
+    "N9": {
+      "value": "2d8+2",
+      "formula": null,
+      "references": []
+    },
+    "R9": {
+      "value": "2d10+3",
+      "formula": null,
+      "references": []
+    },
+    "V9": {
+      "value": "2d12+4",
+      "formula": null,
+      "references": []
+    },
+    "Z9": {
+      "value": "2d20+5",
+      "formula": null,
+      "references": []
+    },
+    "B11": {
+      "value": "Scale Up II",
+      "formula": null,
+      "references": []
+    },
+    "F11": {
+      "value": "3d4",
+      "formula": null,
+      "references": []
+    },
+    "J11": {
+      "value": "3d6+1",
+      "formula": null,
+      "references": []
+    },
+    "N11": {
+      "value": "3d8+2",
+      "formula": null,
+      "references": []
+    },
+    "R11": {
+      "value": "3d10+3",
+      "formula": null,
+      "references": []
+    },
+    "V11": {
+      "value": "3d12+4",
+      "formula": null,
+      "references": []
+    },
+    "Z11": {
+      "value": "3d20+5",
+      "formula": null,
+      "references": []
+    },
+    "B13": {
+      "value": "Scale Up III",
+      "formula": null,
+      "references": []
+    },
+    "F13": {
+      "value": "4d4",
+      "formula": null,
+      "references": []
+    },
+    "J13": {
+      "value": "4d6+1",
+      "formula": null,
+      "references": []
+    },
+    "N13": {
+      "value": "4d8+2",
+      "formula": null,
+      "references": []
+    },
+    "R13": {
+      "value": "4d10+3",
+      "formula": null,
+      "references": []
+    },
+    "V13": {
+      "value": "4d12+4",
+      "formula": null,
+      "references": []
+    },
+    "Z13": {
+      "value": "4d20+5",
+      "formula": null,
+      "references": []
+    },
+    "B15": {
+      "value": "Scale Up IV",
+      "formula": null,
+      "references": []
+    },
+    "F15": {
+      "value": "5d4",
+      "formula": null,
+      "references": []
+    },
+    "J15": {
+      "value": "5d6+1",
+      "formula": null,
+      "references": []
+    },
+    "N15": {
+      "value": "5d8+2",
+      "formula": null,
+      "references": []
+    },
+    "R15": {
+      "value": "5d10+3",
+      "formula": null,
+      "references": []
+    },
+    "V15": {
+      "value": "5d12+4",
+      "formula": null,
+      "references": []
+    },
+    "Z15": {
+      "value": "5d20+5",
+      "formula": null,
+      "references": []
+    },
+    "B17": {
+      "value": "Scale Up V",
+      "formula": null,
+      "references": []
+    },
+    "F17": {
+      "value": "6d4",
+      "formula": null,
+      "references": []
+    },
+    "J17": {
+      "value": "6d6+1",
+      "formula": null,
+      "references": []
+    },
+    "N17": {
+      "value": "6d8+2",
+      "formula": null,
+      "references": []
+    },
+    "R17": {
+      "value": "6d10+3",
+      "formula": null,
+      "references": []
+    },
+    "V17": {
+      "value": "6d12+4",
+      "formula": null,
+      "references": []
+    },
+    "Z17": {
+      "value": "6d20+5",
+      "formula": null,
+      "references": []
+    },
+    "B20": {
+      "value": "Magie",
+      "formula": null,
+      "references": []
+    },
+    "B23": {
+      "value": "Magieschule",
+      "formula": null,
+      "references": []
+    },
+    "L23": {
+      "value": "Info",
+      "formula": null,
+      "references": []
+    },
+    "W23": {
+      "value": "Vorbereiteter Zauber",
+      "formula": null,
+      "references": []
+    },
+    "AG23": {
+      "value": "Ladung",
+      "formula": null,
+      "references": []
+    },
+    "AJ23": {
+      "value": "Dauer",
+      "formula": null,
+      "references": []
+    },
+    "AM23": {
+      "value": "Effekt",
+      "formula": null,
+      "references": []
+    },
+    "B39": {
+      "value": "Regelfragen",
+      "formula": null,
+      "references": []
+    }
+  },
+  "Notizen": {
+    "B2": {
+      "value": "Notizen",
+      "formula": null,
+      "references": []
+    },
+    "B7": {
+      "value": "1 bp sind 5xp",
+      "formula": null,
+      "references": []
+    },
+    "B8": {
+      "value": "25 BP start BP ",
+      "formula": null,
+      "references": []
+    },
+    "Z8": {
+      "value": "Aufgabe : Bringt den alten man 2 zinken rostig in der Sumpfstadt unter der brücke",
+      "formula": null,
+      "references": []
+    },
+    "B9": {
+      "value": "15bp durch Nachteile erhaltbar",
+      "formula": null,
+      "references": []
+    },
+    "B10": {
+      "value": "Gaukler Dieb richtung ",
+      "formula": null,
+      "references": []
+    },
+    "B11": {
+      "value": "Charackter wird zu beginn erstmal nur physisch angreifen da er noch net weis wie es geht mit der Magie usw .",
+      "formula": null,
+      "references": []
+    },
+    "Z11": {
+      "value": "Weird potion heiltränke eventeul pl3 was mit halozigone beinhaltet",
+      "formula": null,
+      "references": []
+    },
+    "B12": {
+      "value": "Er weis das es zwar magie gigbt und so aber er weis nicht das er selbst magie besitzt ",
+      "formula": null,
+      "references": []
+    },
+    "B13": {
+      "value": "Besitz nur ein schwanz , Neco like Ohren  dafür kurze haare",
+      "formula": null,
+      "references": []
+    },
+    "B14": {
+      "value": "Hinweis aus Coc2 ich hasse den namen(game) immer noch ",
+      "formula": null,
+      "references": []
+    },
+    "B16": {
+      "value": "20 ist gut 1 ist schlecht",
+      "formula": null,
+      "references": []
+    },
+    "W16": {
+      "value": "meets it bets it",
+      "formula": null,
+      "references": []
+    },
+    "B17": {
+      "value": "Nebel = katastrophe",
+      "formula": null,
+      "references": []
+    },
+    "B18": {
+      "value": "Brenenn vor Wurf +10 danach +1",
+      "formula": null,
+      "references": []
+    },
+    "W19": {
+      "value": "1d4+ kampf gleich heilen über schlafen ebenso mit mana",
+      "formula": null,
+      "references": []
+    },
+    "W20": {
+      "value": "(6) Fizzy Crystal Cave / Make your Mouth go Boom",
+      "formula": null,
+      "references": []
+    },
+    "B21": {
+      "value": "Ferris",
+      "formula": null,
+      "references": []
+    },
+    "C21": {
+      "value": "fabi",
+      "formula": null,
+      "references": []
+    },
+    "W21": {
+      "value": "2 gold 4 shil nagari währung",
+      "formula": null,
+      "references": []
+    },
+    "B22": {
+      "value": "MIMI",
+      "formula": null,
+      "references": []
+    },
+    "C22": {
+      "value": "tiny tina",
+      "formula": null,
+      "references": []
+    },
+    "E22": {
+      "value": " =tim",
+      "formula": null,
+      "references": []
+    },
+    "B23": {
+      "value": "Alruna",
+      "formula": null,
+      "references": []
+    },
+    "W23": {
+      "value": "Stats mal 10 = exp kosten ( 2 auf 3 = 30 exp",
+      "formula": null,
+      "references": []
+    },
+    "A24": {
+      "value": "2d20 wird immer gewürfelt . kann ich es aktivieren dann kh1 ansonsten kl1 . RI G und so wird nicht +20 . nur sepzialisierung geben mir genug",
+      "formula": null,
+      "references": []
+    },
+    "W25": {
+      "value": "R+I darf ich nicht dazu rechenn wahr jeher bullshit ",
+      "formula": null,
+      "references": []
+    },
+    "W26": {
+      "value": "Das brennen mit +10",
+      "formula": null,
+      "references": []
+    },
+    "W27": {
+      "value": "Unheilig gleich mehr schaden gegen Zombies ",
+      "formula": null,
+      "references": []
+    },
+    "W28": {
+      "value": "Shortrest : ",
+      "formula": null,
+      "references": []
+    },
+    "B29": {
+      "value": "QUEST",
+      "formula": null,
+      "references": []
+    },
+    "AE29": {
+      "value": "All out Attack ist eine technik die mir splitte ich den pool ",
+      "formula": null,
+      "references": []
+    },
+    "B31": {
+      "value": 1,
+      "formula": null,
+      "references": []
+    },
+    "C31": {
+      "value": "(8-G*) Vermisst: der kleine Mika / finde Mika (0/1) ",
+      "formula": null,
+      "references": []
+    },
+    "AE31": {
+      "value": "Beastform ist da",
+      "formula": null,
+      "references": []
+    },
+    "B32": {
+      "value": 2,
+      "formula": null,
+      "references": []
+    },
+    "C32": {
+      "value": "(9-G*) Delicious Dungeon / A Seasonal Dungeon popped open for the Festival Season",
+      "formula": null,
+      "references": []
+    },
+    "B33": {
+      "value": 3,
+      "formula": null,
+      "references": []
+    },
+    "C33": {
+      "value": "(10-G*) Wanted: Der Ernteschrecken / terrorisiert die Felder bei Nacht",
+      "formula": null,
+      "references": []
+    },
+    "B34": {
+      "value": 4,
+      "formula": null,
+      "references": []
+    },
+    "B35": {
+      "value": 5,
+      "formula": null,
+      "references": []
+    },
+    "B36": {
+      "value": 6,
+      "formula": null,
+      "references": []
+    },
+    "C36": {
+      "value": "(666) Finde heraus was ES damit auf sich hat …",
+      "formula": null,
+      "references": []
+    },
+    "J40": {
+      "value": "                     ",
+      "formula": null,
+      "references": []
+    },
+    "M40": {
+      "value": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ",
+      "formula": null,
+      "references": []
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from datetime import datetime
 from typing import Any
 
 from openpyxl import load_workbook
@@ -9,10 +10,20 @@ class DataLoader:
     def __init__(self):
         self.workbook = None
         self.cell_cache: dict[str, dict[str, dict[str, Any]]] = {}
+        self.active_cache_path = ""
+        self.current_character_name = "unknown_character"
+        self.source_file_path = ""
         self.load_cache_from_json()
 
     def load_file(self, file_path):
+        lower_path = str(file_path).lower()
+        if lower_path.endswith(".ods"):
+            print("[LOAD] ODS not supported:", file_path)
+            raise ValueError("ODS wird aktuell nicht unterstützt. Bitte als XLSX exportieren.")
+        if not (lower_path.endswith(".xlsx") or lower_path.endswith(".xlsm")):
+            raise ValueError("Dateityp nicht unterstützt. Bitte .xlsx oder .xlsm verwenden.")
         self.workbook = load_workbook(file_path, data_only=False)
+        self.source_file_path = file_path
         self._build_cache()
         self.save_cache_to_json()
         print("[CACHE] built:", len(self.cell_cache))
@@ -61,21 +72,126 @@ class DataLoader:
             return None
         return cell_data.get("value")
 
-    def save_cache_to_json(self, path="data/character_cache.json"):
+    def save_cache_to_json(self, path=None):
+        if path is None:
+            character_name = self._get_character_name_from_cache()
+            slug = self.make_character_slug(character_name)
+            path = os.path.join("data", "cache", f"{slug}.json")
+        else:
+            character_name = self._get_character_name_from_cache()
+
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self._to_serializable(self.cell_cache), f, ensure_ascii=False, indent=2)
+        self.active_cache_path = path
+        self.current_character_name = character_name
+        self._write_current_character_metadata(path, character_name)
+        print("[CACHE] character:", character_name)
+        print("[CACHE] saved character cache:", path)
+        print("[CACHE] active:", path)
 
-    def load_cache_from_json(self, path="data/character_cache.json"):
+    def load_cache_from_json(self, path=None):
+        if path is None:
+            metadata_path = os.path.join("data", "current_character.json")
+            if os.path.exists(metadata_path):
+                try:
+                    with open(metadata_path, "r", encoding="utf-8") as f:
+                        metadata = json.load(f)
+                    active_cache = metadata.get("active_cache")
+                    if isinstance(active_cache, str) and active_cache:
+                        path = active_cache
+                        self.current_character_name = str(
+                            metadata.get("character_name", "unknown_character")
+                        )
+                        self.source_file_path = str(metadata.get("source_file", ""))
+                except Exception:
+                    path = None
+
+        if path is None:
+            self.cell_cache = {}
+            print("[CACHE] no active character cache found")
+            return False
         if not os.path.exists(path):
+            self.cell_cache = {}
+            print("[CACHE] no active character cache found")
             return False
         try:
             with open(path, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
             self.cell_cache = loaded if isinstance(loaded, dict) else {}
+            self.active_cache_path = path
+            if not self.current_character_name or self.current_character_name == "unknown_character":
+                self.current_character_name = self._get_character_name_from_cache()
+            print("[CACHE] active:", path)
             return True
         except Exception:
             self.cell_cache = {}
+            print("[CACHE] no active character cache found")
+            return False
+
+    def make_character_slug(self, name: str) -> str:
+        if not isinstance(name, str):
+            return "unknown_character"
+        slug = name.strip().lower()
+        slug = (
+            slug.replace("ä", "ae")
+            .replace("ö", "oe")
+            .replace("ü", "ue")
+            .replace("ß", "ss")
+        )
+        slug = re.sub(r"\s+", "_", slug)
+        slug = re.sub(r"[^a-z0-9_]", "", slug)
+        slug = re.sub(r"_+", "_", slug).strip("_")
+        return slug if slug else "unknown_character"
+
+    def list_character_caches(self) -> list[dict[str, str]]:
+        cache_dir = os.path.join("data", "cache")
+        if not os.path.isdir(cache_dir):
+            return []
+
+        results: list[dict[str, str]] = []
+        for file_name in sorted(os.listdir(cache_dir)):
+            if not file_name.lower().endswith(".json"):
+                continue
+            cache_path = os.path.join(cache_dir, file_name)
+            character_name = os.path.splitext(file_name)[0]
+            try:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    payload = json.load(f)
+                if isinstance(payload, dict):
+                    sheet = payload.get("Charakterbogen", {})
+                    if isinstance(sheet, dict):
+                        cell_g1 = sheet.get("G1", {})
+                        if isinstance(cell_g1, dict):
+                            value = cell_g1.get("value")
+                            if isinstance(value, str) and value.strip():
+                                character_name = value.strip()
+            except Exception:
+                pass
+            results.append(
+                {
+                    "name": character_name,
+                    "path": cache_path,
+                    "file": file_name,
+                }
+            )
+        return results
+
+    def load_character_cache(self, cache_path: str) -> bool:
+        if not cache_path or not os.path.exists(cache_path):
+            return False
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if not isinstance(loaded, dict):
+                return False
+            self.cell_cache = loaded
+            self.active_cache_path = cache_path
+            self.current_character_name = self._get_character_name_from_cache()
+            self._write_current_character_metadata(cache_path, self.current_character_name)
+            print("[CACHE] active:", cache_path)
+            return True
+        except Exception:
             return False
 
     def _build_cache(self):
@@ -137,3 +253,31 @@ class DataLoader:
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
         return str(value)
+
+    def _get_character_name_from_cache(self) -> str:
+        candidates = [("Charakterbogen", "G1"), ("CharacterSheet", "G1"), ("Sheet1", "G1")]
+        for sheet_name, cell_ref in candidates:
+            value = self.get_cell(sheet_name, cell_ref)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        for sheet_name, sheet_cache in self.cell_cache.items():
+            if not isinstance(sheet_cache, dict):
+                continue
+            g1 = sheet_cache.get("G1")
+            if isinstance(g1, dict):
+                value = g1.get("value")
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return "unknown_character"
+
+    def _write_current_character_metadata(self, active_cache_path: str, character_name: str) -> None:
+        metadata_path = os.path.join("data", "current_character.json")
+        os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
+        payload = {
+            "active_cache": active_cache_path,
+            "character_name": character_name,
+            "source_file": self.source_file_path,
+            "last_loaded": datetime.now().isoformat(),
+        }
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)

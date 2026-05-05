@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
-    QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog
+    QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox
 )
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon
@@ -99,6 +99,8 @@ class MainWindow(QMainWindow):
         self.settings_checkbox_text_label = None
         self._settings_checkbox_asset_true = "icons/checkmark_true.png"
         self._settings_checkbox_asset_false = "icons/checkmark_false.png"
+        self.settings_character_active_label = None
+        self.settings_character_combo = None
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -576,7 +578,6 @@ class MainWindow(QMainWindow):
         self.debug_dialog.activateWindow()
 
     def switch_to_next_theme(self):
-        current_section = self.current_main_section
         themes = self.theme_config.get("themes", ["diablo"])
         if not isinstance(themes, list) or not themes:
             themes = ["diablo"]
@@ -590,11 +591,10 @@ class MainWindow(QMainWindow):
         self.theme_config["active_theme"] = next_theme
         self.save_theme_config()
         self.reload_theme()
-        self.show_main_section(current_section)
         if self.theme_name_value_label is not None:
             self.theme_name_value_label.setText(self.get_active_theme())
-        if self.settings_theme_label is not None and current_section == "settings":
-            self.settings_theme_label.setText(f"Aktuelles Theme: {self.get_active_theme()}")
+        if hasattr(self, "settings_theme_value_label") and self.settings_theme_value_label is not None and self.current_main_section == "settings":
+            self.settings_theme_value_label.setText(self.get_active_theme())
         print("[THEME] switched to:", next_theme)
 
     def on_settings_switch_theme_clicked(self):
@@ -621,6 +621,7 @@ class MainWindow(QMainWindow):
         if self.content_layer is None:
             return
         for child in self.content_layer.findChildren(QWidget):
+            child.setParent(None)
             child.deleteLater()
 
     def show_main_section(self, section_id):
@@ -700,6 +701,22 @@ class MainWindow(QMainWindow):
         )
         title_label.show()
 
+        # 1) Theme Bereich
+        theme_section_title_cfg = settings_page.get("theme_section_title", {})
+        theme_section_title = QLabel(self.content_layer)
+        theme_section_title.setGeometry(
+            int(theme_section_title_cfg.get("x", 100)),
+            int(theme_section_title_cfg.get("y", 145)),
+            int(theme_section_title_cfg.get("w", 300)),
+            int(theme_section_title_cfg.get("h", 35)),
+        )
+        theme_section_title.setText(str(theme_section_title_cfg.get("text", "Theme")))
+        theme_section_title.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(theme_section_title_cfg.get('font_size', 24))}px; font-weight: 700;"
+        )
+        theme_section_title.show()
+
         theme_label_cfg = settings_page.get("theme_label", {})
         theme_label_x = int(theme_label_cfg.get("x", 80))
         theme_label_y = int(theme_label_cfg.get("y", 120))
@@ -711,11 +728,27 @@ class MainWindow(QMainWindow):
         self.settings_theme_label.setGeometry(
             theme_label_x, theme_label_y, theme_label_w, theme_label_h
         )
-        self.settings_theme_label.setText(f"{theme_text_prefix}: {self.get_active_theme()}")
+        self.settings_theme_label.setText(theme_text_prefix)
         self.settings_theme_label.setStyleSheet(
             f"background: transparent; color: {default_color}; font-size: {theme_label_font}px; font-weight: 500;"
         )
         self.settings_theme_label.show()
+
+        theme_value_cfg = settings_page.get("theme_value", {})
+        theme_value_x = int(theme_value_cfg.get("x", theme_label_x + 210))
+        theme_value_y = int(theme_value_cfg.get("y", theme_label_y))
+        theme_value_w = int(theme_value_cfg.get("w", 260))
+        theme_value_h = int(theme_value_cfg.get("h", theme_label_h))
+        self.settings_theme_value_label = QLabel(self.content_layer)
+        self.settings_theme_value_label.setGeometry(
+            theme_value_x, theme_value_y, theme_value_w, theme_value_h
+        )
+        self.settings_theme_value_label.setText(self.get_active_theme())
+        self.settings_theme_value_label.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(theme_value_cfg.get('font_size', theme_label_font))}px; font-weight: 600;"
+        )
+        self.settings_theme_value_label.show()
 
         self.create_asset_text_button(
             self.content_layer,
@@ -723,17 +756,124 @@ class MainWindow(QMainWindow):
             "Theme wechseln",
             self.on_settings_switch_theme_clicked,
         )
+
+        # 2) Charakter Bereich
+        character_section_title_cfg = settings_page.get("character_section_title", {})
+        character_section_y = int(character_section_title_cfg.get("y", 330))
+        character_title = QLabel(self.content_layer)
+        character_title.setGeometry(
+            int(character_section_title_cfg.get("x", 100)),
+            character_section_y,
+            int(character_section_title_cfg.get("w", 300)),
+            int(character_section_title_cfg.get("h", 35)),
+        )
+        character_title.setText(str(character_section_title_cfg.get("text", "Charakter")))
+        character_title.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(character_section_title_cfg.get('font_size', 24))}px; font-weight: 700;"
+        )
+        character_title.show()
+
+        active_character_label_cfg = settings_page.get("active_character_label", {})
+        active_prefix = QLabel(self.content_layer)
+        active_prefix.setGeometry(
+            int(active_character_label_cfg.get("x", 110)),
+            int(active_character_label_cfg.get("y", character_section_y + 44)),
+            int(active_character_label_cfg.get("w", 220)),
+            int(active_character_label_cfg.get("h", 32)),
+        )
+        active_prefix.setText(str(active_character_label_cfg.get("text", "Aktiver Charakter:")))
+        active_prefix.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(active_character_label_cfg.get('font_size', 18))}px; font-weight: 500;"
+        )
+        active_prefix.show()
+
+        active_character_value_cfg = settings_page.get("active_character_value", {})
+        self.settings_character_active_label = QLabel(self.content_layer)
+        self.settings_character_active_label.setGeometry(
+            int(active_character_value_cfg.get("x", 320)),
+            int(active_character_value_cfg.get("y", character_section_y + 44)),
+            int(active_character_value_cfg.get("w", 420)),
+            int(active_character_value_cfg.get("h", 32)),
+        )
+        self.settings_character_active_label.setText(self.loader.current_character_name)
+        self.settings_character_active_label.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(active_character_value_cfg.get('font_size', 18))}px; font-weight: 600;"
+        )
+        self.settings_character_active_label.show()
+
+        character_select_cfg = settings_page.get("character_select", {})
+        select_x = int(character_select_cfg.get("x", 80))
+        select_y = int(character_select_cfg.get("y", character_section_y + 88))
+        select_w = int(character_select_cfg.get("w", 620))
+        select_h = int(character_select_cfg.get("h", 36))
+        nav_style = self.theme_style.get("nav_button", {})
+        combo_text_color = str(nav_style.get("active_color", default_color))
+
+        self.settings_character_combo = QComboBox(self.content_layer)
+        self.settings_character_combo.setGeometry(select_x, select_y, select_w, select_h)
+        self.settings_character_combo.setStyleSheet(
+            "QComboBox {"
+            "background-color: rgba(10, 10, 10, 180);"
+            f"color: {combo_text_color};"
+            "border: 1px solid #8a6a32;"
+            "padding-left: 8px;"
+            "padding-right: 24px;"
+            "}"
+            "QComboBox::drop-down {"
+            "subcontrol-origin: padding;"
+            "subcontrol-position: top right;"
+            "width: 20px;"
+            "border-left: 1px solid #8a6a32;"
+            "background: rgba(30, 20, 10, 180);"
+            "}"
+            "QComboBox QAbstractItemView {"
+            "background-color: rgba(10, 10, 10, 220);"
+            f"color: {combo_text_color};"
+            "selection-background-color: rgba(80, 60, 30, 180);"
+            "border: 1px solid #8a6a32;"
+            "}"
+        )
+        self.settings_character_combo.show()
+        self.refresh_character_cache_list()
+
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("character_load_button", {}),
+            "Charakter laden",
+            self.on_settings_load_character_clicked,
+        )
+
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("character_refresh_button", {}),
+            "Liste aktualisieren",
+            self.on_settings_refresh_character_list_clicked,
+        )
+
+        # 3) Debug Bereich
+        debug_section_title_cfg = settings_page.get("debug_section_title", {})
+        debug_section_title = QLabel(self.content_layer)
+        debug_section_title.setGeometry(
+            int(debug_section_title_cfg.get("x", 100)),
+            int(debug_section_title_cfg.get("y", 570)),
+            int(debug_section_title_cfg.get("w", 300)),
+            int(debug_section_title_cfg.get("h", 35)),
+        )
+        debug_section_title.setText(str(debug_section_title_cfg.get("text", "Debug")))
+        debug_section_title.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(debug_section_title_cfg.get('font_size', 24))}px; font-weight: 700;"
+        )
+        debug_section_title.show()
+
         self.create_asset_text_button(
             self.content_layer,
             settings_page.get("debug_button", {}),
             "Debug öffnen",
             self.open_debug_dialog,
-        )
-        self.create_asset_text_button(
-            self.content_layer,
-            settings_page.get("reload_cache_button", {}),
-            "Cache neu laden",
-            self.on_settings_cache_reload_clicked,
         )
 
         checkbox_cfg = settings_page.get("checkbox_debug_start", {})
@@ -774,6 +914,29 @@ class MainWindow(QMainWindow):
         click_overlay.raise_()
         checkbox_container.show()
 
+        # 4) Daten/Cache Bereich
+        data_section_title_cfg = settings_page.get("data_section_title", {})
+        data_section_title = QLabel(self.content_layer)
+        data_section_title.setGeometry(
+            int(data_section_title_cfg.get("x", 100)),
+            int(data_section_title_cfg.get("y", 785)),
+            int(data_section_title_cfg.get("w", 300)),
+            int(data_section_title_cfg.get("h", 35)),
+        )
+        data_section_title.setText(str(data_section_title_cfg.get("text", "Daten")))
+        data_section_title.setStyleSheet(
+            f"background: transparent; color: {default_color}; "
+            f"font-size: {int(data_section_title_cfg.get('font_size', 24))}px; font-weight: 700;"
+        )
+        data_section_title.show()
+
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("reload_cache_button", {}),
+            "Cache neu laden",
+            self.on_settings_cache_reload_clicked,
+        )
+
         self.update_settings_checkbox_icon()
 
     def update_settings_checkbox_icon(self):
@@ -802,6 +965,41 @@ class MainWindow(QMainWindow):
         self.settings_debug_on_start = not self.settings_debug_on_start
         self.update_settings_checkbox_icon()
         print("[SETTINGS] debug on start:", self.settings_debug_on_start)
+
+    def refresh_character_cache_list(self):
+        if self.settings_character_combo is None:
+            return
+        self.settings_character_combo.clear()
+        caches = self.loader.list_character_caches()
+        active_cache = self.loader.active_cache_path
+        active_index = -1
+        for i, entry in enumerate(caches):
+            display_text = f"{entry['name']}  ({entry['file']})"
+            self.settings_character_combo.addItem(display_text, entry["path"])
+            if entry["path"] == active_cache:
+                active_index = i
+        if active_index >= 0:
+            self.settings_character_combo.setCurrentIndex(active_index)
+
+    def on_settings_load_character_clicked(self):
+        if self.settings_character_combo is None:
+            return
+        cache_path = self.settings_character_combo.currentData()
+        if not isinstance(cache_path, str) or not cache_path:
+            QMessageBox.warning(self, "Charakter laden", "Bitte zuerst einen Charakter auswählen.")
+            return
+        ok = self.loader.load_character_cache(cache_path)
+        if not ok:
+            QMessageBox.warning(self, "Charakter laden", "Charakter-Cache konnte nicht geladen werden.")
+            return
+        if self.settings_character_active_label is not None:
+            self.settings_character_active_label.setText(self.loader.current_character_name)
+        self.create_tabs_from_cache()
+        print("[CHARACTER] loaded:", cache_path)
+
+    def on_settings_refresh_character_list_clicked(self):
+        self.refresh_character_cache_list()
+        print("[CHARACTER] cache list refreshed")
 
     def update_main_nav_button_styles(self):
         nav_style = self.theme_style.get("nav_button", {})
@@ -850,7 +1048,7 @@ class MainWindow(QMainWindow):
 
     def load_excel(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Excel auswählen", "", "Excel Files (*.xlsx)"
+            self, "Excel auswählen", "", "Excel Dateien (*.xlsx *.xlsm);;Alle Dateien (*)"
         )
 
         if not file_path:
@@ -860,7 +1058,22 @@ class MainWindow(QMainWindow):
         self.clear_reference_highlights()
         self.sheet_tabs = {}
 
-        self.loader.load_file(file_path)
+        try:
+            self.loader.load_file(file_path)
+        except ValueError as exc:
+            print("[LOAD ERROR]", str(exc))
+            message_text = str(exc)
+            if "ODS wird aktuell nicht unterstützt" in message_text:
+                message_text = (
+                    "ODS wird aktuell nicht unterstützt. Bitte die Datei in LibreOffice "
+                    "oder Excel als .xlsx speichern."
+                )
+            QMessageBox.warning(
+                self,
+                "Dateiformat nicht unterstützt",
+                message_text,
+            )
+            return
         sheets = self.loader.get_sheets()
 
         for sheet_name in sheets:
@@ -874,10 +1087,6 @@ class MainWindow(QMainWindow):
 
         for sheet_tab in self.sheet_tabs.values():
             sheet_tab.evaluate_formulas()
-
-        if self.sheet_tabs:
-            first_tab = next(iter(self.sheet_tabs.values()))
-            first_tab.export_to_json("data/character_cache.json")
 
         for sheet_name in sheets:
             data = self.sheet_tabs[sheet_name].get_data()
