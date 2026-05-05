@@ -17,6 +17,7 @@
   },
 
 
+
  
 
 
@@ -132,12 +133,18 @@
       "h": 60
     }
   ],
+
+
   "content_area": {
     "x": 32,
     "y": 128,
     "w": 1460,
     "h": 870
   },
+
+
+
+
   "settings_page": {
     "title": {
       "text": "Settings",
@@ -269,23 +276,21 @@
 
 
 
-
-  
   "character_screen": {
     "panels": {
       "character_info_panel": {
         "asset": "panels/character_info_panel.png",
-        "x": 40,
-        "y": 40,
+        "x": 8,
+        "y": 0,
         "w": 360,
-        "h": 300
+        "h": 600
       },
       "attribute_panel": {
         "asset": "panels/attribute_panel.png",
-        "x": 430,
-        "y": 40,
+        "x": 380,
+        "y": 20,
         "w": 460,
-        "h": 380
+        "h": 400
       },
       "perk_panel": {
         "asset": "panels/perk_panel.png",
@@ -295,6 +300,11 @@
         "h": 780
       }
     },
+
+
+
+
+
 
     "data_map": {
       "sheet": "Charakterbogen",
@@ -309,9 +319,14 @@
         "mp_current": "B13",
         "mp_max": "F13",
         "exp_current": "B16",
-        "exp_max": "F16"
+        "exp_max": "F16",
+        "lifeforce_current": "AM23",
+        "lifeforce_max": "AO23",
+        "sanity_current": "AM27",
+        "sanity_max": "AO27",
+        "faith_current": "AM31",
+        "faith_max": "AM31"
       },
-
       "attributes": {
         "body": {
           "label": "Körper",
@@ -334,7 +349,6 @@
           ]
         }
       },
-
       "perks": {
         "title": "Perks",
         "start_row": 4,
@@ -343,7 +357,6 @@
         "bp_col": "BB",
         "effect_col": "BD"
       },
-
       "disadvantages": {
         "title": "Nachteile",
         "start_row": 4,
@@ -354,85 +367,140 @@
       }
     },
 
-    "text_style": {
-      "title_color": "#f2d28b",
-      "label_color": "#f0e6c8",
-      "value_color": "#ffffff",
-      "muted_color": "#b8aa8a",
-      "hp_color": "#d84646",
-      "mp_color": "#4f82e6",
-      "border_color": "#8a6a32",
-      "shadow_color": "#000000"
-    },
+
+
+
+
+
+
 
     "text_layout": {
       "character_info_panel": {
         "title": {
-          "x": 26,
-          "y": 24,
-          "w": 308,
-          "h": 40,
-          "font_size": 25,
+          "x": 38,
+          "y": 50,
+          "w": 285,
+          "h": 38,
+          "font_size": 28,
           "color": "#f2d28b",
-          "bold": true
+          "bold": true,
+          "align": "center"
         },
 
-        "basic_rows": {
-          "font_size": 16,
-          "label_color": "#f0e6c8",
+        "portrait": {
+          "enabled": true,
+          "x": 34,
+          "y": 94,
+          "w": 92,
+          "h": 135,
+          "fallback_color": "rgba(0, 0, 0, 80)"
+        },
+
+        "fields": {
+          "label_font_size": 13,
+          "value_font_size": 14,
+          "label_color": "#d8d0b0",
           "value_color": "#ffffff",
+          "bold_values": true,
           "rows": [
             {
               "id": "race",
-              "label": "Rasse",
-              "label_rect": { "x": 28, "y": 84, "w": 120, "h": 24 },
-              "value_rect": { "x": 170, "y": 84, "w": 150, "h": 24 }
+              "label": "Rasse:",
+              "label_rect": { "x": 68, "y": 315, "w": 82, "h": 30 },
+              "value_rect": { "x": 180, "y": 315, "w": 140, "h": 30 },
+              "font_size": 22,
+              "color": "#f0e6c8",
+              "mode": "raw"
             },
             {
               "id": "size",
               "label": "Größe",
-              "label_rect": { "x": 28, "y": 116, "w": 120, "h": 24 },
-              "value_rect": { "x": 170, "y": 116, "w": 150, "h": 24 }
+              "label_rect": { "x": 222, "y": 370, "w": 62, "h": 24 },
+              "value_rect": { "x": 310, "y": 370, "w": 10, "h": 24 },
+              "font_size": 20,
+              "color": "#f0e6c8",              
+              "mode": "int"
             },
             {
               "id": "weight",
               "label": "Gewicht",
-              "label_rect": { "x": 28, "y": 148, "w": 120, "h": 24 },
-              "value_rect": { "x": 170, "y": 148, "w": 150, "h": 24 }
-            }
-          ]
-        },
+              "label_rect": { "x": 218, "y": 420, "w": 80, "h": 24 },
+              "value_rect": { "x": 310, "y": 420, "w": 10, "h": 24 },
+              "font_size": 17,
+              "color": "#f0e6c8",
+              "mode": "int"
+            },
 
-        "stat_rows": {
-          "label_font_size": 17,
-          "value_font_size": 22,
-          "label_color": "#f0e6c8",
-          "value_color": "#ffffff",
-          "rows": [
             {
               "id": "hp",
               "label": "HP",
-              "label_rect": { "x": 28, "y": 198, "w": 80, "h": 30 },
-              "value_rect": { "x": 150, "y": 194, "w": 170, "h": 34 },
-              "format": "{current} / {max}"
+              "label_rect": { "x": 160, "y": 122, "w": 78, "h": 24 },
+              "value_rect": { "x": 255, "y": 122, "w": 188, "h": 24 },
+              "format": "{current}   {max}",
+              "font_size": 22,
+              "color": "#f71937",
+              "mode": "int"
             },
             {
               "id": "mp",
               "label": "MP",
-              "label_rect": { "x": 28, "y": 236, "w": 80, "h": 30 },
-              "value_rect": { "x": 150, "y": 232, "w": 170, "h": 34 },
-              "format": "{current} / {max}"
+              "label_rect": { "x": 160, "y": 175, "w": 78, "h": 24 },
+              "value_rect": { "x": 255, "y": 175, "w": 188, "h": 24 },
+              "format": "{current}      {max}",
+              "font_size": 22,
+              "color": "#0f95f5",
+              "mode": "int"
             },
             {
               "id": "exp",
-              "label": "EXP",
-              "label_rect": { "x": 28, "y": 270, "w": 80, "h": 26 },
-              "value_rect": { "x": 150, "y": 268, "w": 170, "h": 28 },
-              "format": "{current} / {max}"
+              "label": "XP",
+              "label_rect": { "x": 160, "y": 230, "w": 78, "h": 24 },
+              "value_rect": { "x": 255, "y": 230, "w": 188, "h": 24 },
+              "format": "{current}      {max}",
+              "font_size": 22,
+              "color": "#99f50f",
+              "mode": "int"
+            },
+
+            {
+              "id": "lifeforce",
+              "label": "LifeForce",
+              "label_rect": { "x": 33, "y": 370, "w": 80, "h": 24 },
+              "value_rect": { "x": 133, "y": 370, "w": 10, "h": 24 },
+              "font_size": 17,
+              "color": "#ffaf3e",
+              "format": "{current} / {max}",
+              "mode": "int"
+            },
+            {
+              "id": "sanity",
+              "label": "Sanity",
+              "label_rect": { "x": 45, "y": 420, "w": 80, "h": 24 },
+              "value_rect": { "x": 133, "y": 420, "w": 10, "h": 24 },
+              "font_size": 17,
+              "color": "#8bd0f2",
+              "format": "{current} / {max}",
+              "mode": "int"
+            },
+            {
+              "id": "faith",
+              "label": "Faith",
+              "label_rect": { "x": 55, "y": 475, "w": 80, "h": 24 },
+              "value_rect": { "x": 133, "y": 475, "w": 10, "h": 24 },
+              "font_size": 17,
+              "color": "#ffffff",
+              "format": "{current} / {max}",
+              "mode": "int"
             }
           ]
         }
       },
+
+
+
+
+
+
 
       "attribute_panel": {
         "panel_title": {
@@ -505,6 +573,12 @@
         }
       },
 
+
+
+
+
+
+      
       "perk_panel": {
         "title": {
           "x": 24,

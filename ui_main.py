@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor, QPen, QPixmap, QIcon
 import re
 import os
 import json
+import math
 from pathlib import Path
 
 from data_loader import DataLoader
@@ -979,6 +980,32 @@ class MainWindow(QMainWindow):
             return fallback
         return text
 
+    def format_character_display_value(self, value, mode="auto"):
+        if value is None:
+            return "-"
+        text = str(value).strip()
+        if not text or text.startswith("="):
+            return "-"
+        if mode == "raw":
+            return text
+
+        normalized = text.replace(",", ".")
+        try:
+            number = float(normalized)
+        except Exception:
+            return text
+
+        if mode == "int":
+            rounded = math.floor(number + 0.5) if number >= 0 else math.ceil(number - 0.5)
+            return str(int(rounded))
+
+        if mode == "decimal":
+            return f"{number:.10f}".rstrip("0").rstrip(".")
+
+        if number.is_integer():
+            return str(int(number))
+        return f"{number:.10f}".rstrip("0").rstrip(".")
+
     def _read_data_map_cell(self, mapping_entry, default_sheet, fallback="-"):
         sheet_name = default_sheet
         cell_ref = None
@@ -1037,6 +1064,26 @@ class MainWindow(QMainWindow):
         except Exception:
             return int(default)
 
+    def get_text_font_size(self, cfg, fallback):
+        if isinstance(cfg, dict) and cfg.get("font_size") is not None:
+            return self._safe_int(cfg.get("font_size"), fallback)
+        return self._safe_int(fallback, 14)
+
+    def get_text_color(self, cfg, fallback):
+        if isinstance(cfg, dict) and cfg.get("color") is not None:
+            return str(cfg.get("color"))
+        return str(fallback)
+
+    def get_text_bold(self, cfg, fallback=False):
+        if isinstance(cfg, dict) and cfg.get("bold") is not None:
+            return bool(cfg.get("bold"))
+        return bool(fallback)
+
+    def get_text_align(self, cfg, fallback="left"):
+        if isinstance(cfg, dict) and cfg.get("align") is not None:
+            return str(cfg.get("align"))
+        return str(fallback)
+
     def create_panel_text(
         self, parent, rect_cfg, text, font_size, color, bold=False, align="left"
     ):
@@ -1088,14 +1135,38 @@ class MainWindow(QMainWindow):
         basic_map = data_map.get("basic", {})
         name_value = self._read_data_map_cell(basic_map.get("name", "G1"), default_sheet, "Unbekannter Charakter")
         race_value = self._read_data_map_cell(basic_map.get("race", "G3"), default_sheet)
-        size_value = self._read_data_map_cell(basic_map.get("size", "G5"), default_sheet)
-        weight_value = self._read_data_map_cell(basic_map.get("weight", "G7"), default_sheet)
-        hp_current = self._read_data_map_cell(basic_map.get("hp_current", "B10"), default_sheet)
-        hp_max = self._read_data_map_cell(basic_map.get("hp_max", "F10"), default_sheet)
-        mp_current = self._read_data_map_cell(basic_map.get("mp_current", "B13"), default_sheet)
-        mp_max = self._read_data_map_cell(basic_map.get("mp_max", "F13"), default_sheet)
-        exp_current = self._read_data_map_cell(basic_map.get("exp_current", "B16"), default_sheet)
-        exp_max = self._read_data_map_cell(basic_map.get("exp_max", "F16"), default_sheet)
+        size_value = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("size", "G5"), default_sheet),
+            "auto",
+        )
+        weight_value = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("weight", "G7"), default_sheet),
+            "auto",
+        )
+        hp_current = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("hp_current", "B10"), default_sheet),
+            "int",
+        )
+        hp_max = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("hp_max", "F10"), default_sheet),
+            "int",
+        )
+        mp_current = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("mp_current", "B13"), default_sheet),
+            "int",
+        )
+        mp_max = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("mp_max", "F13"), default_sheet),
+            "int",
+        )
+        exp_current = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("exp_current", "B16"), default_sheet),
+            "int",
+        )
+        exp_max = self.format_character_display_value(
+            self._read_data_map_cell(basic_map.get("exp_max", "F16"), default_sheet),
+            "int",
+        )
 
         info_layout = text_layout.get("character_info_panel", text_layout.get("info", {}))
         title_cfg = info_layout.get("title", {})
@@ -1103,148 +1174,243 @@ class MainWindow(QMainWindow):
             character_panel,
             title_cfg if isinstance(title_cfg, dict) else {},
             name_value if name_value != "-" else "Unbekannter Charakter",
-            self._safe_int(title_cfg.get("font_size", 30), 30) if isinstance(title_cfg, dict) else 30,
-            str(title_cfg.get("color", default_color)) if isinstance(title_cfg, dict) else default_color,
-            bold=True,
-            align=str(title_cfg.get("align", "left")) if isinstance(title_cfg, dict) else "left",
+            self.get_text_font_size(title_cfg, 30),
+            self.get_text_color(title_cfg, default_color),
+            bold=self.get_text_bold(title_cfg, True),
+            align=self.get_text_align(title_cfg, "left"),
         )
 
-        basic_rows_cfg = info_layout.get("basic_rows", {})
-        basic_rows = basic_rows_cfg.get("rows", [])
-        basic_values = {"race": race_value, "size": size_value, "weight": weight_value}
-        if isinstance(basic_rows, list) and basic_rows:
-            for row in basic_rows:
+        fields_cfg = info_layout.get("fields", {})
+        field_rows = fields_cfg.get("rows", []) if isinstance(fields_cfg, dict) else []
+        if isinstance(field_rows, list) and field_rows:
+            portrait_cfg = info_layout.get("portrait", {})
+            if isinstance(portrait_cfg, dict) and bool(portrait_cfg.get("enabled", False)):
+                portrait = QFrame(character_panel)
+                portrait.setGeometry(
+                    self._safe_int(portrait_cfg.get("x", 0), 0),
+                    self._safe_int(portrait_cfg.get("y", 0), 0),
+                    self._safe_int(portrait_cfg.get("w", 120), 120),
+                    self._safe_int(portrait_cfg.get("h", 160), 160),
+                )
+                portrait.setStyleSheet(
+                    f"background: {str(portrait_cfg.get('fallback_color', 'rgba(0, 0, 0, 90)'))};"
+                    "border: 1px solid rgba(255, 255, 255, 35);"
+                )
+                portrait.lower()
+                portrait.show()
+
+            field_single_sources = {
+                "race": basic_map.get("race", "G3"),
+                "size": basic_map.get("size", "G5"),
+                "weight": basic_map.get("weight", "G7"),
+            }
+            field_pair_sources = {
+                "hp": (basic_map.get("hp_current", "B10"), basic_map.get("hp_max", "F10")),
+                "mp": (basic_map.get("mp_current", "B13"), basic_map.get("mp_max", "F13")),
+                "exp": (basic_map.get("exp_current", "B16"), basic_map.get("exp_max", "F16")),
+                "lifeforce": (
+                    basic_map.get("lifeforce_current", ""),
+                    basic_map.get("lifeforce_max", ""),
+                ),
+                "sanity": (
+                    basic_map.get("sanity_current", ""),
+                    basic_map.get("sanity_max", ""),
+                ),
+                "faith": (
+                    basic_map.get("faith_current", ""),
+                    basic_map.get("faith_max", ""),
+                ),
+            }
+            label_font_default = self._safe_int(fields_cfg.get("label_font_size", 18), 18)
+            value_font_default = self._safe_int(fields_cfg.get("value_font_size", 18), 18)
+            label_color_default = str(fields_cfg.get("label_color", default_color))
+            value_color_default = str(fields_cfg.get("value_color", "#ffffff"))
+            bold_values_default = bool(fields_cfg.get("bold_values", True))
+
+            for row in field_rows:
                 if not isinstance(row, dict):
                     continue
                 row_id = str(row.get("id", "")).strip().lower()
-                label_text = str(row.get("label", row_id.capitalize() if row_id else ""))
-                value_text = basic_values.get(row_id, "-")
+                if not row_id:
+                    continue
+                mode = str(row.get("mode", "raw" if row_id in ("race",) else "auto"))
+                label_text = str(row.get("label", row_id.capitalize()))
+                if row_id in field_pair_sources:
+                    current_src, max_src = field_pair_sources[row_id]
+                    current = self.format_character_display_value(
+                        self._read_data_map_cell(current_src, default_sheet),
+                        mode,
+                    )
+                    maximum = self.format_character_display_value(
+                        self._read_data_map_cell(max_src, default_sheet),
+                        mode,
+                    )
+                    value_text = str(row.get("format", "{current} / {max}")).format(
+                        current=current,
+                        max=maximum,
+                    )
+                else:
+                    source = field_single_sources.get(row_id)
+                    value_text = self.format_character_display_value(
+                        self._read_data_map_cell(source, default_sheet),
+                        mode,
+                    )
+
                 self.create_panel_text(
                     character_panel,
                     row.get("label_rect", {}),
                     label_text,
-                    self._safe_int(row.get("label_font_size", basic_rows_cfg.get("label_font_size", 18)), 18),
-                    str(row.get("label_color", basic_rows_cfg.get("label_color", default_color))),
-                    bold=False,
+                    self._safe_int(row.get("label_font_size", row.get("font_size", label_font_default)), 14),
+                    str(row.get("label_color", row.get("color", label_color_default))),
+                    bold=bool(row.get("label_bold", False)),
                     align=str(row.get("label_align", "left")),
                 )
                 self.create_panel_text(
                     character_panel,
                     row.get("value_rect", {}),
                     value_text,
-                    self._safe_int(row.get("value_font_size", basic_rows_cfg.get("value_font_size", 18)), 18),
-                    str(row.get("value_color", basic_rows_cfg.get("value_color", "#ffffff"))),
-                    bold=True,
+                    self._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15),
+                    str(row.get("value_color", row.get("color", value_color_default))),
+                    bold=bool(row.get("bold_value", bold_values_default)),
                     align=str(row.get("value_align", "left")),
                 )
         else:
-            rows_cfg = info_layout.get("rows", {})
-            rows_x_label = self._safe_int(rows_cfg.get("label_x", 24), 24)
-            rows_x_value = self._safe_int(rows_cfg.get("value_x", 210), 210)
-            rows_start_y = self._safe_int(rows_cfg.get("start_y", 90), 90)
-            rows_gap = self._safe_int(rows_cfg.get("row_gap", 34), 34)
-            rows_font = self._safe_int(rows_cfg.get("font_size", 18), 18)
-            rows_values = [("Rasse", race_value), ("Größe", size_value), ("Gewicht", weight_value)]
-            for i, (label_text, value_text) in enumerate(rows_values):
-                y = rows_start_y + i * rows_gap
-                self.create_panel_text(
-                    character_panel,
-                    {"x": rows_x_label, "y": y, "w": 180, "h": 30},
-                    f"{label_text}:",
-                    rows_font,
-                    str(rows_cfg.get("label_color", default_color)),
-                )
-                self.create_panel_text(
-                    character_panel,
-                    {"x": rows_x_value, "y": y, "w": max(120, character_panel.width() - rows_x_value - 20), "h": 30},
-                    value_text,
-                    rows_font,
-                    str(rows_cfg.get("value_color", "#ffffff")),
-                    bold=True,
-                )
+            basic_rows_cfg = info_layout.get("basic_rows", {})
+            basic_rows = basic_rows_cfg.get("rows", [])
+            basic_values = {"race": race_value, "size": size_value, "weight": weight_value}
+            if isinstance(basic_rows, list) and basic_rows:
+                for row in basic_rows:
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("id", "")).strip().lower()
+                    label_text = str(row.get("label", row_id.capitalize() if row_id else ""))
+                    value_text = basic_values.get(row_id, "-")
+                    self.create_panel_text(
+                        character_panel,
+                        row.get("label_rect", {}),
+                        label_text,
+                        self._safe_int(row.get("label_font_size", basic_rows_cfg.get("label_font_size", 18)), 18),
+                        str(row.get("label_color", basic_rows_cfg.get("label_color", default_color))),
+                        bold=False,
+                        align=str(row.get("label_align", "left")),
+                    )
+                    self.create_panel_text(
+                        character_panel,
+                        row.get("value_rect", {}),
+                        value_text,
+                        self._safe_int(row.get("value_font_size", basic_rows_cfg.get("value_font_size", 18)), 18),
+                        str(row.get("value_color", basic_rows_cfg.get("value_color", "#ffffff"))),
+                        bold=True,
+                        align=str(row.get("value_align", "left")),
+                    )
+            else:
+                rows_cfg = info_layout.get("rows", {})
+                rows_x_label = self._safe_int(rows_cfg.get("label_x", 24), 24)
+                rows_x_value = self._safe_int(rows_cfg.get("value_x", 210), 210)
+                rows_start_y = self._safe_int(rows_cfg.get("start_y", 90), 90)
+                rows_gap = self._safe_int(rows_cfg.get("row_gap", 34), 34)
+                rows_font = self._safe_int(rows_cfg.get("font_size", 18), 18)
+                rows_values = [("Rasse", race_value), ("Größe", size_value), ("Gewicht", weight_value)]
+                for i, (label_text, value_text) in enumerate(rows_values):
+                    y = rows_start_y + i * rows_gap
+                    self.create_panel_text(
+                        character_panel,
+                        {"x": rows_x_label, "y": y, "w": 180, "h": 30},
+                        f"{label_text}:",
+                        rows_font,
+                        str(rows_cfg.get("label_color", default_color)),
+                    )
+                    self.create_panel_text(
+                        character_panel,
+                        {"x": rows_x_value, "y": y, "w": max(120, character_panel.width() - rows_x_value - 20), "h": 30},
+                        value_text,
+                        rows_font,
+                        str(rows_cfg.get("value_color", "#ffffff")),
+                        bold=True,
+                    )
 
-        stats_rows_cfg = info_layout.get("stat_rows", {})
-        stats_rows = stats_rows_cfg.get("rows", [])
-        stats_values = {
-            "hp": f"{hp_current} / {hp_max}",
-            "mp": f"{mp_current} / {mp_max}",
-            "exp": f"{exp_current} / {exp_max}",
-        }
-        if isinstance(stats_rows, list) and stats_rows:
-            for row in stats_rows:
-                if not isinstance(row, dict):
-                    continue
-                row_id = str(row.get("id", "")).strip().lower()
-                label_text = str(row.get("label", row_id.upper() if row_id else ""))
-                value_text = stats_values.get(row_id, "-")
-                self.create_panel_text(
-                    character_panel,
-                    row.get("label_rect", {}),
-                    label_text,
-                    self._safe_int(row.get("label_font_size", stats_rows_cfg.get("label_font_size", 20)), 20),
-                    str(row.get("label_color", stats_rows_cfg.get("label_color", default_color))),
-                    bold=True,
-                    align=str(row.get("label_align", "left")),
-                )
-                self.create_panel_text(
-                    character_panel,
-                    row.get("value_rect", {}),
-                    value_text,
-                    self._safe_int(row.get("value_font_size", stats_rows_cfg.get("value_font_size", 26)), 26),
-                    str(row.get("value_color", stats_rows_cfg.get("value_color", "#ffffff"))),
-                    bold=True,
-                    align=str(row.get("value_align", "left")),
-                )
-        else:
-            stats_cfg = info_layout.get("stats", {})
-            stats_x_label = self._safe_int(stats_cfg.get("label_x", 24), 24)
-            stats_x_value = self._safe_int(stats_cfg.get("value_x", 210), 210)
-            stats_start_y = self._safe_int(stats_cfg.get("start_y", 230), 230)
-            stats_gap = self._safe_int(stats_cfg.get("row_gap", 52), 52)
-            hp_label_font = self._safe_int(stats_cfg.get("hp_label_font_size", 22), 22)
-            hp_value_font = self._safe_int(stats_cfg.get("hp_value_font_size", 30), 30)
-            mp_label_font = self._safe_int(stats_cfg.get("mp_label_font_size", 20), 20)
-            mp_value_font = self._safe_int(stats_cfg.get("mp_value_font_size", 28), 28)
-            exp_label_font = self._safe_int(stats_cfg.get("exp_label_font_size", 18), 18)
-            exp_value_font = self._safe_int(stats_cfg.get("exp_value_font_size", 22), 22)
-            stat_rows = [
-                ("HP", f"{hp_current} / {hp_max}", hp_label_font, hp_value_font),
-                ("MP", f"{mp_current} / {mp_max}", mp_label_font, mp_value_font),
-                ("EXP", f"{exp_current} / {exp_max}", exp_label_font, exp_value_font),
-            ]
-            for i, (label_text, value_text, lf, vf) in enumerate(stat_rows):
-                y = stats_start_y + i * stats_gap
-                self.create_panel_text(
-                    character_panel,
-                    {"x": stats_x_label, "y": y, "w": 140, "h": 34},
-                    f"{label_text}:",
-                    lf,
-                    str(stats_cfg.get("label_color", default_color)),
-                    bold=True,
-                )
-                self.create_panel_text(
-                    character_panel,
-                    {"x": stats_x_value, "y": y - 8, "w": max(160, character_panel.width() - stats_x_value - 20), "h": max(34, vf + 10)},
-                    value_text,
-                    vf,
-                    str(stats_cfg.get("value_color", "#ffffff")),
-                    bold=True,
-                )
+            stats_rows_cfg = info_layout.get("stat_rows", {})
+            stats_rows = stats_rows_cfg.get("rows", [])
+            stats_values = {
+                "hp": f"{hp_current} / {hp_max}",
+                "mp": f"{mp_current} / {mp_max}",
+                "exp": f"{exp_current} / {exp_max}",
+            }
+            if isinstance(stats_rows, list) and stats_rows:
+                for row in stats_rows:
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("id", "")).strip().lower()
+                    label_text = str(row.get("label", row_id.upper() if row_id else ""))
+                    value_text = stats_values.get(row_id, "-")
+                    self.create_panel_text(
+                        character_panel,
+                        row.get("label_rect", {}),
+                        label_text,
+                        self._safe_int(row.get("label_font_size", stats_rows_cfg.get("label_font_size", 20)), 20),
+                        str(row.get("label_color", stats_rows_cfg.get("label_color", default_color))),
+                        bold=True,
+                        align=str(row.get("label_align", "left")),
+                    )
+                    self.create_panel_text(
+                        character_panel,
+                        row.get("value_rect", {}),
+                        value_text,
+                        self._safe_int(row.get("value_font_size", stats_rows_cfg.get("value_font_size", 26)), 26),
+                        str(row.get("value_color", stats_rows_cfg.get("value_color", "#ffffff"))),
+                        bold=True,
+                        align=str(row.get("value_align", "left")),
+                    )
+            else:
+                stats_cfg = info_layout.get("stats", {})
+                stats_x_label = self._safe_int(stats_cfg.get("label_x", 24), 24)
+                stats_x_value = self._safe_int(stats_cfg.get("value_x", 210), 210)
+                stats_start_y = self._safe_int(stats_cfg.get("start_y", 230), 230)
+                stats_gap = self._safe_int(stats_cfg.get("row_gap", 52), 52)
+                hp_label_font = self._safe_int(stats_cfg.get("hp_label_font_size", 22), 22)
+                hp_value_font = self._safe_int(stats_cfg.get("hp_value_font_size", 30), 30)
+                mp_label_font = self._safe_int(stats_cfg.get("mp_label_font_size", 20), 20)
+                mp_value_font = self._safe_int(stats_cfg.get("mp_value_font_size", 28), 28)
+                exp_label_font = self._safe_int(stats_cfg.get("exp_label_font_size", 18), 18)
+                exp_value_font = self._safe_int(stats_cfg.get("exp_value_font_size", 22), 22)
+                stat_rows = [
+                    ("HP", f"{hp_current} / {hp_max}", hp_label_font, hp_value_font),
+                    ("MP", f"{mp_current} / {mp_max}", mp_label_font, mp_value_font),
+                    ("EXP", f"{exp_current} / {exp_max}", exp_label_font, exp_value_font),
+                ]
+                for i, (label_text, value_text, lf, vf) in enumerate(stat_rows):
+                    y = stats_start_y + i * stats_gap
+                    self.create_panel_text(
+                        character_panel,
+                        {"x": stats_x_label, "y": y, "w": 140, "h": 34},
+                        f"{label_text}:",
+                        lf,
+                        str(stats_cfg.get("label_color", default_color)),
+                        bold=True,
+                    )
+                    self.create_panel_text(
+                        character_panel,
+                        {"x": stats_x_value, "y": y - 8, "w": max(160, character_panel.width() - stats_x_value - 20), "h": max(34, vf + 10)},
+                        value_text,
+                        vf,
+                        str(stats_cfg.get("value_color", "#ffffff")),
+                        bold=True,
+                    )
 
-        for bar_key, default_y, bar_color in (("hp_bar", 276, "#cc4444"), ("mp_bar", 328, "#4477cc")):
-            bar_cfg = info_layout.get(bar_key, {})
-            if bool(bar_cfg.get("enabled", True)):
-                bar_bg = QFrame(character_panel)
-                bar_x = self._safe_int(bar_cfg.get("x", 24), 24)
-                bar_y = self._safe_int(bar_cfg.get("y", default_y), default_y)
-                bar_w = self._safe_int(bar_cfg.get("w", 260), 260)
-                bar_h = self._safe_int(bar_cfg.get("h", 12), 12)
-                bar_bg.setGeometry(bar_x, bar_y, bar_w, bar_h)
-                bar_bg.setStyleSheet("background: rgba(10, 10, 10, 180); border: 1px solid rgba(0,0,0,120);")
-                bar_fill = QFrame(bar_bg)
-                bar_fill.setGeometry(0, 0, bar_w, bar_h)
-                bar_fill.setStyleSheet(f"background: {str(bar_cfg.get('color', bar_color))};")
-                bar_bg.show()
+            for bar_key, default_y, bar_color in (("hp_bar", 276, "#cc4444"), ("mp_bar", 328, "#4477cc")):
+                bar_cfg = info_layout.get(bar_key, {})
+                if bool(bar_cfg.get("enabled", True)):
+                    bar_bg = QFrame(character_panel)
+                    bar_x = self._safe_int(bar_cfg.get("x", 24), 24)
+                    bar_y = self._safe_int(bar_cfg.get("y", default_y), default_y)
+                    bar_w = self._safe_int(bar_cfg.get("w", 260), 260)
+                    bar_h = self._safe_int(bar_cfg.get("h", 12), 12)
+                    bar_bg.setGeometry(bar_x, bar_y, bar_w, bar_h)
+                    bar_bg.setStyleSheet("background: rgba(10, 10, 10, 180); border: 1px solid rgba(0,0,0,120);")
+                    bar_fill = QFrame(bar_bg)
+                    bar_fill.setGeometry(0, 0, bar_w, bar_h)
+                    bar_fill.setStyleSheet(f"background: {str(bar_cfg.get('color', bar_color))};")
+                    bar_bg.show()
 
         attr_layout = text_layout.get("attribute_panel", text_layout.get("attributes", {}))
         attr_map = data_map.get("attributes", {})
@@ -1259,10 +1425,10 @@ class MainWindow(QMainWindow):
                 attribute_panel,
                 panel_title_rect if isinstance(panel_title_rect, dict) else {},
                 panel_title_text,
-                self._safe_int(panel_title_cfg.get("font_size", 24), 24),
-                str(panel_title_cfg.get("color", default_color)),
-                bold=bool(panel_title_cfg.get("bold", True)),
-                align=str(panel_title_cfg.get("align", "center")),
+                self.get_text_font_size(panel_title_cfg, 24),
+                self.get_text_color(panel_title_cfg, default_color),
+                bold=self.get_text_bold(panel_title_cfg, True),
+                align=self.get_text_align(panel_title_cfg, "center"),
             )
 
         body_header_layout = attr_layout.get("body_header", {})
@@ -1289,8 +1455,10 @@ class MainWindow(QMainWindow):
 
         body_header_cell = body_map.get("value", body_map.get("header", "-"))
         mind_header_cell = mind_map.get("value", mind_map.get("header", "-"))
-        body_header_value = resolve_cell_value(body_header_cell, "-")
-        mind_header_value = resolve_cell_value(mind_header_cell, "-")
+        body_header_raw_value = resolve_cell_value(body_header_cell, "-")
+        mind_header_raw_value = resolve_cell_value(mind_header_cell, "-")
+        body_header_value = self.format_character_display_value(body_header_raw_value, "int")
+        mind_header_value = self.format_character_display_value(mind_header_raw_value, "int")
         body_header_cell_txt = (
             body_header_cell
             if isinstance(body_header_cell, str)
@@ -1303,13 +1471,32 @@ class MainWindow(QMainWindow):
         )
         print("[ATTR]", "body.header", body_header_cell_txt, "->", body_header_value)
         print("[ATTR]", "mind.header", mind_header_cell_txt, "->", mind_header_value)
+        print("[DISPLAY ATTR]", "body.header", body_header_raw_value, "->", body_header_value)
+        print("[DISPLAY ATTR]", "mind.header", mind_header_raw_value, "->", mind_header_value)
 
         self.create_panel_text(
             attribute_panel,
             body_header_layout.get("label_rect", {"x": 24, "y": 24, "w": 120, "h": 30}),
             body_header_label,
-            self._safe_int(header_style.get("font_size", body_header_layout.get("font_size", 22)), 22),
-            str(header_style.get("label_color", body_header_layout.get("color", default_color))),
+            self._safe_int(
+                body_header_layout.get(
+                    "label_font_size",
+                    body_header_layout.get(
+                        "font_size",
+                        header_style.get("font_size", attr_layout.get("header_font_size", 22)),
+                    ),
+                ),
+                22,
+            ),
+            str(
+                body_header_layout.get(
+                    "label_color",
+                    body_header_layout.get(
+                        "color",
+                        header_style.get("label_color", attr_layout.get("header_color", default_color)),
+                    ),
+                )
+            ),
             bold=True,
             align=str(body_header_layout.get("label_align", "center")),
         )
@@ -1317,8 +1504,25 @@ class MainWindow(QMainWindow):
             attribute_panel,
             body_header_layout.get("value_rect", {"x": 150, "y": 24, "w": 80, "h": 30}),
             body_header_value,
-            self._safe_int(header_style.get("font_size", body_header_layout.get("value_font_size", 22)), 22),
-            str(header_style.get("value_color", body_header_layout.get("value_color", "#ffffff"))),
+            self._safe_int(
+                body_header_layout.get(
+                    "value_font_size",
+                    body_header_layout.get(
+                        "font_size",
+                        header_style.get("font_size", attr_layout.get("header_font_size", 22)),
+                    ),
+                ),
+                22,
+            ),
+            str(
+                body_header_layout.get(
+                    "value_color",
+                    body_header_layout.get(
+                        "color",
+                        header_style.get("value_color", attr_layout.get("header_color", "#ffffff")),
+                    ),
+                )
+            ),
             bold=True,
             align=str(body_header_layout.get("value_align", "center")),
         )
@@ -1326,8 +1530,25 @@ class MainWindow(QMainWindow):
             attribute_panel,
             mind_header_layout.get("label_rect", {"x": 320, "y": 24, "w": 120, "h": 30}),
             mind_header_label,
-            self._safe_int(header_style.get("font_size", mind_header_layout.get("font_size", 22)), 22),
-            str(header_style.get("label_color", mind_header_layout.get("color", default_color))),
+            self._safe_int(
+                mind_header_layout.get(
+                    "label_font_size",
+                    mind_header_layout.get(
+                        "font_size",
+                        header_style.get("font_size", attr_layout.get("header_font_size", 22)),
+                    ),
+                ),
+                22,
+            ),
+            str(
+                mind_header_layout.get(
+                    "label_color",
+                    mind_header_layout.get(
+                        "color",
+                        header_style.get("label_color", attr_layout.get("header_color", default_color)),
+                    ),
+                )
+            ),
             bold=True,
             align=str(mind_header_layout.get("label_align", "center")),
         )
@@ -1335,8 +1556,25 @@ class MainWindow(QMainWindow):
             attribute_panel,
             mind_header_layout.get("value_rect", {"x": 446, "y": 24, "w": 80, "h": 30}),
             mind_header_value,
-            self._safe_int(header_style.get("font_size", mind_header_layout.get("value_font_size", 22)), 22),
-            str(header_style.get("value_color", mind_header_layout.get("value_color", "#ffffff"))),
+            self._safe_int(
+                mind_header_layout.get(
+                    "value_font_size",
+                    mind_header_layout.get(
+                        "font_size",
+                        header_style.get("font_size", attr_layout.get("header_font_size", 22)),
+                    ),
+                ),
+                22,
+            ),
+            str(
+                mind_header_layout.get(
+                    "value_color",
+                    mind_header_layout.get(
+                        "color",
+                        header_style.get("value_color", attr_layout.get("header_color", "#ffffff")),
+                    ),
+                )
+            ),
             bold=True,
             align=str(mind_header_layout.get("value_align", "center")),
         )
@@ -1359,20 +1597,36 @@ class MainWindow(QMainWindow):
                     continue
                 label_text = str(item.get("label", item_id))
                 cell_ref = item.get("value")
-                value_text = resolve_cell_value(cell_ref, "-")
+                raw_value_text = resolve_cell_value(cell_ref, "-")
+                value_text = self.format_character_display_value(raw_value_text, "int")
                 cell_txt = (
                     cell_ref
                     if isinstance(cell_ref, str)
                     else str(cell_ref.get("cell", "-")) if isinstance(cell_ref, dict) else "-"
                 )
                 print("[ATTR]", group_name, item_id, cell_txt, "->", value_text)
+                print("[DISPLAY ATTR]", item_id, raw_value_text, "->", value_text)
 
                 self.create_panel_text(
                     attribute_panel,
                     row_cfg.get("label_rect", {}),
                     label_text,
-                    self._safe_int(rows_style.get("font_size", row_cfg.get("label_font_size", 18)), 18),
-                    str(rows_style.get("label_color", row_cfg.get("label_color", default_color))),
+                    self._safe_int(
+                        row_cfg.get(
+                            "label_font_size",
+                            row_cfg.get(
+                                "font_size",
+                                rows_style.get("font_size", attr_layout.get("label_font_size", 18)),
+                            ),
+                        ),
+                        18,
+                    ),
+                    str(
+                        row_cfg.get(
+                            "label_color",
+                            row_cfg.get("color", rows_style.get("label_color", default_color)),
+                        )
+                    ),
                     bold=False,
                     align=str(row_cfg.get("label_align", "left")),
                 )
@@ -1380,8 +1634,22 @@ class MainWindow(QMainWindow):
                     attribute_panel,
                     row_cfg.get("value_rect", {}),
                     value_text,
-                    value_font_size,
-                    str(rows_style.get("value_color", row_cfg.get("value_color", "#ffffff"))),
+                    self._safe_int(
+                        row_cfg.get(
+                            "value_font_size",
+                            row_cfg.get(
+                                "font_size",
+                                rows_style.get("font_size", attr_layout.get("value_font_size", value_font_size)),
+                            ),
+                        ),
+                        18,
+                    ),
+                    str(
+                        row_cfg.get(
+                            "value_color",
+                            row_cfg.get("color", rows_style.get("value_color", "#ffffff")),
+                        )
+                    ),
                     bold=True,
                     align=str(row_cfg.get("value_align", "center")),
                 )
@@ -1400,9 +1668,9 @@ class MainWindow(QMainWindow):
                 parent,
                 title_rect,
                 str(title_cfg.get("text", section_title)),
-                self._safe_int(title_cfg.get("font_size", 22), 22),
-                str(title_cfg.get("color", default_color)),
-                bold=True,
+                self.get_text_font_size(title_cfg, 22),
+                self.get_text_color(title_cfg, default_color),
+                bold=self.get_text_bold(title_cfg, True),
             )
 
             header_cfg = table_cfg.get("header", {})
@@ -1416,29 +1684,37 @@ class MainWindow(QMainWindow):
             row_h = self._safe_int(table_cfg.get("row_h", 28), 28)
             max_rows = self._safe_int(table_cfg.get("max_rows", 8), 8)
             font_size = self._safe_int(table_cfg.get("font_size", 16), 16)
+            header_font_size = self._safe_int(
+                table_cfg.get("header_font_size", header_cfg.get("font_size", font_size)),
+                font_size,
+            )
+            header_color = str(
+                table_cfg.get("header_color", header_cfg.get("color", default_color))
+            )
+            row_color = str(table_cfg.get("row_color", table_cfg.get("color", "#ffffff")))
 
             self.create_panel_text(
                 parent,
                 {"x": name_x, "y": header_y, "w": name_w, "h": row_h},
                 str(header_cfg.get("name", "Name")),
-                font_size,
-                str(header_cfg.get("color", default_color)),
+                header_font_size,
+                header_color,
                 bold=True,
             )
             self.create_panel_text(
                 parent,
                 {"x": bp_x, "y": header_y, "w": bp_w, "h": row_h},
                 str(header_cfg.get("bp", "BP")),
-                font_size,
-                str(header_cfg.get("color", default_color)),
+                header_font_size,
+                header_color,
                 bold=True,
             )
             self.create_panel_text(
                 parent,
                 {"x": effect_x, "y": header_y, "w": effect_w, "h": row_h},
                 str(header_cfg.get("effect", "Effekt")),
-                font_size,
-                str(header_cfg.get("color", default_color)),
+                header_font_size,
+                header_color,
                 bold=True,
             )
 
@@ -1457,7 +1733,8 @@ class MainWindow(QMainWindow):
                 if rendered >= max_rows:
                     break
                 n = self.get_cache_display_value(sheet_name, f"{name_col}{row}", "")
-                b = self.get_cache_display_value(sheet_name, f"{bp_col}{row}", "")
+                raw_b = self.get_cache_display_value(sheet_name, f"{bp_col}{row}", "")
+                b = self.format_character_display_value(raw_b, "int") if raw_b else ""
                 e = self.get_cache_display_value(sheet_name, f"{effect_col}{row}", "")
                 if not (n or b or e):
                     continue
@@ -1468,7 +1745,7 @@ class MainWindow(QMainWindow):
                     {"x": name_x, "y": y, "w": name_w, "h": row_h},
                     n or "-",
                     font_size,
-                    str(table_cfg.get("row_color", "#ffffff")),
+                    row_color,
                     align="left",
                 )
                 self.create_panel_text(
@@ -1476,7 +1753,7 @@ class MainWindow(QMainWindow):
                     {"x": bp_x, "y": y, "w": bp_w, "h": row_h},
                     b or "-",
                     font_size,
-                    str(table_cfg.get("row_color", "#ffffff")),
+                    row_color,
                     align="left",
                 )
                 effect_text = (e or "-")
@@ -1487,7 +1764,7 @@ class MainWindow(QMainWindow):
                     {"x": effect_x, "y": y, "w": effect_w, "h": row_h},
                     effect_text,
                     font_size,
-                    str(table_cfg.get("row_color", "#ffffff")),
+                    row_color,
                     align="left",
                 )
             return row_start_y + rendered * row_h

@@ -5,3 +5,5 @@ ui_tabs/__pycache__/*
 .usefullfles/*
 
 data/current_character.json
+  "lifeforce_current": "AI13",
+  "lifeforce_max": "AJ13",
