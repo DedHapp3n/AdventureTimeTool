@@ -1,11 +1,53 @@
 import json
 import os
 import re
+import xml.etree.ElementTree as ET
+import zipfile
 from datetime import datetime
 from typing import Any
 
-from openpyxl import load_workbook
+try:
+    from openpyxl import load_workbook
+except ImportError:
+    load_workbook = None
+
 from formula_parser import FormulaParser
+
+
+ODS_NS = {
+    "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
+    "table": "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
+    "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
+}
+
+
+def _ods_attr(namespace: str, name: str) -> str:
+    return f"{{{ODS_NS[namespace]}}}{name}"
+
+
+class SimpleCell:
+    def __init__(self, coordinate: str, value: Any):
+        self.coordinate = coordinate
+        self.value = value
+
+
+class SimpleSheet:
+    def __init__(self, title: str, rows: list[list[SimpleCell]]):
+        self.title = title
+        self._rows = rows
+
+    def iter_rows(self):
+        return iter(self._rows)
+
+
+class SimpleWorkbook:
+    def __init__(self, sheets: dict[str, SimpleSheet]):
+        self._sheets = sheets
+        self.sheetnames = list(sheets.keys())
+
+    def __getitem__(self, sheet_name: str) -> SimpleSheet:
+        return self._sheets[sheet_name]
+
 
 class DataLoader:
     def __init__(self):
@@ -19,11 +61,13 @@ class DataLoader:
     def load_file(self, file_path):
         lower_path = str(file_path).lower()
         if lower_path.endswith(".ods"):
-            print("[LOAD] ODS not supported:", file_path)
-            raise ValueError("ODS wird aktuell nicht unterstützt. Bitte als XLSX exportieren.")
-        if not (lower_path.endswith(".xlsx") or lower_path.endswith(".xlsm")):
-            raise ValueError("Dateityp nicht unterstützt. Bitte .xlsx oder .xlsm verwenden.")
-        self.workbook = load_workbook(file_path, data_only=False)
+            self.workbook = self._load_ods_workbook(file_path)
+        elif lower_path.endswith(".xlsx") or lower_path.endswith(".xlsm"):
+            if load_workbook is None:
+                raise ValueError("XLSX/XLSM benötigt das Python-Paket openpyxl.")
+            self.workbook = load_workbook(file_path, data_only=False)
+        else:
+            raise ValueError("Dateityp nicht unterstützt. Bitte .xlsx, .xlsm oder .ods verwenden.")
         self.source_file_path = file_path
         self._build_cache()
         FormulaParser().recalculate_cache(self.cell_cache)
@@ -160,14 +204,9 @@ class DataLoader:
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     payload = json.load(f)
-                if isinstance(payload, dict):
-                    sheet = payload.get("Charakterbogen", {})
-                    if isinstance(sheet, dict):
-                        cell_g1 = sheet.get("G1", {})
-                        if isinstance(cell_g1, dict):
-                            value = cell_g1.get("value")
-                            if isinstance(value, str) and value.strip():
-                                character_name = value.strip()
+                detected_name = self._get_character_name_from_payload(payload)
+                if detected_name != "unknown_character":
+                    character_name = detected_name
             except Exception:
                 pass
             results.append(
@@ -218,6 +257,148 @@ class DataLoader:
                         "error": None,
                     }
 
+    def _load_ods_workbook(self, file_path) -> SimpleWorkbook:
+        try:
+            with zipfile.ZipFile(file_path) as ods:
+                content = ods.read("content.xml")
+        except (KeyError, zipfile.BadZipFile) as exc:
+            raise ValueError("ODS-Datei konnte nicht gelesen werden.") from exc
+
+        root = ET.fromstring(content)
+        spreadsheet = root.find(".//office:spreadsheet", ODS_NS)
+        if spreadsheet is None:
+            raise ValueError("ODS-Datei enthält keine Tabellen.")
+
+        sheets: dict[str, SimpleSheet] = {}
+        for table_index, table in enumerate(spreadsheet.findall("table:table", ODS_NS), start=1):
+            sheet_name = table.get(_ods_attr("table", "name")) or f"Sheet{table_index}"
+            rows: list[list[SimpleCell]] = []
+            row_index = 1
+
+            for row_element in table.iter(_ods_attr("table", "table-row")):
+                row_repeat = self._ods_repeat(row_element, "number-rows-repeated")
+                row_cells, has_content = self._parse_ods_row(row_element, row_index)
+                if has_content:
+                    rows.append(row_cells)
+                    for offset in range(1, min(row_repeat, 1024)):
+                        rows.append(
+                            [
+                                SimpleCell(
+                                    f"{self._col_to_letters(col_index)}{row_index + offset}",
+                                    cell.value,
+                                )
+                                for col_index, cell in enumerate(row_cells, start=1)
+                            ]
+                        )
+                row_index += row_repeat
+
+            sheets[sheet_name] = SimpleSheet(sheet_name, rows)
+
+        if not sheets:
+            raise ValueError("ODS-Datei enthält keine Tabellen.")
+        print("[LOAD] ODS loaded:", file_path)
+        return SimpleWorkbook(sheets)
+
+    def _parse_ods_row(self, row_element, row_index: int) -> tuple[list[SimpleCell], bool]:
+        segments: list[tuple[int, Any]] = []
+        col_index = 1
+        max_content_col = 0
+
+        cell_tags = {
+            _ods_attr("table", "table-cell"),
+            _ods_attr("table", "covered-table-cell"),
+        }
+        for cell_element in row_element:
+            if cell_element.tag not in cell_tags:
+                continue
+            repeat = self._ods_repeat(cell_element, "number-columns-repeated")
+            cell_value = (
+                None
+                if cell_element.tag == _ods_attr("table", "covered-table-cell")
+                else self._ods_cell_value(cell_element)
+            )
+            segments.append((repeat, cell_value))
+            if cell_value is not None:
+                max_content_col = col_index + repeat - 1
+            col_index += repeat
+
+        if max_content_col == 0:
+            return [], False
+
+        row_cells: list[SimpleCell] = []
+        col_index = 1
+        for repeat, cell_value in segments:
+            for _ in range(repeat):
+                if col_index > max_content_col:
+                    break
+                row_cells.append(
+                    SimpleCell(f"{self._col_to_letters(col_index)}{row_index}", cell_value)
+                )
+                col_index += 1
+            if col_index > max_content_col:
+                break
+
+        return row_cells, True
+
+    def _ods_cell_value(self, cell_element):
+        formula = cell_element.get(_ods_attr("table", "formula"))
+        if formula:
+            return self._normalize_ods_formula(formula)
+
+        value_type = cell_element.get(_ods_attr("office", "value-type"))
+        if value_type in {"float", "percentage", "currency"}:
+            value = cell_element.get(_ods_attr("office", "value"))
+            if value is None:
+                return None
+            try:
+                number = float(value)
+                return int(number) if number.is_integer() else number
+            except ValueError:
+                return value
+
+        if value_type == "boolean":
+            return cell_element.get(_ods_attr("office", "boolean-value")) == "true"
+
+        if value_type == "date":
+            return cell_element.get(_ods_attr("office", "date-value"))
+
+        if value_type == "time":
+            return cell_element.get(_ods_attr("office", "time-value"))
+
+        text_parts = [
+            "".join(paragraph.itertext())
+            for paragraph in cell_element.findall("text:p", ODS_NS)
+        ]
+        text_value = "\n".join(part for part in text_parts if part != "")
+        return text_value if text_value != "" else None
+
+    def _normalize_ods_formula(self, formula: str) -> str:
+        expression = formula.strip()
+        if ":=" in expression:
+            expression = expression.split(":=", 1)[1]
+        elif expression.startswith("="):
+            expression = expression[1:]
+
+        def replace_bracket_ref(match):
+            ref = match.group(1).replace("$", "")
+            if ref.startswith("."):
+                return ref[1:].replace(":.", ":")
+            if "." in ref:
+                sheet_name, cell_ref = ref.rsplit(".", 1)
+                return f"{sheet_name}!{cell_ref}"
+            return ref
+
+        expression = re.sub(r"\[([^\]]+)\]", replace_bracket_ref, expression)
+        return "=" + expression
+
+    def _ods_repeat(self, element, attr_name: str) -> int:
+        raw_repeat = element.get(_ods_attr("table", attr_name), "1")
+        try:
+            repeat = int(raw_repeat)
+        except (TypeError, ValueError):
+            repeat = 1
+        return max(repeat, 1)
+
     def _extract_references(self, formula):
         refs = re.findall(r"[A-Za-z]+[0-9]+", formula or "")
         unique = []
@@ -258,20 +439,60 @@ class DataLoader:
         return str(value)
 
     def _get_character_name_from_cache(self) -> str:
-        candidates = [("Charakterbogen", "G1"), ("CharacterSheet", "G1"), ("Sheet1", "G1")]
-        for sheet_name, cell_ref in candidates:
-            value = self.get_cell(sheet_name, cell_ref)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-        for sheet_name, sheet_cache in self.cell_cache.items():
-            if not isinstance(sheet_cache, dict):
-                continue
-            g1 = sheet_cache.get("G1")
-            if isinstance(g1, dict):
-                value = g1.get("value")
-                if isinstance(value, str) and value.strip():
-                    return value.strip()
+        return self._get_character_name_from_payload(self.cell_cache)
+
+    def _get_character_name_from_payload(self, payload) -> str:
+        if not isinstance(payload, dict):
+            return "unknown_character"
+
+        sheet_candidates = ["Charakterbogen", "CharacterSheet", "Sheet1"]
+        for sheet_name in sheet_candidates:
+            sheet_cache = payload.get(sheet_name)
+            name = self._get_character_name_from_sheet_cache(sheet_cache)
+            if name != "unknown_character":
+                return name
+
+        for sheet_cache in payload.values():
+            name = self._get_character_name_from_sheet_cache(sheet_cache)
+            if name != "unknown_character":
+                return name
         return "unknown_character"
+
+    def _get_character_name_from_sheet_cache(self, sheet_cache) -> str:
+        if not isinstance(sheet_cache, dict):
+            return "unknown_character"
+
+        for cell_ref in ("G1", "C1"):
+            value = self._get_cached_cell_value(sheet_cache, cell_ref)
+            if self._looks_like_character_name(value):
+                return value.strip()
+
+        for cell_ref, cell_data in sheet_cache.items():
+            value = cell_data.get("value") if isinstance(cell_data, dict) else None
+            if not isinstance(value, str) or value.strip().lower() != "name":
+                continue
+            row, col = self._cell_ref_to_row_col(cell_ref)
+            for next_col in range(col + 1, col + 8):
+                next_ref = self._col_to_letters(next_col) + str(row)
+                next_value = self._get_cached_cell_value(sheet_cache, next_ref)
+                if self._looks_like_character_name(next_value):
+                    return next_value.strip()
+
+        return "unknown_character"
+
+    def _get_cached_cell_value(self, sheet_cache, cell_ref: str):
+        cell_data = sheet_cache.get(cell_ref)
+        if isinstance(cell_data, dict):
+            return cell_data.get("value")
+        return None
+
+    def _looks_like_character_name(self, value) -> bool:
+        if not isinstance(value, str):
+            return False
+        text = value.strip()
+        if not text:
+            return False
+        return text.lower() not in {"name", "unknown_character", "attribute"}
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str) -> None:
         metadata_path = os.path.join("data", "current_character.json")

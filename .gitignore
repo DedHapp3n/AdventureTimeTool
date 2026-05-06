@@ -4,6 +4,9 @@ __pycache__/*
 ui_tabs/__pycache__/*
 .usefullfles/*
 
+data/*
+data/cache/*
 data/current_character.json
-  "lifeforce_current": "AI13",
-  "lifeforce_max": "AJ13",
+data/cache/ferris.json
+data/current_character.json
+

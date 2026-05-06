@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
         self.settings_layout = QVBoxLayout(self.settings_tab)
 
         # Button
-        self.load_button = QPushButton("Excel laden")
+        self.load_button = QPushButton("Tabelle laden")
         self.load_button.clicked.connect(self.load_excel)
         self.debug_button = QPushButton("Debug anzeigen")
         self.debug_button.clicked.connect(self.toggle_debug_panel)
@@ -2123,13 +2123,18 @@ class MainWindow(QMainWindow):
         caches = self.loader.list_character_caches()
         active_cache = self.loader.active_cache_path
         active_index = -1
+        active_character_name = self.loader.current_character_name
         for i, entry in enumerate(caches):
             display_text = f"{entry['name']}  ({entry['file']})"
             self.settings_character_combo.addItem(display_text, entry["path"])
             if entry["path"] == active_cache:
                 active_index = i
+                active_character_name = entry["name"]
+                self.loader.current_character_name = active_character_name
         if active_index >= 0:
             self.settings_character_combo.setCurrentIndex(active_index)
+        if self.settings_character_active_label is not None:
+            self.settings_character_active_label.setText(active_character_name)
 
     def on_settings_load_character_clicked(self):
         if self.settings_character_combo is None:
@@ -2198,7 +2203,10 @@ class MainWindow(QMainWindow):
 
     def load_excel(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Excel auswählen", "", "Excel Dateien (*.xlsx *.xlsm);;Alle Dateien (*)"
+            self,
+            "Tabelle auswählen",
+            "",
+            "Tabellen (*.xlsx *.xlsm *.ods);;Excel Dateien (*.xlsx *.xlsm);;OpenDocument Tabellen (*.ods);;Alle Dateien (*)",
         )
 
         if not file_path:
@@ -2212,16 +2220,10 @@ class MainWindow(QMainWindow):
             self.loader.load_file(file_path)
         except ValueError as exc:
             print("[LOAD ERROR]", str(exc))
-            message_text = str(exc)
-            if "ODS wird aktuell nicht unterstützt" in message_text:
-                message_text = (
-                    "ODS wird aktuell nicht unterstützt. Bitte die Datei in LibreOffice "
-                    "oder Excel als .xlsx speichern."
-                )
             QMessageBox.warning(
                 self,
                 "Dateiformat nicht unterstützt",
-                message_text,
+                str(exc),
             )
             return
         sheets = self.loader.get_sheets()
