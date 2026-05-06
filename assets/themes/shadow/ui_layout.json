@@ -287,19 +287,20 @@
       },
       "attribute_panel": {
         "asset": "panels/attribute_panel.png",
-        "x": 380,
+        "x": 360,
         "y": 20,
         "w": 460,
         "h": 400
       },
       "perk_panel": {
         "asset": "panels/perk_panel.png",
-        "x": 980,
-        "y": 40,
-        "w": 440,
-        "h": 780
+        "x": 810,
+        "y": 0,
+        "w": 650,
+        "h": 882
       }
     },
+
 
 
 
@@ -579,58 +580,83 @@
 
       
       "perk_panel": {
-        "title": {
-          "x": 24,
-          "y": 22,
-          "w": 390,
-          "h": 32,
-          "font_size": 22,
-          "color": "#f2d28b"
+        "left_title": {
+          "text": "Perks",
+          "rect": { "x": 135, "y": 50, "w": 290, "h": 32 },
+          "font_size": 24,
+          "color": "#f2d28b",
+          "bold": true,
+          "align": "left"
         },
 
-        "table": {
-          "header_y": 62,
-          "start_y": 92,
-          "row_h": 30,
-          "font_size": 12,
+        "right_title": {
+          "text": "Nachteile",
+          "rect": { "x": 408, "y": 50, "w": 290, "h": 32 },
+          "font_size": 24,
+          "color": "#f2d28b",
+          "bold": true,
+          "align": "left"
+        },
+
+        "perk_table": {
+          "header_y": 95,
+          "start_y": 128,
+          "row_h": 33,
+          "max_rows": 22,
+
           "header_font_size": 13,
-          "name_x": 24,
-          "name_w": 125,
-          "bp_x": 155,
-          "bp_w": 36,
-          "effect_x": 200,
-          "effect_w": 210,
-          "max_rows": 9
-        },
+          "row_font_size": 12,
 
-        "disadvantage_title": {
-          "x": 24,
-          "y": 402,
-          "w": 390,
-          "h": 32,
-          "font_size": 22,
-          "color": "#f2d28b"
+          "header_color": "#f0e6c8",
+          "name_color": "#f2d28b",
+          "bp_color": "#7fd0ff",
+          "effect_color": "#ffffff",
+
+          "name_x": 41,
+          "name_w": 65,
+
+          "bp_x": 114,
+          "bp_w": 34,
+
+          "effect_x": 155,
+          "effect_w": 155,
+
+          "name_header": "Name",
+          "bp_header": "BP",
+          "effect_header": "Effekt"
         },
 
         "disadvantage_table": {
-          "header_y": 442,
-          "start_y": 472,
-          "row_h": 30,
-          "font_size": 12,
+          "header_y": 95,
+          "start_y": 128,
+          "row_h": 33,
+          "max_rows": 22,
+
           "header_font_size": 13,
-          "name_x": 24,
-          "name_w": 125,
-          "bp_x": 155,
-          "bp_w": 36,
-          "effect_x": 200,
-          "effect_w": 210,
-          "max_rows": 9
+          "row_font_size": 12,
+
+          "header_color": "#f0e6c8",
+          "name_color": "#f2d28b",
+          "bp_color": "#ff8f8f",
+          "effect_color": "#ffffff",
+
+          "name_x": 339,
+          "name_w": 65,
+
+          "bp_x": 410,
+          "bp_w": 34,
+
+          "effect_x": 455,
+          "effect_w": 155,
+
+          "name_header": "Name",
+          "bp_header": "BP",
+          "effect_header": "Effekt"
         }
       }
-    }
 
 
 
 
   }
-}
+}}

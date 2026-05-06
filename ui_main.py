@@ -1661,6 +1661,146 @@ class MainWindow(QMainWindow):
         disadv_layout = text_layout.get("disadvantages", perks_layout.get("disadvantage_table", {}))
         perks_map = data_map.get("perks", {})
         disadv_map = data_map.get("disadvantages", {})
+        self.current_perks = []
+        self.current_disadvantages = []
+
+        def elide_fixed_text(text, max_chars):
+            value = str(text)
+            if len(value) <= max_chars:
+                return value
+            return value[: max(0, max_chars - 3)] + "..."
+
+        def render_side_table(parent, table_cfg, map_cfg, collection):
+            header_y = self._safe_int(table_cfg.get("header_y", 0), 0)
+            start_y = self._safe_int(table_cfg.get("start_y", header_y + 24), header_y + 24)
+            row_h = self._safe_int(table_cfg.get("row_h", 24), 24)
+            max_rows = self._safe_int(table_cfg.get("max_rows", 8), 8)
+            header_font_size = self._safe_int(table_cfg.get("header_font_size", 15), 15)
+            row_font_size = self._safe_int(table_cfg.get("row_font_size", table_cfg.get("font_size", 14)), 14)
+            header_color = str(table_cfg.get("header_color", table_cfg.get("color", default_color)))
+            name_color = str(table_cfg.get("name_color", table_cfg.get("row_color", "#f2d28b")))
+            bp_color = str(table_cfg.get("bp_color", table_cfg.get("row_color", "#d6b35a")))
+            effect_color = str(table_cfg.get("effect_color", table_cfg.get("row_color", "#ffffff")))
+            name_x = self._safe_int(table_cfg.get("name_x", 0), 0)
+            name_w = self._safe_int(table_cfg.get("name_w", 130), 130)
+            bp_x = self._safe_int(table_cfg.get("bp_x", name_x + name_w + 8), name_x + name_w + 8)
+            bp_w = self._safe_int(table_cfg.get("bp_w", 40), 40)
+            effect_x = self._safe_int(table_cfg.get("effect_x", bp_x + bp_w + 8), bp_x + bp_w + 8)
+            effect_w = self._safe_int(table_cfg.get("effect_w", 180), 180)
+
+            self.create_panel_text(
+                parent,
+                {"x": name_x, "y": header_y, "w": name_w, "h": row_h},
+                str(table_cfg.get("name_header", "Name")),
+                header_font_size,
+                header_color,
+                bold=True,
+            )
+            self.create_panel_text(
+                parent,
+                {"x": bp_x, "y": header_y, "w": bp_w, "h": row_h},
+                str(table_cfg.get("bp_header", "BP")),
+                header_font_size,
+                header_color,
+                bold=True,
+                align="center",
+            )
+            self.create_panel_text(
+                parent,
+                {"x": effect_x, "y": header_y, "w": effect_w, "h": row_h},
+                str(table_cfg.get("effect_header", "Effekt")),
+                header_font_size,
+                header_color,
+                bold=True,
+            )
+
+            start_row = self._safe_int(map_cfg.get("start_row", 0), 0)
+            end_row = self._safe_int(map_cfg.get("end_row", -1), -1)
+            if start_row <= 0 or end_row < start_row:
+                return
+
+            sheet_name = str(map_cfg.get("sheet", default_sheet))
+            name_col = str(map_cfg.get("name_col", "A"))
+            bp_col = str(map_cfg.get("bp_col", "B"))
+            effect_col = str(map_cfg.get("effect_col", "C"))
+            name_max_chars = self._safe_int(table_cfg.get("name_max_chars", 22), 22)
+            effect_max_chars = self._safe_int(table_cfg.get("effect_max_chars", 34), 34)
+
+            rendered = 0
+            for row in range(start_row, end_row + 1):
+                if rendered >= max_rows:
+                    break
+                name = self.get_cache_display_value(sheet_name, f"{name_col}{row}", "")
+                raw_bp = self.get_cache_display_value(sheet_name, f"{bp_col}{row}", "")
+                effect = self.get_cache_display_value(sheet_name, f"{effect_col}{row}", "")
+                if not (name or raw_bp or effect):
+                    continue
+
+                bp = self.format_character_display_value(raw_bp, "int") if raw_bp else ""
+                if name and name != "-":
+                    collection.append(name)
+                y = start_y + rendered * row_h
+                rendered += 1
+
+                self.create_panel_text(
+                    parent,
+                    {"x": name_x, "y": y, "w": name_w, "h": row_h},
+                    elide_fixed_text(name, name_max_chars) if name else "",
+                    row_font_size,
+                    name_color,
+                )
+                self.create_panel_text(
+                    parent,
+                    {"x": bp_x, "y": y, "w": bp_w, "h": row_h},
+                    bp,
+                    row_font_size,
+                    bp_color,
+                    align="center",
+                )
+                self.create_panel_text(
+                    parent,
+                    {"x": effect_x, "y": y, "w": effect_w, "h": row_h},
+                    elide_fixed_text(effect, effect_max_chars) if effect else "",
+                    row_font_size,
+                    effect_color,
+                )
+
+        if isinstance(perks_layout, dict) and "perk_table" in perks_layout and "disadvantage_table" in perks_layout:
+            left_title = perks_layout.get("left_title", {})
+            right_title = perks_layout.get("right_title", {})
+            self.create_panel_text(
+                perk_panel,
+                left_title.get("rect", left_title if isinstance(left_title, dict) else {}),
+                str(left_title.get("text", "Perks")) if isinstance(left_title, dict) else "Perks",
+                self.get_text_font_size(left_title, 22),
+                self.get_text_color(left_title, default_color),
+                bold=self.get_text_bold(left_title, True),
+                align=self.get_text_align(left_title, "center"),
+            )
+            self.create_panel_text(
+                perk_panel,
+                right_title.get("rect", right_title if isinstance(right_title, dict) else {}),
+                str(right_title.get("text", "Nachteile")) if isinstance(right_title, dict) else "Nachteile",
+                self.get_text_font_size(right_title, 22),
+                self.get_text_color(right_title, default_color),
+                bold=self.get_text_bold(right_title, True),
+                align=self.get_text_align(right_title, "center"),
+            )
+            render_side_table(
+                perk_panel,
+                perks_layout.get("perk_table", {}),
+                perks_map if isinstance(perks_map, dict) else {},
+                self.current_perks,
+            )
+            render_side_table(
+                perk_panel,
+                perks_layout.get("disadvantage_table", {}),
+                disadv_map if isinstance(disadv_map, dict) else {},
+                self.current_disadvantages,
+            )
+            print("[PERKS]", self.current_perks)
+            print("[DISADVANTAGES]", self.current_disadvantages)
+            return
 
         def render_table_block(parent, table_cfg, map_cfg, title_cfg, section_title, start_y_default):
             title_rect = title_cfg.get("rect", {"x": 24, "y": start_y_default, "w": 280, "h": 30})
