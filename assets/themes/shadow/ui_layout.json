@@ -287,10 +287,10 @@
       },
       "attribute_panel": {
         "asset": "panels/attribute_panel.png",
-        "x": 410,
+        "x": 380,
         "y": 20,
         "w": 460,
-        "h": 380
+        "h": 400
       },
       "perk_panel": {
         "asset": "panels/perk_panel.png",
@@ -502,11 +502,11 @@
 
 
 
-      "attribute_panel": {
+        "attribute_panel": {
         "panel_title": {
           "text": "Attribute",
-          "x": 0,
-          "y": 30,
+          "x": -20,
+          "y": 35,
           "w": 510,
           "h": 32,
           "font_size": 30,
@@ -523,56 +523,55 @@
         "value_color": "#ffffff",
 
         "body_header": {
-          "label_rect": { "x": 60, "y": 85, "w": 120, "h": 30 },
-          "value_rect": { "x": 164, "y": 70, "w": 55, "h": 55 },
+          "label_rect": { "x": 60, "y": 93, "w": 120, "h": 30 },
+          "value_rect": { "x": 167, "y": 81, "w": 55, "h": 55 },
           "label_align": "center",
           "value_align": "center"
         },
 
         "mind_header": {
-          "label_rect": { "x": 285, "y": 85, "w": 120, "h": 30 },
-          "value_rect": { "x": 241, "y": 70, "w": 55, "h": 55 }
+          "label_rect": { "x": 285, "y": 93, "w": 120, "h": 30 },
+          "value_rect": { "x": 238, "y": 81, "w": 55, "h": 55 }
         },
 
         "body_rows": {
           "kraft": {
-            "label_rect": { "x": 90, "y": 145, "w": 120, "h": 24 },
-            "value_rect": { "x": 164, "y": 130, "w": 55, "h": 55 }
+            "label_rect": { "x": 90, "y": 153, "w": 120, "h": 24 },
+            "value_rect": { "x": 167, "y": 137, "w": 55, "h": 55 }
           },
           "geschick": {
-            "label_rect": { "x": 75, "y": 200, "w": 120, "h": 24 },
-            "value_rect": { "x": 164, "y": 185, "w": 55, "h": 55 }
+            "label_rect": { "x": 75, "y": 207, "w": 120, "h": 24 },
+            "value_rect": { "x": 167, "y": 192, "w": 55, "h": 55 }
           },
           "zaehigkeit": {
-            "label_rect": { "x": 75, "y": 255, "w": 120, "h": 24 },
-            "value_rect": { "x": 164, "y": 240, "w": 55, "h": 55 }
+            "label_rect": { "x": 75, "y": 264, "w": 120, "h": 24 },
+            "value_rect": { "x": 167, "y": 247, "w": 55, "h": 55 }
           },
           "reflex": {
-            "label_rect": { "x": 90, "y": 312, "w": 120, "h": 24 },
-            "value_rect": { "x": 164, "y": 297, "w": 55, "h": 55 }
+            "label_rect": { "x": 90, "y": 319, "w": 120, "h": 24 },
+            "value_rect": { "x": 167, "y": 304, "w": 55, "h": 55 }
           }
         },
 
         "mind_rows": {
           "intelligenz": {
-            "label_rect": { "x": 300, "y": 145, "w": 140, "h": 24 },
-            "value_rect": { "x": 241, "y": 130, "w": 55, "h": 55 }
+            "label_rect": { "x": 300, "y": 153, "w": 140, "h": 24 },
+            "value_rect": { "x": 238, "y": 137, "w": 55, "h": 55 }
           },
           "willenskraft": {
-            "label_rect": { "x": 300, "y": 200, "w": 140, "h": 24 },
-            "value_rect": { "x": 241, "y": 185, "w": 55, "h": 55 }
+            "label_rect": { "x": 300, "y": 207, "w": 140, "h": 24 },
+            "value_rect": { "x": 238, "y": 192, "w": 55, "h": 55 }
           },
           "charisma": {
-            "label_rect": { "x": 300, "y": 255, "w": 140, "h": 24 },
-            "value_rect": { "x": 241, "y": 240, "w": 55, "h": 55 }
+            "label_rect": { "x": 300, "y": 264, "w": 140, "h": 24 },
+            "value_rect": { "x": 238, "y": 247, "w": 55, "h": 55 }
           },
           "sinne": {
-            "label_rect": { "x": 320, "y": 312, "w": 140, "h": 24 },
-            "value_rect": { "x": 241, "y": 297, "w": 55, "h": 55 }
+            "label_rect": { "x": 320, "y": 319, "w": 140, "h": 24 },
+            "value_rect": { "x": 238, "y": 304, "w": 55, "h": 55 }
           }
         }
       },
-
 
 
 
