@@ -89,6 +89,10 @@ class MainWindow(QMainWindow):
         self.current_reference_color_map = {}
         self.current_indirect_references = []
         self.current_main_section = "character"
+        self.current_skill_category = "allgemein"
+        self.skill_source_infos = {}
+        self.skills_debug_sources = True
+        self.skill_sheet_mapping_config = None
         self.settings_debug_on_start = False
         self.nav_buttons = {}
         self.settings_dialog = None
@@ -603,7 +607,15 @@ class MainWindow(QMainWindow):
 
     def on_settings_cache_reload_clicked(self):
         if hasattr(self.loader, "load_cache_from_json"):
-            self.loader.load_cache_from_json()
+            if self.loader.load_cache_from_json():
+                self.reset_character_runtime_state()
+                self.create_tabs_from_cache()
+                if self.settings_character_active_label is not None:
+                    self.settings_character_active_label.setText(self.loader.current_character_name)
+                if self.current_main_section == "character":
+                    self.show_main_section("character")
+                elif self.current_main_section in ("skills", "fertigkeiten"):
+                    self.show_main_section("skills")
             print("[SETTINGS] Cache reload clicked")
             return
         print("[SETTINGS] Cache reload clicked")
@@ -633,6 +645,8 @@ class MainWindow(QMainWindow):
             self.render_settings_page()
         elif section_id == "character":
             self.render_character_screen()
+        elif section_id in ("skills", "fertigkeiten"):
+            self.render_skills_screen()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -840,6 +854,9 @@ class MainWindow(QMainWindow):
             "}"
         )
         self.settings_character_combo.show()
+        self.settings_character_combo.currentIndexChanged.connect(
+            self.on_settings_character_selection_changed
+        )
         self.refresh_character_cache_list()
 
         self.create_asset_text_button(
@@ -1005,6 +1022,1212 @@ class MainWindow(QMainWindow):
         if number.is_integer():
             return str(int(number))
         return f"{number:.10f}".rstrip("0").rstrip(".")
+
+    def load_skill_definitions(self):
+        definitions_path = self.base_dir / "assets" / "config" / "skill_definitions.json"
+        empty = {"attribute_map": {}, "categories": []}
+        try:
+            if not definitions_path.exists():
+                print("[SKILLS] missing/invalid skill_definitions.json")
+                return empty
+            with open(definitions_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                print("[SKILLS] missing/invalid skill_definitions.json")
+                return empty
+            if not isinstance(data.get("attribute_map"), dict):
+                data["attribute_map"] = {}
+            if not isinstance(data.get("categories"), list):
+                data["categories"] = []
+            return data
+        except Exception:
+            print("[SKILLS] missing/invalid skill_definitions.json")
+            return empty
+
+    def get_default_skills_layout_config(self):
+        return {
+            "skills_screen": {
+                "x": 20,
+                "y": 20,
+                "w": 1420,
+                "h": 820,
+                "category_tabs": {
+                    "x": 20,
+                    "y": 10,
+                    "w": 1380,
+                    "h": 50,
+                    "button_w": 220,
+                    "button_h": 42,
+                    "gap": 18,
+                    "font_size": 20,
+                    "active_color": "#f2d28b",
+                    "inactive_color": "#9a8560",
+                },
+                "table": {
+                    "x": 20,
+                    "y": 80,
+                    "w": 1380,
+                    "h": 700,
+                    "header_h": 42,
+                    "row_h": 42,
+                    "max_visible_rows": 15,
+                    "font_size": 17,
+                    "header_font_size": 19,
+                    "header_color": "#f2d28b",
+                    "skill_name_color": "#f2d28b",
+                    "attribute_color": "#ffffff",
+                    "value_color": "#7fd0ff",
+                    "specialization_color": "#ffffff",
+                    "note_color": "#d8d0b0",
+                    "columns": {
+                        "skill": {"title": "Fertigkeiten", "x": 0, "w": 360},
+                        "attributes": {
+                            "title": "Attribute",
+                            "x": 370,
+                            "w": 220,
+                            "slot_w": 42,
+                            "slot_gap": 8,
+                        },
+                        "value": {"title": "Wert", "x": 600, "w": 80},
+                        "specialization": {
+                            "title": "Spezialisierung",
+                            "x": 690,
+                            "w": 470,
+                        },
+                        "note": {"title": "Notiz", "x": 1170, "w": 210},
+                    },
+                },
+            }
+        }
+
+    def load_skills_layout_config(self):
+        active_theme = self.get_active_theme()
+        layout_file = ""
+        screen_cfg = self.main_ui_layout_config.get("skills_screen", {})
+        if isinstance(screen_cfg, dict):
+            layout_file = str(screen_cfg.get("layout_file", "")).strip()
+        if not layout_file:
+            layout_file = "skills_layout.json"
+
+        candidates = [
+            self.base_dir / "assets" / "themes" / active_theme / layout_file,
+            self.base_dir / "assets" / "themes" / "diablo" / "skills_layout.json",
+        ]
+        for layout_path in candidates:
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("skills_screen"), dict):
+                    return data
+            except Exception:
+                continue
+        return self.get_default_skills_layout_config()
+
+    def get_default_skill_sheet_mapping_config(self):
+        return {
+            "sheet": "Fertigkeiten",
+            "name_col": "D",
+            "attribute_cols": ["V", "X", "Z", "AB"],
+            "value_formula_col": "AD",
+            "specialization_col": "AG",
+            "note_col": "BE",
+            "blocks": [
+                self.get_default_skill_sheet_mapping_block("allgemein", 15, 35),
+                self.get_default_skill_sheet_mapping_block("kampf", 49, 61),
+                self.get_default_skill_sheet_mapping_block("wissen", 75, 87),
+                self.get_default_skill_sheet_mapping_block("handwerk", 101, 125),
+            ],
+        }
+
+    def get_default_skill_sheet_mapping_block(self, category_id, row_min, row_max):
+        return {
+            "category_id": category_id,
+            "row_min": row_min,
+            "row_max": row_max,
+            "lookup_source": "shared_attribute_bonus_table",
+            "lookup_key_col": "BW",
+            "lookup_value_col": "BX",
+            "lookup_start_row": 15,
+            "lookup_end_row": 22,
+            "bonus_rows": [
+                {"key_cell": "BY24", "value_cell": "BW24"},
+                {"key_cell": "BY26", "value_cell": "BW26"},
+                {"key_cell": "BY28", "value_cell": "BW28"},
+            ],
+        }
+
+    def load_skill_sheet_mapping_config(self):
+        mapping_path = self.base_dir / "assets" / "config" / "skill_sheet_mapping.json"
+        default = self.get_default_skill_sheet_mapping_config()
+        try:
+            if not mapping_path.exists():
+                return default
+            with open(mapping_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                return default
+            if not isinstance(data.get("blocks"), list):
+                data["blocks"] = default["blocks"]
+            for key, value in default.items():
+                if key not in data:
+                    data[key] = value
+            return data
+        except Exception:
+            return default
+
+    def get_attribute_value_by_key(self, attribute_key):
+        attribute_cells = {
+            "kraft": "AG7",
+            "geschick": "AG9",
+            "zaehigkeit": "AG11",
+            "reflex": "AG13",
+            "intelligenz": "AR7",
+            "willenskraft": "AR9",
+            "charisma": "AR11",
+            "sinne": "AR13",
+        }
+        cell_ref = attribute_cells.get(str(attribute_key))
+        if not cell_ref:
+            return 0
+        raw_value = self.get_cache_display_value("Charakterbogen", cell_ref, "0")
+        display_value = self.format_character_display_value(raw_value, "int")
+        try:
+            return int(display_value)
+        except Exception:
+            return 0
+
+    def calculate_skill_attribute_sum(self, skill, attribute_map):
+        if not isinstance(skill, dict) or not isinstance(attribute_map, dict):
+            return 0
+        attributes = skill.get("attributes", [])
+        if not isinstance(attributes, list):
+            return 0
+        total = 0
+        for attribute_letter in attributes[:4]:
+            attribute_key = attribute_map.get(str(attribute_letter))
+            if not attribute_key:
+                continue
+            total += self.get_attribute_value_by_key(attribute_key)
+        return int(total)
+
+    def calculate_skill_value(self, skill, attribute_map):
+        return self.calculate_skill_attribute_sum(skill, attribute_map)
+
+    def normalize_skill_name(self, text):
+        normalized = str(text or "").strip().lower()
+        normalized = (
+            normalized.replace("ä", "ae")
+            .replace("ö", "oe")
+            .replace("ü", "ue")
+            .replace("ß", "ss")
+        )
+        normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        return normalized
+
+    def _skill_name_matches(self, wanted_name, cached_name):
+        return self.get_skill_name_match_quality(wanted_name, cached_name) in ("exact", "legacy")
+
+    def get_skill_name_match_quality(self, wanted_name, cached_name):
+        wanted = self.normalize_skill_name(wanted_name)
+        cached = self.normalize_skill_name(cached_name)
+        if not wanted or not cached:
+            return "none"
+        if wanted == cached:
+            return "exact"
+
+        wanted_tokens = wanted.split()
+        cached_tokens = cached.split()
+        if len(cached_tokens) >= 2 and cached_tokens == wanted_tokens[: len(cached_tokens)]:
+            return "legacy"
+        if len(wanted_tokens) >= 2 and wanted_tokens == cached_tokens[: len(wanted_tokens)]:
+            return "legacy"
+        return "none"
+
+    def _coerce_skill_numeric_value(self, value):
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            return value
+        text = str(value).strip()
+        if not text or text.startswith("="):
+            return None
+        lowered = text.lower()
+        if "arrayformula" in lowered or "openpyxl.worksheet.formula" in lowered:
+            return None
+        normalized = text.replace(",", ".")
+        if not re.fullmatch(r"-?\d+(\.\d+)?", normalized):
+            return None
+        try:
+            number = float(normalized)
+        except Exception:
+            return None
+        return int(number) if number.is_integer() else number
+
+    def get_cache_cell_value(self, sheet_name, cell_ref, fallback=None):
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        cell_data = sheet_cache.get(cell_ref)
+        if isinstance(cell_data, dict):
+            return cell_data.get("value")
+        return fallback if cell_data is None else cell_data
+
+    def get_numeric_cache_value(self, sheet_name, cell_ref):
+        return self._coerce_skill_numeric_value(
+            self.get_cache_cell_value(sheet_name, cell_ref, None)
+        )
+
+    def get_skill_formula_text(self, sheet_name, formula_cell):
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        cell_data = sheet_cache.get(formula_cell)
+        if not isinstance(cell_data, dict):
+            return None
+        for key in ("formula", "value"):
+            value = cell_data.get(key)
+            if not isinstance(value, str):
+                continue
+            text = value.strip()
+            if not text or not text.startswith("="):
+                continue
+            lowered = text.lower()
+            if "arrayformula object" in lowered or "openpyxl.worksheet.formula" in lowered:
+                continue
+            return text
+        return None
+
+    def extract_skill_bonus_cell_from_formula(self, formula_text, source_key=""):
+        if not isinstance(formula_text, str) or not formula_text.strip():
+            return None
+        normalized = formula_text.strip().replace("$", "").upper()
+        last_paren = normalized.rfind(")")
+        if last_paren < 0:
+            return None
+        tail = normalized[last_paren + 1 :]
+        candidates = re.findall(r"\+([A-Z]{1,3}[0-9]+)", tail)
+        if len(candidates) > 1:
+            print("[SKILLS FORMULA BONUS AMBIGUOUS]", source_key, f'formula="{formula_text}"')
+            return None
+        return candidates[0] if candidates else None
+
+    def infer_skill_bonus_cell_from_array_formula(self, sheet_name, row, formula_cell):
+        raw_value = self.get_cache_cell_value(sheet_name, formula_cell, None)
+        lowered = str(raw_value or "").lower()
+        if "arrayformula object" not in lowered and "openpyxl.worksheet.formula" not in lowered:
+            return None, False
+
+        profile_name = self.normalize_skill_name(self.get_cache_cell_value(sheet_name, "D15", ""))
+        if profile_name != "klettern athletik":
+            return None, False
+
+        # Old imported sheets store only ArrayFormula objects in AD. This mirrors the
+        # known visible AD formula structure for that sheet profile without evaluating Excel.
+        old_general_bonus_cells = {
+            15: "BW24",
+            17: "BW24",
+            19: None,
+            21: None,
+            23: "BW24",
+            25: "BW26",
+            27: "BW26",
+            29: "BW24",
+            31: "BW24",
+            33: "BW24",
+            35: "BW36",
+        }
+        if row not in old_general_bonus_cells:
+            return None, False
+        return old_general_bonus_cells[row], True
+
+    def get_skill_sheet_mapping_config(self):
+        if not isinstance(self.skill_sheet_mapping_config, dict):
+            self.skill_sheet_mapping_config = self.load_skill_sheet_mapping_config()
+        return self.skill_sheet_mapping_config
+
+    def get_skill_fertigkeiten_blocks(self):
+        mapping = self.get_skill_sheet_mapping_config()
+        blocks = mapping.get("blocks", [])
+        return blocks if isinstance(blocks, list) else []
+
+    def get_skill_block_config_for_category(self, category_id):
+        wanted = str(category_id or "").strip()
+        if not wanted:
+            return None
+        for block in self.get_skill_fertigkeiten_blocks():
+            if not isinstance(block, dict):
+                continue
+            if str(block.get("category_id", "")).strip() == wanted:
+                return self._merge_skill_block_config(block)
+        return None
+
+    def _merge_skill_block_config(self, block):
+        mapping = self.get_skill_sheet_mapping_config()
+        config = dict(block)
+        for key in (
+            "sheet",
+            "name_col",
+            "attribute_cols",
+            "value_formula_col",
+            "specialization_col",
+            "note_col",
+        ):
+            if key not in config:
+                config[key] = mapping.get(key)
+        return config
+
+    def get_skill_block_config_for_row(self, row, category_id=None):
+        try:
+            row = int(row)
+        except Exception:
+            return None
+        if category_id:
+            block = self.get_skill_block_config_for_category(category_id)
+            if block and self._safe_int(block.get("row_min", 0), 0) <= row <= self._safe_int(block.get("row_max", 0), 0):
+                return block
+            return None
+        for block in self.get_skill_fertigkeiten_blocks():
+            if not isinstance(block, dict):
+                continue
+            row_min = self._safe_int(block.get("row_min", 0), 0)
+            row_max = self._safe_int(block.get("row_max", 0), 0)
+            if row_min <= row <= row_max:
+                return self._merge_skill_block_config(block)
+        return None
+
+    def find_skill_row_in_fertigkeiten(self, skill_name, category_id=None, skill_id=None, return_info=False):
+        mapping = self.get_skill_sheet_mapping_config()
+        sheet_name = str(mapping.get("sheet", "Fertigkeiten"))
+        name_col = str(mapping.get("name_col", "D"))
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        if not isinstance(sheet_cache, dict):
+            result = (None, "missing_row", [])
+            return result if return_info else None
+
+        category_block = self.get_skill_block_config_for_category(category_id)
+        matches = []
+        for cell_ref, cell_data in sheet_cache.items():
+            match = re.fullmatch(rf"{name_col}([0-9]+)", str(cell_ref), flags=re.IGNORECASE)
+            if not match:
+                continue
+            row = int(match.group(1))
+            if category_block:
+                row_min = self._safe_int(category_block.get("row_min", 0), 0)
+                row_max = self._safe_int(category_block.get("row_max", 0), 0)
+                if row < row_min or row > row_max:
+                    continue
+            cached_name = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
+            match_quality = self.get_skill_name_match_quality(skill_name, cached_name)
+            if match_quality == "none":
+                continue
+            matches.append((row, str(cached_name).strip(), match_quality))
+
+        if len(matches) > 1:
+            print(
+                "[SKILLS MAP AMBIGUOUS]",
+                f"{category_id}/{skill_id}",
+                f'"{skill_name}"',
+                "matches:",
+                [m[0] for m in matches],
+            )
+            result = (None, "ambiguous_row", matches)
+            return result if return_info else None
+        if len(matches) == 1:
+            print(
+                "[SKILLS MAP ROW]",
+                f"{category_id}/{skill_id}",
+                f'"{skill_name}"',
+                "->",
+                f"{sheet_name}!{name_col}{matches[0][0]}",
+            )
+            result = (matches[0][0], "ok", matches)
+            return result if return_info else matches[0][0]
+        print(
+            "[SKILLS MAP MISSING]",
+            f"{category_id}/{skill_id}",
+            f'"{skill_name}"',
+            "no row found",
+        )
+        result = (None, "missing_row", [])
+        return result if return_info else None
+
+    def get_skill_attribute_cells_for_row(self, row, block=None):
+        if block is None:
+            block = self.get_skill_block_config_for_row(row)
+        mapping = self.get_skill_sheet_mapping_config()
+        attr_cols = block.get("attribute_cols") if isinstance(block, dict) else mapping.get("attribute_cols", [])
+        if not isinstance(attr_cols, list):
+            attr_cols = []
+        return [f"{str(col)}{row}" for col in attr_cols[:4]]
+
+    def get_skill_attribute_letters_from_row(self, row, block=None):
+        if block is None:
+            block = self.get_skill_block_config_for_row(row)
+        sheet_name = str((block or {}).get("sheet", self.get_skill_sheet_mapping_config().get("sheet", "Fertigkeiten")))
+        letters = []
+        for cell_ref in self.get_skill_attribute_cells_for_row(row, block):
+            raw_value = self.get_cache_cell_value(sheet_name, cell_ref, "")
+            letter = str(raw_value or "").strip().upper()
+            if letter:
+                letters.append(letter)
+        return letters[:4]
+
+    def get_skill_lookup_value(self, block, attribute_letter):
+        letter = str(attribute_letter or "").strip().upper()
+        if not letter:
+            return None
+        sheet_name = block.get("sheet", "Fertigkeiten")
+        key_col = block.get("lookup_key_col", "BW")
+        value_col = block.get("lookup_value_col", "BX")
+        for row in range(
+            self._safe_int(block.get("lookup_start_row", 15), 15),
+            self._safe_int(block.get("lookup_end_row", 22), 22) + 1,
+        ):
+            key = str(self.get_cache_cell_value(sheet_name, f"{key_col}{row}", "") or "").strip().upper()
+            if key != letter:
+                continue
+            return self.get_numeric_cache_value(sheet_name, f"{value_col}{row}")
+        return None
+
+    def get_skill_bonus_key_from_note(self, note_text, attribute_letters):
+        note = self.normalize_skill_name(note_text)
+        has_attributes = any(str(letter).strip() for letter in attribute_letters)
+        if "freie wahl" in note:
+            return None
+        if "charisma" in note:
+            return "CH"
+        if "geist" in note:
+            return "M"
+        if "koerper" in note:
+            if not has_attributes and "oder" in note:
+                return None
+            return "B"
+        return None
+
+    def get_skill_bonus_value_for_key(self, block, bonus_key):
+        key_wanted = str(bonus_key or "").strip().upper()
+        if not key_wanted or not block:
+            return None
+        for bonus in block.get("bonus_rows", []):
+            key = str(
+                self.get_cache_cell_value(block["sheet"], bonus.get("key_cell", ""), "") or ""
+            ).strip().upper()
+            if key != key_wanted:
+                continue
+            value = self.get_numeric_cache_value(block["sheet"], bonus.get("value_cell", ""))
+            return value if value is not None else 0
+        return None
+
+    def resolve_skill_bonus_key(self, skill, row, block, attribute_letters, note_text, source_key):
+        note = self.normalize_skill_name(note_text)
+        direct_key = self.get_skill_bonus_key_from_note(note_text, attribute_letters)
+        if direct_key:
+            return direct_key, "note"
+
+        if "freie wahl" not in note:
+            return None, "unknown"
+
+        body_letters = {"K", "G", "Z", "R"}
+        mind_letters = {"I", "W", "S"}
+        candidates = set()
+        for letter in attribute_letters:
+            clean_letter = str(letter or "").strip().upper()
+            if clean_letter in body_letters:
+                candidates.add("B")
+            elif clean_letter == "C":
+                candidates.add("CH" if self.get_skill_bonus_value_for_key(block, "CH") is not None else "M")
+            elif clean_letter in mind_letters:
+                candidates.add("M")
+
+        if len(candidates) == 1:
+            bonus_key = next(iter(candidates))
+            bonus_value = self.get_skill_bonus_value_for_key(block, bonus_key)
+            print(
+                "[SKILLS MAP BONUS RESOLVED]",
+                source_key,
+                "freie_wahl",
+                f"attrs={attribute_letters}",
+                "->",
+                bonus_key,
+                f"value={bonus_value if bonus_value is not None else 0}",
+            )
+            return bonus_key, "attribute_group"
+        if len(candidates) > 1:
+            sorted_candidates = sorted(candidates)
+            print(
+                "[SKILLS MAP BONUS AMBIGUOUS]",
+                source_key,
+                "freie_wahl",
+                f"attrs={attribute_letters}",
+                f"candidates={sorted_candidates}",
+            )
+            return None, "ambiguous"
+
+        print(
+            "[SKILLS MAP BONUS UNKNOWN]",
+            source_key,
+            "freie_wahl",
+            f"attrs={attribute_letters}",
+        )
+        return None, "unknown"
+
+    def get_skill_base_bonus_from_row_or_note(self, row, skill, block=None, note_text=None, source_key=""):
+        if block is None:
+            block = self.get_skill_block_config_for_row(row)
+        if not block:
+            return None, 0, "missing_block"
+        attribute_letters = self.get_skill_attribute_letters_from_row(row, block)
+        if note_text is None and isinstance(skill, dict):
+            note_text = skill.get("note", "")
+        bonus_key, resolve_status = self.resolve_skill_bonus_key(
+            skill,
+            row,
+            block,
+            attribute_letters,
+            note_text,
+            source_key,
+        )
+        if not bonus_key:
+            return None, 0, resolve_status
+        value = self.get_skill_bonus_value_for_key(block, bonus_key)
+        return bonus_key, value if value is not None else 0, resolve_status
+
+    def get_clean_skill_cache_text(self, sheet_name, cell_ref):
+        value = self.get_cache_cell_value(sheet_name, cell_ref, None)
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if not text or text.startswith("="):
+            return ""
+        lowered = text.lower()
+        if "arrayformula" in lowered or "openpyxl.worksheet.formula" in lowered:
+            return ""
+        return text
+
+    def get_skill_source_key(self, category_id, skill):
+        skill = skill if isinstance(skill, dict) else {}
+        skill_id = str(skill.get("id", self.normalize_skill_name(skill.get("name", "")))).strip()
+        return f"{category_id}/{skill_id}"
+
+    def build_skill_source_infos(self, categories, attribute_map):
+        self.skill_source_infos = {}
+        if not isinstance(categories, list):
+            return
+        for category in categories:
+            if not isinstance(category, dict):
+                continue
+            category_id = str(category.get("id", "")).strip()
+            skills = category.get("skills", [])
+            if not category_id or not isinstance(skills, list):
+                continue
+            for skill in skills:
+                if isinstance(skill, dict):
+                    self.build_skill_source_info(skill, category_id, attribute_map)
+
+    def build_skill_source_info(self, skill, category_id, attribute_map):
+        skill = skill if isinstance(skill, dict) else {}
+        skill_id = str(skill.get("id", self.normalize_skill_name(skill.get("name", "")))).strip()
+        ui_name = str(skill.get("name", ""))
+        mapping = self.get_skill_sheet_mapping_config()
+        sheet_name = str(mapping.get("sheet", "Fertigkeiten"))
+        name_col = str(mapping.get("name_col", "D"))
+        value_formula_col = str(mapping.get("value_formula_col", "AD"))
+        spec_col = str(mapping.get("specialization_col", "AG"))
+        note_col = str(mapping.get("note_col", "BE"))
+        attribute_sum = self.calculate_skill_attribute_sum(skill, attribute_map)
+        source_key = self.get_skill_source_key(category_id, skill)
+        info = {
+            "category_id": category_id,
+            "skill_id": skill_id,
+            "ui_name": ui_name,
+            "sheet_name": sheet_name,
+            "row": None,
+            "name_cell": None,
+            "attribute_cells": [],
+            "value_formula_cell": None,
+            "specialization_cell": None,
+            "note_cell": None,
+            "lookup_key_range": None,
+            "lookup_value_range": None,
+            "bonus_cells": [],
+            "resolved_attribute_letters": [],
+            "resolved_attribute_values": [],
+            "resolved_bonus_key": None,
+            "resolved_bonus_value": 0,
+            "calculated_value": None,
+            "display_value": "",
+            "source_status": "fallback",
+            "attribute_sum": attribute_sum,
+            "cache_name": "",
+            "display_name": ui_name,
+            "match_type": "missing",
+            "visible_source": "structure",
+            "display_attributes": [],
+            "display_specialization": "",
+            "display_note": "",
+        }
+
+        row, row_status, matches = self.find_skill_row_in_fertigkeiten(
+            ui_name,
+            category_id=category_id,
+            skill_id=skill_id,
+            return_info=True,
+        )
+        if row is None:
+            info["source_status"] = row_status
+            info["match_type"] = "ambiguous" if row_status == "ambiguous_row" else "missing"
+            if row_status == "ambiguous_row":
+                print(
+                    "[SKILLS MATCH AMBIGUOUS]",
+                    source_key,
+                    f'ui="{ui_name}"',
+                    f"matches={[m[0] for m in matches]}",
+                )
+            else:
+                print("[SKILLS MATCH MISSING]", source_key, f'ui="{ui_name}"')
+            print(
+                "[SKILLS STRUCTURE ONLY]",
+                source_key,
+                "no cache row, visible fields blank",
+            )
+            self.skill_source_infos[source_key] = info
+            self.log_skill_source_info(source_key, info)
+            print(
+                "[SKILLS VISIBLE SOURCE]",
+                source_key,
+                f"visible_source={info.get('visible_source')}",
+                f"match={info.get('match_type')}",
+                f'display="{info.get("display_name")}"',
+            )
+            return info
+
+        cache_name = matches[0][1] if matches else ""
+        match_quality = matches[0][2] if matches and len(matches[0]) > 2 else "exact"
+        info["cache_name"] = cache_name
+        info["match_quality"] = match_quality
+        info["match_type"] = match_quality
+        use_cache_display_fields = match_quality in ("exact", "legacy")
+        field_fallback_used = False
+        if match_quality == "legacy":
+            print(
+                "[SKILLS LEGACY MATCH]",
+                source_key,
+                f'ui="{ui_name}"',
+                f'cache="{cache_name}"',
+                f"row={row}",
+                "using cache-visible data",
+            )
+        elif match_quality == "exact":
+            print("[SKILLS EXACT MATCH]", source_key, f"row={row}", "using cache-visible data")
+
+        block = self.get_skill_block_config_for_row(row, category_id)
+        info["row"] = row
+        info["name_cell"] = f"{name_col}{row}"
+        info["attribute_cells"] = self.get_skill_attribute_cells_for_row(row, block)
+        info["value_formula_cell"] = f"{value_formula_col}{row}"
+        info["specialization_cell"] = f"{spec_col}{row}"
+        info["note_cell"] = f"{note_col}{row}"
+
+        cache_name_text = self.get_clean_skill_cache_text(sheet_name, info["name_cell"])
+        cache_specialization = self.get_clean_skill_cache_text(sheet_name, info["specialization_cell"])
+        cache_note = self.get_clean_skill_cache_text(sheet_name, info["note_cell"])
+        if use_cache_display_fields:
+            if cache_name_text:
+                info["display_name"] = cache_name_text
+            else:
+                field_fallback_used = True
+            info["display_specialization"] = cache_specialization
+            info["display_note"] = cache_note
+
+        if not block:
+            cache_letters = self.get_skill_attribute_letters_from_row(row, None)
+            info["resolved_attribute_letters"] = cache_letters
+            if use_cache_display_fields:
+                info["display_attributes"] = cache_letters
+                info["visible_source"] = "mixed_field_fallback" if field_fallback_used else "cache"
+            info["source_status"] = "missing_block"
+            info["display_value"] = "0"
+            print("[SKILLS FALLBACK]", ui_name, "missing block, using attribute_sum:", attribute_sum)
+            self.skill_source_infos[source_key] = info
+            self.log_skill_source_info(source_key, info)
+            print(
+                "[SKILLS VISIBLE SOURCE]",
+                source_key,
+                f"visible_source={info.get('visible_source')}",
+                f"match={info.get('match_type')}",
+                f'display="{info.get("display_name")}"',
+            )
+            return info
+
+        lookup_start = self._safe_int(block.get("lookup_start_row", 0), 0)
+        lookup_end = self._safe_int(block.get("lookup_end_row", 0), 0)
+        lookup_key_col = str(block.get("lookup_key_col", ""))
+        lookup_value_col = str(block.get("lookup_value_col", ""))
+        if lookup_start and lookup_end and lookup_key_col and lookup_value_col:
+            info["lookup_key_range"] = f"{lookup_key_col}{lookup_start}:{lookup_key_col}{lookup_end}"
+            info["lookup_value_range"] = f"{lookup_value_col}{lookup_start}:{lookup_value_col}{lookup_end}"
+        info["bonus_cells"] = block.get("bonus_rows", []) if isinstance(block.get("bonus_rows"), list) else []
+
+        letters = self.get_skill_attribute_letters_from_row(row, block)
+        info["resolved_attribute_letters"] = letters
+        if use_cache_display_fields:
+            info["display_attributes"] = letters
+            info["visible_source"] = "mixed_field_fallback" if field_fallback_used else "cache"
+        total = 0
+        status = "ok"
+        for letter in letters:
+            lookup_value = self.get_skill_lookup_value(block, letter)
+            if lookup_value is None:
+                print("[SKILLS MAP LOOKUP MISSING]", source_key, letter, info["lookup_key_range"])
+                status = "missing_lookup"
+                continue
+            info["resolved_attribute_values"].append(lookup_value)
+            total += lookup_value
+
+        formula_cell = info["value_formula_cell"]
+        formula_text = self.get_skill_formula_text(sheet_name, formula_cell)
+        formula_bonus_cell = None
+        formula_bonus_known = False
+        if formula_text:
+            info["formula_text"] = formula_text
+            formula_bonus_cell = self.extract_skill_bonus_cell_from_formula(formula_text, source_key)
+            formula_bonus_known = True
+        else:
+            formula_bonus_cell, formula_bonus_known = self.infer_skill_bonus_cell_from_array_formula(
+                sheet_name,
+                row,
+                formula_cell,
+            )
+
+        bonus_key = None
+        bonus_value = 0
+        if formula_bonus_known:
+            if formula_bonus_cell:
+                bonus_value = self.get_numeric_cache_value(sheet_name, formula_bonus_cell)
+                if bonus_value is None:
+                    bonus_value = 0
+                bonus_key = formula_bonus_cell
+                info["formula_bonus_cell"] = formula_bonus_cell
+                print(
+                    "[SKILLS FORMULA BONUS]",
+                    source_key,
+                    formula_cell,
+                    "->",
+                    formula_bonus_cell,
+                    f"value={bonus_value}",
+                )
+            else:
+                print("[SKILLS FORMULA BONUS]", source_key, formula_cell, "->", "none")
+        else:
+            print("[SKILLS BONUS FALLBACK]", source_key, "no formula text, using note fallback")
+            bonus_key, bonus_value, bonus_status = self.get_skill_base_bonus_from_row_or_note(
+                row,
+                skill,
+                block=block,
+                note_text=info["display_note"],
+                source_key=source_key,
+            )
+            if bonus_key is None and bonus_status in ("unknown", "ambiguous"):
+                status = "fallback" if status == "ok" else status
+        total += bonus_value
+        info["resolved_bonus_key"] = bonus_key
+        info["resolved_bonus_value"] = bonus_value
+        info["calculated_value"] = total
+        info["display_value"] = self.format_character_display_value(total, "int")
+        info["source_status"] = status
+
+        formula_raw = self.get_cache_cell_value(sheet_name, info["value_formula_cell"], None)
+        if isinstance(formula_raw, str):
+            lowered = formula_raw.lower()
+            if formula_raw.startswith("=") or "arrayformula" in lowered or "openpyxl.worksheet.formula" in lowered:
+                if status == "ok":
+                    info["ignored_formula_cell_value"] = formula_raw
+
+        self.skill_source_infos[source_key] = info
+        self.log_skill_source_info(source_key, info)
+        print(
+            "[SKILLS VISIBLE SOURCE]",
+            source_key,
+            f"visible_source={info.get('visible_source')}",
+            f"match={info.get('match_type')}",
+            f'display="{info.get("display_name")}"',
+        )
+        return info
+
+    def log_skill_source_info(self, source_key, info):
+        if not self.skills_debug_sources:
+            return
+        print(
+            "[SKILLS SOURCE]",
+            source_key,
+            f"row={info.get('row')}",
+            f"attrs={info.get('resolved_attribute_letters')}",
+            f"attr_values={info.get('resolved_attribute_values')}",
+            f"bonus={info.get('resolved_bonus_key')}:{info.get('resolved_bonus_value')}",
+            f"raw={info.get('calculated_value')}",
+            f"display={info.get('display_value')}",
+            f"status={info.get('source_status')}",
+        )
+
+    def calculate_skill_value_from_fertigkeiten_sheet(self, skill, category_id=None, attribute_map=None):
+        if not isinstance(skill, dict):
+            return None
+        if attribute_map is None:
+            attribute_map = {}
+        info = self.build_skill_source_info(skill, category_id or "", attribute_map)
+        return info.get("calculated_value")
+
+    def get_skill_cache_value(self, skill):
+        return self.calculate_skill_value_from_fertigkeiten_sheet(skill)
+
+    def render_skills_screen(self):
+        if self.content_layer is None:
+            return
+
+        layout_config = self.load_skills_layout_config()
+        skill_definitions = self.load_skill_definitions()
+        screen_cfg = layout_config.get("skills_screen", {})
+        categories = skill_definitions.get("categories", [])
+        if not isinstance(categories, list):
+            categories = []
+        attribute_map = skill_definitions.get("attribute_map", {})
+        if not isinstance(attribute_map, dict):
+            attribute_map = {}
+
+        category_ids = [
+            str(category.get("id", ""))
+            for category in categories
+            if isinstance(category, dict) and str(category.get("id", "")).strip()
+        ]
+        print("[SKILLS] render category:", self.current_skill_category)
+        print("[SKILLS] loaded categories:", category_ids)
+        has_skills_cache = bool(self.loader.cell_cache) and isinstance(
+            self.loader.cell_cache.get("Fertigkeiten"),
+            dict,
+        )
+        if has_skills_cache:
+            self.build_skill_source_infos(categories, attribute_map)
+        else:
+            self.skill_source_infos = {}
+            print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+
+        if self.current_skill_category not in category_ids and category_ids:
+            self.current_skill_category = category_ids[0]
+
+        screen = QFrame(self.content_layer)
+        screen.setGeometry(
+            self._safe_int(screen_cfg.get("x", 20), 20),
+            self._safe_int(screen_cfg.get("y", 20), 20),
+            self._safe_int(screen_cfg.get("w", 1420), 1420),
+            self._safe_int(screen_cfg.get("h", 820), 820),
+        )
+        screen.setStyleSheet("background: transparent;")
+        screen.show()
+
+        tabs_cfg = screen_cfg.get("category_tabs", {})
+        tabs_container = QFrame(screen)
+        tabs_container.setGeometry(
+            self._safe_int(tabs_cfg.get("x", 20), 20),
+            self._safe_int(tabs_cfg.get("y", 10), 10),
+            self._safe_int(tabs_cfg.get("w", 1380), 1380),
+            self._safe_int(tabs_cfg.get("h", 50), 50),
+        )
+        tabs_container.setStyleSheet("background: transparent;")
+        tabs_container.show()
+
+        button_w = self._safe_int(tabs_cfg.get("button_w", 220), 220)
+        button_h = self._safe_int(tabs_cfg.get("button_h", 42), 42)
+        button_gap = self._safe_int(tabs_cfg.get("gap", 18), 18)
+        tab_font_size = self._safe_int(tabs_cfg.get("font_size", 20), 20)
+        active_color = str(tabs_cfg.get("active_color", "#f2d28b"))
+        inactive_color = str(tabs_cfg.get("inactive_color", "#9a8560"))
+
+        for index, category in enumerate(categories):
+            if not isinstance(category, dict):
+                continue
+            category_id = str(category.get("id", "")).strip()
+            if not category_id:
+                continue
+            title = str(category.get("title", category_id))
+            is_active = category_id == self.current_skill_category
+            button = QPushButton(tabs_container)
+            button.setGeometry(index * (button_w + button_gap), 0, button_w, button_h)
+            button.setText(title)
+            button.setCursor(Qt.PointingHandCursor)
+            color = active_color if is_active else inactive_color
+            border = "#b88a35" if is_active else "rgba(180, 140, 70, 90)"
+            bg = "rgba(35, 24, 12, 185)" if is_active else "rgba(8, 8, 8, 125)"
+            button.setStyleSheet(
+                "QPushButton {"
+                f"background-color: {bg};"
+                f"color: {color};"
+                f"border: 1px solid {border};"
+                "border-radius: 4px;"
+                f"font-size: {tab_font_size}px;"
+                "font-weight: 700;"
+                "padding: 0px;"
+                "}"
+                "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
+            )
+            button.clicked.connect(
+                lambda checked=False, cid=category_id: self.on_skill_category_clicked(cid)
+            )
+            button.show()
+
+        active_category = None
+        for category in categories:
+            if isinstance(category, dict) and category.get("id") == self.current_skill_category:
+                active_category = category
+                break
+        if active_category is None:
+            active_category = {"id": self.current_skill_category, "skills": []}
+
+        self.render_skills_table(screen, screen_cfg.get("table", {}), active_category, attribute_map)
+
+    def on_skill_category_clicked(self, category_id):
+        self.current_skill_category = str(category_id)
+        section_id = self.current_main_section
+        if section_id not in ("skills", "fertigkeiten"):
+            section_id = "skills"
+        self.show_main_section(section_id)
+
+    def render_skills_table(self, parent, table_cfg, category, attribute_map):
+        table = QFrame(parent)
+        table.setGeometry(
+            self._safe_int(table_cfg.get("x", 20), 20),
+            self._safe_int(table_cfg.get("y", 80), 80),
+            self._safe_int(table_cfg.get("w", 1380), 1380),
+            self._safe_int(table_cfg.get("h", 700), 700),
+        )
+        table.setStyleSheet(
+            "background: rgba(5, 5, 5, 95);"
+            "border: 1px solid rgba(242, 210, 139, 70);"
+            "border-radius: 4px;"
+        )
+        table.show()
+
+        header_h = self._safe_int(table_cfg.get("header_h", 42), 42)
+        row_h = self._safe_int(table_cfg.get("row_h", 42), 42)
+        max_rows = self._safe_int(table_cfg.get("max_visible_rows", 15), 15)
+        font_size = self._safe_int(table_cfg.get("font_size", 17), 17)
+        header_font_size = self._safe_int(table_cfg.get("header_font_size", 19), 19)
+        header_color = str(table_cfg.get("header_color", "#f2d28b"))
+        columns = table_cfg.get("columns", {})
+        if not isinstance(columns, dict):
+            columns = {}
+
+        header_bg = QFrame(table)
+        header_bg.setGeometry(0, 0, table.width(), header_h)
+        header_bg.setStyleSheet(
+            "background: rgba(24, 16, 8, 175); border-bottom: 1px solid rgba(242, 210, 139, 85);"
+        )
+        header_bg.show()
+
+        for column_id in ("skill", "attributes", "value", "specialization", "note"):
+            col_cfg = columns.get(column_id, {})
+            self.create_panel_text(
+                table,
+                {
+                    "x": self._safe_int(col_cfg.get("x", 0), 0),
+                    "y": 0,
+                    "w": self._safe_int(col_cfg.get("w", 120), 120),
+                    "h": header_h,
+                },
+                str(col_cfg.get("title", column_id)),
+                header_font_size,
+                header_color,
+                bold=True,
+                align="center" if column_id in ("attributes", "value") else "left",
+            )
+
+        if not self.loader.cell_cache:
+            self.create_panel_text(
+                table,
+                {"x": 0, "y": header_h, "w": table.width(), "h": row_h * 2},
+                "Kein Charaktercache geladen",
+                font_size,
+                str(table_cfg.get("note_color", "#d8d0b0")),
+                bold=True,
+                align="center",
+            )
+            print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+            return
+        if not isinstance(self.loader.cell_cache.get("Fertigkeiten"), dict):
+            self.create_panel_text(
+                table,
+                {"x": 0, "y": header_h, "w": table.width(), "h": row_h * 2},
+                "Keine Fertigkeiten-Daten gefunden",
+                font_size,
+                str(table_cfg.get("note_color", "#d8d0b0")),
+                bold=True,
+                align="center",
+            )
+            print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+            return
+
+        skills = category.get("skills", []) if isinstance(category, dict) else []
+        if not isinstance(skills, list):
+            skills = []
+        category_id = str(category.get("id", "")) if isinstance(category, dict) else ""
+        visible_skills = skills[:max_rows]
+        if len(skills) > max_rows:
+            print("[SKILLS] rows truncated:", category_id)
+
+        row_colors = ("rgba(8, 8, 8, 125)", "rgba(20, 20, 20, 105)")
+        for index, skill in enumerate(visible_skills):
+            if not isinstance(skill, dict):
+                continue
+            y = header_h + index * row_h
+            row_bg = QFrame(table)
+            row_bg.setGeometry(0, y, table.width(), row_h)
+            row_bg.setStyleSheet(
+                f"background: {row_colors[index % 2]};"
+                "border-bottom: 1px solid rgba(255, 255, 255, 24);"
+            )
+            row_bg.lower()
+            row_bg.show()
+
+            skill_name = str(skill.get("name", ""))
+            attributes = skill.get("attributes", [])
+            if not isinstance(attributes, list):
+                attributes = []
+            attribute_sum = self.calculate_skill_attribute_sum(skill, attribute_map)
+            source_key = self.get_skill_source_key(category_id, skill)
+            source_info = self.skill_source_infos.get(source_key)
+            if not isinstance(source_info, dict):
+                source_info = self.build_skill_source_info(skill, category_id, attribute_map)
+            display_name = source_info.get("display_name", skill_name)
+            if not isinstance(display_name, str) or not display_name.strip():
+                display_name = skill_name
+            sheet_value = source_info.get("calculated_value")
+            if sheet_value is None:
+                display_value = "0" if source_info.get("row") is not None else ""
+                print(
+                    "[SKILLS FALLBACK]",
+                    display_name,
+                    "no sheet value, using:",
+                    display_value if display_value else "blank",
+                )
+            else:
+                display_value = self.format_character_display_value(sheet_value, "int")
+                try:
+                    sheet_int_value = int(display_value)
+                except Exception:
+                    sheet_int_value = sheet_value
+                if sheet_int_value != attribute_sum:
+                    print(
+                        "[SKILLS DIFF]",
+                        display_name,
+                        "sheet:",
+                        sheet_value,
+                        "attribute_sum:",
+                        attribute_sum,
+                        "display:",
+                        display_value,
+                    )
+                else:
+                    print(
+                        "[SKILLS OK]",
+                        display_name,
+                        "sheet:",
+                        sheet_value,
+                        "attribute_sum:",
+                        attribute_sum,
+                        "display:",
+                        display_value,
+                    )
+            print("[SKILLS] skill value:", display_name, attributes[:4], "->", display_value)
+            display_attributes = source_info.get("display_attributes", [])
+            if not isinstance(display_attributes, list):
+                display_attributes = []
+            display_specialization = source_info.get("display_specialization", "")
+            display_note = source_info.get("display_note", "")
+
+            skill_col = columns.get("skill", {})
+            attr_col = columns.get("attributes", {})
+            value_col = columns.get("value", {})
+            spec_col = columns.get("specialization", {})
+            note_col = columns.get("note", {})
+
+            self.create_panel_text(
+                table,
+                {
+                    "x": self._safe_int(skill_col.get("x", 0), 0) + 8,
+                    "y": y,
+                    "w": max(1, self._safe_int(skill_col.get("w", 360), 360) - 12),
+                    "h": row_h,
+                },
+                display_name,
+                font_size,
+                str(table_cfg.get("skill_name_color", "#f2d28b")),
+                bold=True,
+            )
+
+            slot_w = self._safe_int(attr_col.get("slot_w", 42), 42)
+            slot_gap = self._safe_int(attr_col.get("slot_gap", 8), 8)
+            attr_x = self._safe_int(attr_col.get("x", 370), 370)
+            for slot_index in range(4):
+                letter = str(display_attributes[slot_index]) if slot_index < len(display_attributes) else ""
+                slot = QFrame(table)
+                slot.setGeometry(
+                    attr_x + slot_index * (slot_w + slot_gap),
+                    y + 5,
+                    slot_w,
+                    max(1, row_h - 10),
+                )
+                slot.setStyleSheet(
+                    "background: rgba(0, 0, 0, 105);"
+                    "border: 1px solid rgba(255, 255, 255, 42);"
+                    "border-radius: 3px;"
+                )
+                slot.show()
+                self.create_panel_text(
+                    slot,
+                    {"x": 0, "y": 0, "w": slot_w, "h": max(1, row_h - 10)},
+                    letter,
+                    font_size,
+                    str(table_cfg.get("attribute_color", "#ffffff")),
+                    bold=True,
+                    align="center",
+                )
+
+            self.create_panel_text(
+                table,
+                {
+                    "x": self._safe_int(value_col.get("x", 600), 600),
+                    "y": y,
+                    "w": self._safe_int(value_col.get("w", 80), 80),
+                    "h": row_h,
+                },
+                display_value,
+                font_size,
+                str(table_cfg.get("value_color", "#7fd0ff")),
+                bold=True,
+                align="center",
+            )
+            self.create_panel_text(
+                table,
+                {
+                    "x": self._safe_int(spec_col.get("x", 690), 690) + 8,
+                    "y": y,
+                    "w": max(1, self._safe_int(spec_col.get("w", 470), 470) - 12),
+                    "h": row_h,
+                },
+                str(display_specialization),
+                font_size,
+                str(table_cfg.get("specialization_color", "#ffffff")),
+            )
+            self.create_panel_text(
+                table,
+                {
+                    "x": self._safe_int(note_col.get("x", 1170), 1170) + 8,
+                    "y": y,
+                    "w": max(1, self._safe_int(note_col.get("w", 210), 210) - 12),
+                    "h": row_h,
+                },
+                str(display_note),
+                font_size,
+                str(table_cfg.get("note_color", "#d8d0b0")),
+            )
 
     def _read_data_map_cell(self, mapping_entry, default_sheet, fallback="-"):
         sheet_name = default_sheet
@@ -2119,20 +3342,24 @@ class MainWindow(QMainWindow):
     def refresh_character_cache_list(self):
         if self.settings_character_combo is None:
             return
-        self.settings_character_combo.clear()
-        caches = self.loader.list_character_caches()
-        active_cache = self.loader.active_cache_path
-        active_index = -1
         active_character_name = self.loader.current_character_name
-        for i, entry in enumerate(caches):
-            display_text = f"{entry['name']}  ({entry['file']})"
-            self.settings_character_combo.addItem(display_text, entry["path"])
-            if entry["path"] == active_cache:
-                active_index = i
-                active_character_name = entry["name"]
-                self.loader.current_character_name = active_character_name
-        if active_index >= 0:
-            self.settings_character_combo.setCurrentIndex(active_index)
+        self.settings_character_combo.blockSignals(True)
+        try:
+            self.settings_character_combo.clear()
+            caches = self.loader.list_character_caches()
+            active_cache = self.loader.active_cache_path
+            active_index = -1
+            for i, entry in enumerate(caches):
+                display_text = f"{entry['name']}  ({entry['file']})"
+                self.settings_character_combo.addItem(display_text, entry["path"])
+                if entry["path"] == active_cache:
+                    active_index = i
+                    active_character_name = entry["name"]
+                    self.loader.current_character_name = active_character_name
+            if active_index >= 0:
+                self.settings_character_combo.setCurrentIndex(active_index)
+        finally:
+            self.settings_character_combo.blockSignals(False)
         if self.settings_character_active_label is not None:
             self.settings_character_active_label.setText(active_character_name)
 
@@ -2159,6 +3386,7 @@ class MainWindow(QMainWindow):
             )
             return
 
+        self.reset_character_runtime_state()
         self.create_tabs_from_cache()
         self.refresh_character_cache_list()
         if self.settings_character_active_label is not None:
@@ -2169,24 +3397,63 @@ class MainWindow(QMainWindow):
     def load_selected_character_cache(self):
         if self.settings_character_combo is None:
             return
+        self.on_settings_character_selection_changed(self.settings_character_combo.currentIndex())
+
+    def on_settings_character_selection_changed(self, index):
+        if self.settings_character_combo is None:
+            return
+        if index < 0:
+            return
         cache_path = self.settings_character_combo.currentData()
         if not isinstance(cache_path, str) or not cache_path:
-            QMessageBox.warning(self, "Charakter laden", "Bitte zuerst einen Charakter auswählen.")
+            return
+        active_cache_path = self.loader.active_cache_path
+        if active_cache_path and Path(cache_path) == Path(active_cache_path):
             return
         ok = self.loader.load_character_cache(cache_path)
         if not ok:
             QMessageBox.warning(self, "Charakter laden", "Charakter-Cache konnte nicht geladen werden.")
             return
+        self.reset_character_runtime_state()
         if self.settings_character_active_label is not None:
             self.settings_character_active_label.setText(self.loader.current_character_name)
         self.create_tabs_from_cache()
         if self.current_main_section == "character":
             self.show_main_section("character")
+        elif self.current_main_section in ("skills", "fertigkeiten"):
+            self.show_main_section("skills")
         print("[CHARACTER CACHE] loaded:", cache_path)
 
     def on_settings_refresh_character_list_clicked(self):
         self.refresh_character_cache_list()
         print("[CHARACTER] cache list refreshed")
+
+    def reset_character_runtime_state(self):
+        if hasattr(self, "tabs") and self.tabs is not None:
+            self.tabs.clear()
+        if hasattr(self, "formula_table") and self.formula_table is not None:
+            self.formula_table.setRowCount(0)
+        if hasattr(self, "formula_editor") and self.formula_editor is not None:
+            self.formula_editor.setPlainText("")
+        if hasattr(self, "cell_label") and self.cell_label is not None:
+            self.cell_label.setText('Zelle: <span style="color:#666666">-</span>')
+        if hasattr(self, "references_label") and self.references_label is not None:
+            self.references_label.setText("Referenzen: -")
+        if hasattr(self, "result_label") and self.result_label is not None:
+            self.result_label.setText("Ergebnis: -")
+
+        self.sheet_tabs = {}
+        self.formula_changes = {}
+        self.formula_data = {}
+        self.current_formula_cell = None
+        self.highlighted_borders = {}
+        self.current_highlight_table = None
+        self.current_active_grid_cell = None
+        self.current_reference_color_map = {}
+        self.current_indirect_references = []
+        self.skill_source_infos = {}
+        self.skill_sheet_mapping_config = None
+        print("[CHARACTER RESET] runtime state cleared")
 
     def update_main_nav_button_styles(self):
         nav_style = self.theme_style.get("nav_button", {})
@@ -2258,6 +3525,7 @@ class MainWindow(QMainWindow):
                 str(exc),
             )
             return
+        self.reset_character_runtime_state()
         sheets = self.loader.get_sheets()
 
         for sheet_name in sheets:
@@ -2307,12 +3575,21 @@ class MainWindow(QMainWindow):
 
         for i, row in enumerate(data):
             for j, value in enumerate(row):
-                text = str(value) if value is not None else ""
+                text = self.format_debug_grid_value(value)
                 item = QTableWidgetItem(text)
                 table.setItem(i, j, item)
 
         tab_layout.addWidget(table)
         self.tabs.addTab(tab, sheet_name)
+
+    def format_debug_grid_value(self, value):
+        if value is None:
+            return ""
+        text = str(value)
+        lowered = text.lower()
+        if "openpyxl.worksheet.formula.arrayformula" in lowered or "arrayformula object" in lowered:
+            return "[ArrayFormula: unsupported]"
+        return text
 
     def update_formula_list_for_current_tab(self, index):
         self.formula_table.setRowCount(0)

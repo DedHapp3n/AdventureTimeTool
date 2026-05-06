@@ -523,14 +523,14 @@
       "error": null
     },
     "AG16": {
-      "value": "=IF(G5=3,0+AG4/2,IF(G5=2,1+AG4/2,IF(G5=1,2+AG4/2,IF(G5=0,4+AG4/2,IF(G5=4,-1+AG4/2,IF(G5=5,-2+AG4/2,-4+AG4/2))))))+AG18+4",
+      "value": 4.875,
       "formula": "=IF(G5=3,0+AG4/2,IF(G5=2,1+AG4/2,IF(G5=1,2+AG4/2,IF(G5=0,4+AG4/2,IF(G5=4,-1+AG4/2,IF(G5=5,-2+AG4/2,-4+AG4/2))))))+AG18+4",
       "references": [
         "G5",
         "AG4",
         "AG18"
       ],
-      "error": "unsupported"
+      "error": null
     },
     "AJ16": {
       "value": "Magie-Typus:",
@@ -2212,7 +2212,7 @@
       "error": null
     },
     "AD15": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf5f6540>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534d16d0>",
       "formula": null,
       "references": [],
       "error": null
@@ -2278,7 +2278,7 @@
       "error": null
     },
     "AD17": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf606a50>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534d9d60>",
       "formula": null,
       "references": [],
       "error": null
@@ -2338,7 +2338,7 @@
       "error": null
     },
     "AD19": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf60e300>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534e1610>",
       "formula": null,
       "references": [],
       "error": null
@@ -2384,7 +2384,7 @@
       "error": null
     },
     "AD21": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf644c80>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55350bfb0>",
       "formula": null,
       "references": [],
       "error": null
@@ -2442,7 +2442,7 @@
       "error": null
     },
     "AD23": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf604890>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534d9790>",
       "formula": null,
       "references": [],
       "error": null
@@ -2494,7 +2494,7 @@
       "error": null
     },
     "AD25": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf6061b0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534d37a0>",
       "formula": null,
       "references": [],
       "error": null
@@ -2532,7 +2532,7 @@
       "error": null
     },
     "AD27": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf62dca0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553501010>",
       "formula": null,
       "references": [],
       "error": null
@@ -2564,7 +2564,7 @@
       "error": null
     },
     "AD29": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf6355b0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553502240>",
       "formula": null,
       "references": [],
       "error": null
@@ -2596,7 +2596,7 @@
       "error": null
     },
     "AD31": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf636f30>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534db0e0>",
       "formula": null,
       "references": [],
       "error": null
@@ -2634,7 +2634,7 @@
       "error": null
     },
     "AD33": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf60c3e0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534f18b0>",
       "formula": null,
       "references": [],
       "error": null
@@ -2678,7 +2678,7 @@
       "error": null
     },
     "AD35": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf61a5a0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5534f3590>",
       "formula": null,
       "references": [],
       "error": null
@@ -2810,7 +2810,7 @@
       "error": null
     },
     "AD49": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf66a2d0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55354d520>",
       "formula": null,
       "references": [],
       "error": null
@@ -2854,7 +2854,7 @@
       "error": null
     },
     "AD51": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4c8380>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55338f590>",
       "formula": null,
       "references": [],
       "error": null
@@ -2886,7 +2886,7 @@
       "error": null
     },
     "AD53": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf482060>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553359610>",
       "formula": null,
       "references": [],
       "error": null
@@ -2912,7 +2912,7 @@
       "error": null
     },
     "AD55": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4a9640>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55337c890>",
       "formula": null,
       "references": [],
       "error": null
@@ -2938,7 +2938,7 @@
       "error": null
     },
     "AD57": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4b0d70>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55337ff80>",
       "formula": null,
       "references": [],
       "error": null
@@ -2964,7 +2964,7 @@
       "error": null
     },
     "AD59": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4b84a0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5533871d0>",
       "formula": null,
       "references": [],
       "error": null
@@ -2982,7 +2982,7 @@
       "error": null
     },
     "AD61": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4bbb60>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55338edb0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3110,7 +3110,7 @@
       "error": null
     },
     "AD75": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4f4bf0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55338eb70>",
       "formula": null,
       "references": [],
       "error": null
@@ -3142,7 +3142,7 @@
       "error": null
     },
     "AD77": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf51d250>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5533f04a0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3174,7 +3174,7 @@
       "error": null
     },
     "AD79": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf524980>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5533f3b90>",
       "formula": null,
       "references": [],
       "error": null
@@ -3206,7 +3206,7 @@
       "error": null
     },
     "AD81": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf562c60>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553439eb0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3232,7 +3232,7 @@
       "error": null
     },
     "AD83": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf51e930>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5533f37d0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3258,7 +3258,7 @@
       "error": null
     },
     "AD85": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf4bb680>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55338dc70>",
       "formula": null,
       "references": [],
       "error": null
@@ -3290,7 +3290,7 @@
       "error": null
     },
     "AD87": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf51caa0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5533f1970>",
       "formula": null,
       "references": [],
       "error": null
@@ -3418,7 +3418,7 @@
       "error": null
     },
     "AD101": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf349880>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553268ad0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3444,7 +3444,7 @@
       "error": null
     },
     "AD103": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf5639e0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553268830>",
       "formula": null,
       "references": [],
       "error": null
@@ -3462,7 +3462,7 @@
       "error": null
     },
     "AD105": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf35da60>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb553278dd0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3480,7 +3480,7 @@
       "error": null
     },
     "AD107": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf37d160>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55329c4d0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3498,7 +3498,7 @@
       "error": null
     },
     "AD109": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf384860>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55329fb90>",
       "formula": null,
       "references": [],
       "error": null
@@ -3516,7 +3516,7 @@
       "error": null
     },
     "AD111": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf3c1e80>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5532dd1f0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3534,7 +3534,7 @@
       "error": null
     },
     "AD113": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf37e780>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55329f620>",
       "formula": null,
       "references": [],
       "error": null
@@ -3552,7 +3552,7 @@
       "error": null
     },
     "AD115": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf561c70>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5532784a0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3584,7 +3584,7 @@
       "error": null
     },
     "AD117": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf37e8a0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb55327be90>",
       "formula": null,
       "references": [],
       "error": null
@@ -3608,7 +3608,7 @@
       "error": null
     },
     "AD119": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf3b28a0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5532cdc10>",
       "formula": null,
       "references": [],
       "error": null
@@ -3626,7 +3626,7 @@
       "error": null
     },
     "AD121": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf3b2210>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5532cf050>",
       "formula": null,
       "references": [],
       "error": null
@@ -3658,7 +3658,7 @@
       "error": null
     },
     "AD123": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf392ae0>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5532b37a0>",
       "formula": null,
       "references": [],
       "error": null
@@ -3688,7 +3688,7 @@
       "error": null
     },
     "AD125": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fe5cf390890>",
+      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fb5532b01d0>",
       "formula": null,
       "references": [],
       "error": null

@@ -135,6 +135,12 @@
   ],
 
 
+
+
+  "skills_screen": {
+    "layout_file": "skills_layout.json"
+  },
+  
   "content_area": {
     "x": 32,
     "y": 128,
@@ -301,6 +307,7 @@
       }
     },
 
+    
 
 
 

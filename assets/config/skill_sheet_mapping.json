@@ -1,0 +1,70 @@
+{
+  "sheet": "Fertigkeiten",
+  "name_col": "D",
+  "attribute_cols": ["V", "X", "Z", "AB"],
+  "value_formula_col": "AD",
+  "specialization_col": "AG",
+  "note_col": "BE",
+  "blocks": [
+    {
+      "category_id": "allgemein",
+      "row_min": 15,
+      "row_max": 35,
+      "lookup_source": "shared_attribute_bonus_table",
+      "lookup_key_col": "BW",
+      "lookup_value_col": "BX",
+      "lookup_start_row": 15,
+      "lookup_end_row": 22,
+      "bonus_rows": [
+        { "key_cell": "BY24", "value_cell": "BW24" },
+        { "key_cell": "BY26", "value_cell": "BW26" },
+        { "key_cell": "BY28", "value_cell": "BW28" }
+      ]
+    },
+    {
+      "category_id": "kampf",
+      "row_min": 49,
+      "row_max": 61,
+      "lookup_source": "shared_attribute_bonus_table",
+      "lookup_key_col": "BW",
+      "lookup_value_col": "BX",
+      "lookup_start_row": 15,
+      "lookup_end_row": 22,
+      "bonus_rows": [
+        { "key_cell": "BY24", "value_cell": "BW24" },
+        { "key_cell": "BY26", "value_cell": "BW26" },
+        { "key_cell": "BY28", "value_cell": "BW28" }
+      ]
+    },
+    {
+      "category_id": "wissen",
+      "row_min": 75,
+      "row_max": 87,
+      "lookup_source": "shared_attribute_bonus_table",
+      "lookup_key_col": "BW",
+      "lookup_value_col": "BX",
+      "lookup_start_row": 15,
+      "lookup_end_row": 22,
+      "bonus_rows": [
+        { "key_cell": "BY24", "value_cell": "BW24" },
+        { "key_cell": "BY26", "value_cell": "BW26" },
+        { "key_cell": "BY28", "value_cell": "BW28" }
+      ]
+    },
+    {
+      "category_id": "handwerk",
+      "row_min": 101,
+      "row_max": 125,
+      "lookup_source": "shared_attribute_bonus_table",
+      "lookup_key_col": "BW",
+      "lookup_value_col": "BX",
+      "lookup_start_row": 15,
+      "lookup_end_row": 22,
+      "bonus_rows": [
+        { "key_cell": "BY24", "value_cell": "BW24" },
+        { "key_cell": "BY26", "value_cell": "BW26" },
+        { "key_cell": "BY28", "value_cell": "BW28" }
+      ]
+    }
+  ]
+}

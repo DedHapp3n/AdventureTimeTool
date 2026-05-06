@@ -1,0 +1,304 @@
+{
+  "attribute_map": {
+    "K": "kraft",
+    "G": "geschick",
+    "Z": "zaehigkeit",
+    "R": "reflex",
+    "I": "intelligenz",
+    "W": "willenskraft",
+    "C": "charisma",
+    "S": "sinne"
+  },
+  "categories": [
+    {
+      "id": "allgemein",
+      "title": "Allgemein",
+      "skills": [
+        {
+          "id": "klettern_athletik_ini_wurf",
+          "name": "Klettern, Athletik, Ini-Wurf",
+          "attributes": ["R", "I"],
+          "specialization": "Parcour, eigene Bewegung",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "schwimmen",
+          "name": "Schwimmen",
+          "attributes": ["R"],
+          "specialization": "Wasserimprovisation",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "tanz_und_akrobatik",
+          "name": "Tanz und Akrobatik",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Körper oder freie Wahl"
+        },
+        {
+          "id": "gesang_und_musizieren",
+          "name": "Gesang und Musizieren",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "gaukelei_und_trickbetrug",
+          "name": "Gaukelei und Trickbetrug",
+          "attributes": ["R", "I"],
+          "specialization": "Slight of Hand, Schummeln",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "mustern_und_menschenkenntnis",
+          "name": "Mustern und Menschenkenntnis",
+          "attributes": ["I"],
+          "specialization": "Lauschen",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "etikette_und_redegewandheit",
+          "name": "Etikette und Redegewandheit",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "reiten",
+          "name": "Reiten",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "fahrzeug_lenken_und_geraete_bedienen",
+          "name": "Fahrzeug lenken und Geräte bedienen",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "schleichen_verstecken_und_heimlichkeit",
+          "name": "Schleichen, Verstecken und Heimlichkeit",
+          "attributes": ["R", "S"],
+          "specialization": "Tarnen, Verstecken",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "willensstaerke",
+          "name": "Willensstärke",
+          "attributes": ["I"],
+          "specialization": "Stoische Gelassenheit, Durchhalten",
+          "note": "Anfangsattribut: Geist"
+        }
+      ]
+    },
+    {
+      "id": "kampf",
+      "title": "Kampf",
+      "skills": [
+        {
+          "id": "ausweichen",
+          "name": "Ausweichen",
+          "attributes": ["R"],
+          "specialization": "Close Range",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "nahkampf",
+          "name": "Nahkampf",
+          "attributes": ["R", "G"],
+          "specialization": "Close Range, Stichwaffen",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "fernkampf",
+          "name": "Fernkampf",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "fuehren_taktik_und_kriegskunst",
+          "name": "Führen, Taktik und Kriegskunst",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "blocken_mit_schilden",
+          "name": "Blocken mit Schilden",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Körper"
+        },
+        {
+          "id": "kriegsmaschinerie",
+          "name": "Kriegsmaschinerie",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "magieanwendung",
+          "name": "Magieanwendung",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        }
+      ]
+    },
+    {
+      "id": "wissen",
+      "title": "Wissen",
+      "skills": [
+        {
+          "id": "religion_goetter_und_daemonen",
+          "name": "Religion, Götter und Dämonen",
+          "attributes": ["I"],
+          "specialization": "Unmenschlich",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "heraldik_rechts_und_altertumskunde",
+          "name": "Heraldik, Rechts- und Altertumskunde",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "handel_und_wertgegenstaende",
+          "name": "Handel und Wertgegenstände",
+          "attributes": ["I"],
+          "specialization": "Bewerten",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "monster_und_unwesenskunde",
+          "name": "Monster und Unwesenskunde",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "magische_phaenomene",
+          "name": "Magische Phänomene",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "wildnis_navigation_und_wetterkunde",
+          "name": "Wildnis, Navigation und Wetterkunde",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: Geist"
+        },
+        {
+          "id": "stadtleben_und_gassenwissen",
+          "name": "Stadtleben und Gassenwissen",
+          "attributes": ["I"],
+          "specialization": "Zwielichtige Kontakte",
+          "note": "Anfangsattribut: Geist"
+        }
+      ]
+    },
+    {
+      "id": "handwerk",
+      "title": "Handwerk",
+      "skills": [
+        {
+          "id": "schreiber_maler_und_kartograph",
+          "name": "Schreiber, Maler und Kartograph",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "holzfaeller_zimmermann_und_schnitzer",
+          "name": "Holzfäller, Zimmermann und Schnitzer",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "schmied_giesser_und_metallurgie",
+          "name": "Schmied, Gießer und Metallurgie",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "bergbau_und_steinmetz",
+          "name": "Bergbau und Steinmetz",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "weber_schneider_und_faerber",
+          "name": "Weber, Schneider und Färber",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "jaeger_und_kuerschner",
+          "name": "Jäger und Kürschner",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "tierkunde_und_abrichten",
+          "name": "Tierkunde und Abrichten",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "chemiker_und_glasblaeser",
+          "name": "Chemiker und Glasbläser",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "kochen",
+          "name": "Kochen",
+          "attributes": ["I"],
+          "specialization": "Grillen",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "ritualistik",
+          "name": "Ritualistik",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "pflanzenkunde_und_landwirtschaft",
+          "name": "Pflanzenkunde und Landwirtschaft",
+          "attributes": [],
+          "specialization": "",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "medizin_und_heilkunde",
+          "name": "Medizin und Heilkunde",
+          "attributes": ["I"],
+          "specialization": "Erste Hilfe",
+          "note": "Anfangsattribut: freie Wahl"
+        },
+        {
+          "id": "feinschliff_und_praezisionsmechanik",
+          "name": "Feinschliff und Präzisionsmechanik",
+          "attributes": ["I"],
+          "specialization": "Mechanism",
+          "note": "Anfangsattribut: freie Wahl"
+        }
+      ]
+    }
+  ]
+}

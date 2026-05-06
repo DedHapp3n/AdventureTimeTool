@@ -1,0 +1,66 @@
+{
+  "skills_screen": {
+    "x": 20,
+    "y": 20,
+    "w": 1420,
+    "h": 820,
+    "category_tabs": {
+      "x": 20,
+      "y": 10,
+      "w": 1380,
+      "h": 50,
+      "button_w": 220,
+      "button_h": 42,
+      "gap": 18,
+      "font_size": 20,
+      "active_color": "#f2d28b",
+      "inactive_color": "#9a8560"
+    },
+    "table": {
+      "x": 20,
+      "y": 80,
+      "w": 1380,
+      "h": 700,
+      "header_h": 42,
+      "row_h": 42,
+      "max_visible_rows": 15,
+      "font_size": 17,
+      "header_font_size": 19,
+      "header_color": "#f2d28b",
+      "skill_name_color": "#f2d28b",
+      "attribute_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "specialization_color": "#ffffff",
+      "note_color": "#d8d0b0",
+      "columns": {
+        "skill": {
+          "title": "Fertigkeiten",
+          "x": 0,
+          "w": 360
+        },
+        "attributes": {
+          "title": "Attribute",
+          "x": 370,
+          "w": 220,
+          "slot_w": 42,
+          "slot_gap": 8
+        },
+        "value": {
+          "title": "Wert",
+          "x": 600,
+          "w": 80
+        },
+        "specialization": {
+          "title": "Spezialisierung",
+          "x": 690,
+          "w": 470
+        },
+        "note": {
+          "title": "Notiz",
+          "x": 1170,
+          "w": 210
+        }
+      }
+    }
+  }
+}

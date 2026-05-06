@@ -245,7 +245,7 @@
       "error": null
     },
     "CA8": {
-      "value": " Mustern/Menschenkenntnis-Würfe",
+      "value": "Mustern/Menschenkenntnis-Würfe",
       "formula": null,
       "references": [],
       "error": null
@@ -536,7 +536,7 @@
     },
     "AG16": {
       "value": 6.125,
-      "formula": "=IF(G5=3,0+AG4/2,IF(G5=2,1+AG4/2,IF(G5=1,2+AG4/2,IF(G5=0,4+AG4/2,IF(G5=4,-1+AG4/2,IF(G5=5,-2+AG4/2,-4+AG4/2))))))+AG18",
+      "formula": "=IF(G5=3;0+AG4/2;IF(G5=2;1+AG4/2;IF(G5=1;2+AG4/2;IF(G5=0;4+AG4/2;IF(G5=4;-1+AG4/2;IF(G5=5;-2+AG4/2;-4+AG4/2))))))+AG18",
       "references": [
         "G5",
         "AG4",
@@ -617,7 +617,7 @@
       "error": null
     },
     "AV19": {
-      "value": "Magischer \nVerstärker",
+      "value": "Magischer\nVerstärker",
       "formula": null,
       "references": [],
       "error": null
@@ -682,14 +682,8 @@
       "references": [],
       "error": null
     },
-    "AL22": {
-      "value": " ",
-      "formula": null,
-      "references": [],
-      "error": null
-    },
     "AB23": {
-      "value": " -1 Würfel",
+      "value": "-1 Würfel",
       "formula": null,
       "references": [],
       "error": null
@@ -728,7 +722,7 @@
       "error": null
     },
     "BD23": {
-      "value": "+2 auf Pflanzenkunde (Farming) oder ",
+      "value": "+2 auf Pflanzenkunde (Farming) oder",
       "formula": null,
       "references": [],
       "error": null
@@ -880,7 +874,7 @@
       "error": null
     },
     "BD27": {
-      "value": " +1 \"Willpower\"",
+      "value": "+1 \"Willpower\"",
       "formula": null,
       "references": [],
       "error": null
@@ -1111,12 +1105,6 @@
       "references": [],
       "error": null
     },
-    "BB37": {
-      "value": " ",
-      "formula": null,
-      "references": [],
-      "error": null
-    },
     "B38": {
       "value": "Weber",
       "formula": null,
@@ -1208,7 +1196,7 @@
       "error": null
     },
     "AB43": {
-      "value": " +1 Würfel",
+      "value": "+1 Würfel",
       "formula": null,
       "references": [],
       "error": null
@@ -1330,10 +1318,20 @@
       "error": null
     },
     "AD15": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38a552e0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V15;INDEX(BX15:BX22;MATCH(V15;BW15:BW22;0));0);IF(BW15:BW22=X15;INDEX(BX15:BX22;MATCH(X15;BW15:BW22;0));0);IF(BW15:BW22=Z15;INDEX(BX15:BX22;MATCH(Z15;BW15:BW22;0));0);IF(BW15:BW22=AB15;INDEX(BX15:BX22;MATCH(AB15;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V15;INDEX(BX15:BX22;MATCH(V15;BW15:BW22;0));0);IF(BW15:BW22=X15;INDEX(BX15:BX22;MATCH(X15;BW15:BW22;0));0);IF(BW15:BW22=Z15;INDEX(BX15:BX22;MATCH(Z15;BW15:BW22;0));0);IF(BW15:BW22=AB15;INDEX(BX15:BX22;MATCH(AB15;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V15",
+        "BX15",
+        "BX22",
+        "X15",
+        "Z15",
+        "AB15",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "AG15": {
       "value": "Initiative",
@@ -1349,7 +1347,7 @@
     },
     "BT15": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1363,7 +1361,7 @@
     },
     "BX15": {
       "value": 0,
-      "formula": "=Charakterbogen!$AG$7",
+      "formula": "=Charakterbogen!AG7",
       "references": [
         "AG7"
       ],
@@ -1377,7 +1375,7 @@
     },
     "BX16": {
       "value": 0,
-      "formula": "=Charakterbogen!$AG$9",
+      "formula": "=Charakterbogen!AG9",
       "references": [
         "AG9"
       ],
@@ -1390,10 +1388,20 @@
       "error": null
     },
     "AD17": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387cdb50>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V17;INDEX(BX15:BX22;MATCH(V17;BW15:BW22;0));0);IF(BW15:BW22=X17;INDEX(BX15:BX22;MATCH(X17;BW15:BW22;0));0);IF(BW15:BW22=Z17;INDEX(BX15:BX22;MATCH(Z17;BW15:BW22;0));0);IF(BW15:BW22=AB17;INDEX(BX15:BX22;MATCH(AB17;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V17;INDEX(BX15:BX22;MATCH(V17;BW15:BW22;0));0);IF(BW15:BW22=X17;INDEX(BX15:BX22;MATCH(X17;BW15:BW22;0));0);IF(BW15:BW22=Z17;INDEX(BX15:BX22;MATCH(Z17;BW15:BW22;0));0);IF(BW15:BW22=AB17;INDEX(BX15:BX22;MATCH(AB17;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V17",
+        "BX15",
+        "BX22",
+        "X17",
+        "Z17",
+        "AB17",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE17": {
       "value": "Anfangsattribut: Körper",
@@ -1403,7 +1411,7 @@
     },
     "BT17": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1417,7 +1425,7 @@
     },
     "BX17": {
       "value": 0,
-      "formula": "=Charakterbogen!$AG$11",
+      "formula": "=Charakterbogen!AG11",
       "references": [
         "AG11"
       ],
@@ -1431,7 +1439,7 @@
     },
     "BX18": {
       "value": 1,
-      "formula": "=Charakterbogen!$AG$13",
+      "formula": "=Charakterbogen!AG13",
       "references": [
         "AG13"
       ],
@@ -1444,10 +1452,19 @@
       "error": null
     },
     "AD19": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387fbf80>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V19;INDEX(BX15:BX22;MATCH(V19;BW15:BW22;0));0);IF(BW15:BW22=X19;INDEX(BX15:BX22;MATCH(X19;BW15:BW22;0));0);IF(BW15:BW22=Z19;INDEX(BX15:BX22;MATCH(Z19;BW15:BW22;0));0);IF(BW15:BW22=AB19;INDEX(BX15:BX22;MATCH(AB19;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V19;INDEX(BX15:BX22;MATCH(V19;BW15:BW22;0));0);IF(BW15:BW22=X19;INDEX(BX15:BX22;MATCH(X19;BW15:BW22;0));0);IF(BW15:BW22=Z19;INDEX(BX15:BX22;MATCH(Z19;BW15:BW22;0));0);IF(BW15:BW22=AB19;INDEX(BX15:BX22;MATCH(AB19;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V19",
+        "BX15",
+        "BX22",
+        "X19",
+        "Z19",
+        "AB19"
+      ],
+      "error": "unsupported"
     },
     "BE19": {
       "value": "Anfangsattribut: Körper oder Charisma",
@@ -1463,7 +1480,7 @@
     },
     "BX19": {
       "value": 4,
-      "formula": "=Charakterbogen!$AR$7",
+      "formula": "=Charakterbogen!AR7",
       "references": [
         "AR7"
       ],
@@ -1477,7 +1494,7 @@
     },
     "BX20": {
       "value": 2,
-      "formula": "=Charakterbogen!$AR$9",
+      "formula": "=Charakterbogen!AR9",
       "references": [
         "AR9"
       ],
@@ -1490,10 +1507,19 @@
       "error": null
     },
     "AD21": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde389471d0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V21;INDEX(BX15:BX22;MATCH(V21;BW15:BW22;0));0);IF(BW15:BW22=X21;INDEX(BX15:BX22;MATCH(X21;BW15:BW22;0));0);IF(BW15:BW22=Z21;INDEX(BX15:BX22;MATCH(Z21;BW15:BW22;0));0);IF(BW15:BW22=AB21;INDEX(BX15:BX22;MATCH(AB21;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V21;INDEX(BX15:BX22;MATCH(V21;BW15:BW22;0));0);IF(BW15:BW22=X21;INDEX(BX15:BX22;MATCH(X21;BW15:BW22;0));0);IF(BW15:BW22=Z21;INDEX(BX15:BX22;MATCH(Z21;BW15:BW22;0));0);IF(BW15:BW22=AB21;INDEX(BX15:BX22;MATCH(AB21;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V21",
+        "BX15",
+        "BX22",
+        "X21",
+        "Z21",
+        "AB21"
+      ],
+      "error": "unsupported"
     },
     "BE21": {
       "value": "Anfangsattribut: freie Wahl",
@@ -1509,7 +1535,7 @@
     },
     "BX21": {
       "value": 2,
-      "formula": "=Charakterbogen!$AR$11",
+      "formula": "=Charakterbogen!AR11",
       "references": [
         "AR11"
       ],
@@ -1523,7 +1549,7 @@
     },
     "BX22": {
       "value": 2,
-      "formula": "=Charakterbogen!$AR$13",
+      "formula": "=Charakterbogen!AR13",
       "references": [
         "AR13"
       ],
@@ -1536,10 +1562,20 @@
       "error": null
     },
     "AD23": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387b9820>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V23;INDEX(BX15:BX22;MATCH(V23;BW15:BW22;0));0);IF(BW15:BW22=X23;INDEX(BX15:BX22;MATCH(X23;BW15:BW22;0));0);IF(BW15:BW22=Z23;INDEX(BX15:BX22;MATCH(Z23;BW15:BW22;0));0);IF(BW15:BW22=AB23;INDEX(BX15:BX22;MATCH(AB23;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V23;INDEX(BX15:BX22;MATCH(V23;BW15:BW22;0));0);IF(BW15:BW22=X23;INDEX(BX15:BX22;MATCH(X23;BW15:BW22;0));0);IF(BW15:BW22=Z23;INDEX(BX15:BX22;MATCH(Z23;BW15:BW22;0));0);IF(BW15:BW22=AB23;INDEX(BX15:BX22;MATCH(AB23;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V23",
+        "BX15",
+        "BX22",
+        "X23",
+        "Z23",
+        "AB23",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE23": {
       "value": "Anfangsattribut: Körper",
@@ -1549,7 +1585,7 @@
     },
     "BT23": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1557,7 +1593,7 @@
     },
     "BW24": {
       "value": 0.25,
-      "formula": "=Charakterbogen!$AG$4",
+      "formula": "=Charakterbogen!AG4",
       "references": [
         "AG4"
       ],
@@ -1588,10 +1624,20 @@
       "error": null
     },
     "AD25": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387f0d40>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V25;INDEX(BX15:BX22;MATCH(V25;BW15:BW22;0));0);IF(BW15:BW22=X25;INDEX(BX15:BX22;MATCH(X25;BW15:BW22;0));0);IF(BW15:BW22=Z25;INDEX(BX15:BX22;MATCH(Z25;BW15:BW22;0));0);IF(BW15:BW22=AB25;INDEX(BX15:BX22;MATCH(AB25;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V25;INDEX(BX15:BX22;MATCH(V25;BW15:BW22;0));0);IF(BW15:BW22=X25;INDEX(BX15:BX22;MATCH(X25;BW15:BW22;0));0);IF(BW15:BW22=Z25;INDEX(BX15:BX22;MATCH(Z25;BW15:BW22;0));0);IF(BW15:BW22=AB25;INDEX(BX15:BX22;MATCH(AB25;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V25",
+        "BX15",
+        "BX22",
+        "X25",
+        "Z25",
+        "AB25",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "AG25": {
       "value": "Sinne, Beobachten",
@@ -1607,7 +1653,7 @@
     },
     "BW26": {
       "value": 2.5,
-      "formula": "=Charakterbogen!$AR$4",
+      "formula": "=Charakterbogen!AR4",
       "references": [
         "AR4"
       ],
@@ -1626,10 +1672,20 @@
       "error": null
     },
     "AD27": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387f21e0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V27;INDEX(BX15:BX22;MATCH(V27;BW15:BW22;0));0);IF(BW15:BW22=X27;INDEX(BX15:BX22;MATCH(X27;BW15:BW22;0));0);IF(BW15:BW22=Z27;INDEX(BX15:BX22;MATCH(Z27;BW15:BW22;0));0);IF(BW15:BW22=AB27;INDEX(BX15:BX22;MATCH(AB27;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V27;INDEX(BX15:BX22;MATCH(V27;BW15:BW22;0));0);IF(BW15:BW22=X27;INDEX(BX15:BX22;MATCH(X27;BW15:BW22;0));0);IF(BW15:BW22=Z27;INDEX(BX15:BX22;MATCH(Z27;BW15:BW22;0));0);IF(BW15:BW22=AB27;INDEX(BX15:BX22;MATCH(AB27;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V27",
+        "BX15",
+        "BX22",
+        "X27",
+        "Z27",
+        "AB27",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "BE27": {
       "value": "Anfangsattribut: Geist",
@@ -1639,7 +1695,7 @@
     },
     "BW28": {
       "value": 2,
-      "formula": "=Charakterbogen!$AR$11",
+      "formula": "=Charakterbogen!AR11",
       "references": [
         "AR11"
       ],
@@ -1658,10 +1714,20 @@
       "error": null
     },
     "AD29": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387bb530>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V29;INDEX(BX15:BX22;MATCH(V29;BW15:BW22;0));0);IF(BW15:BW22=X29;INDEX(BX15:BX22;MATCH(X29;BW15:BW22;0));0);IF(BW15:BW22=Z29;INDEX(BX15:BX22;MATCH(Z29;BW15:BW22;0));0);IF(BW15:BW22=AB29;INDEX(BX15:BX22;MATCH(AB29;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V29;INDEX(BX15:BX22;MATCH(V29;BW15:BW22;0));0);IF(BW15:BW22=X29;INDEX(BX15:BX22;MATCH(X29;BW15:BW22;0));0);IF(BW15:BW22=Z29;INDEX(BX15:BX22;MATCH(Z29;BW15:BW22;0));0);IF(BW15:BW22=AB29;INDEX(BX15:BX22;MATCH(AB29;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V29",
+        "BX15",
+        "BX22",
+        "X29",
+        "Z29",
+        "AB29",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE29": {
       "value": "Anfangsattribut: Körper",
@@ -1671,7 +1737,7 @@
     },
     "BT29": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1684,10 +1750,20 @@
       "error": null
     },
     "AD31": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387df560>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V31;INDEX(BX15:BX22;MATCH(V31;BW15:BW22;0));0);IF(BW15:BW22=X31;INDEX(BX15:BX22;MATCH(X31;BW15:BW22;0));0);IF(BW15:BW22=Z31;INDEX(BX15:BX22;MATCH(Z31;BW15:BW22;0));0);IF(BW15:BW22=AB31;INDEX(BX15:BX22;MATCH(AB31;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V31;INDEX(BX15:BX22;MATCH(V31;BW15:BW22;0));0);IF(BW15:BW22=X31;INDEX(BX15:BX22;MATCH(X31;BW15:BW22;0));0);IF(BW15:BW22=Z31;INDEX(BX15:BX22;MATCH(Z31;BW15:BW22;0));0);IF(BW15:BW22=AB31;INDEX(BX15:BX22;MATCH(AB31;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V31",
+        "BX15",
+        "BX22",
+        "X31",
+        "Z31",
+        "AB31",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE31": {
       "value": "Anfangsattribut: Körper",
@@ -1697,7 +1773,7 @@
     },
     "BT31": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1710,10 +1786,20 @@
       "error": null
     },
     "AD33": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387dc080>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V33;INDEX(BX15:BX22;MATCH(V33;BW15:BW22;0));0);IF(BW15:BW22=X33;INDEX(BX15:BX22;MATCH(X33;BW15:BW22;0));0);IF(BW15:BW22=Z33;INDEX(BX15:BX22;MATCH(Z33;BW15:BW22;0));0);IF(BW15:BW22=AB33;INDEX(BX15:BX22;MATCH(AB33;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V33;INDEX(BX15:BX22;MATCH(V33;BW15:BW22;0));0);IF(BW15:BW22=X33;INDEX(BX15:BX22;MATCH(X33;BW15:BW22;0));0);IF(BW15:BW22=Z33;INDEX(BX15:BX22;MATCH(Z33;BW15:BW22;0));0);IF(BW15:BW22=AB33;INDEX(BX15:BX22;MATCH(AB33;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V33",
+        "BX15",
+        "BX22",
+        "X33",
+        "Z33",
+        "AB33",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE33": {
       "value": "Anfangsattribut: Körper",
@@ -1723,7 +1809,7 @@
     },
     "BT33": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1742,10 +1828,20 @@
       "error": null
     },
     "AD35": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde388133b0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V35;INDEX(BX15:BX22;MATCH(V35;BW15:BW22;0));0);IF(BW15:BW22=X35;INDEX(BX15:BX22;MATCH(X35;BW15:BW22;0));0);IF(BW15:BW22=Z35;INDEX(BX15:BX22;MATCH(Z35;BW15:BW22;0));0);IF(BW15:BW22=AB35;INDEX(BX15:BX22;MATCH(AB35;BW15:BW22;0));0))+BW36",
+      "formula": "=SUM(IF(BW15:BW22=V35;INDEX(BX15:BX22;MATCH(V35;BW15:BW22;0));0);IF(BW15:BW22=X35;INDEX(BX15:BX22;MATCH(X35;BW15:BW22;0));0);IF(BW15:BW22=Z35;INDEX(BX15:BX22;MATCH(Z35;BW15:BW22;0));0);IF(BW15:BW22=AB35;INDEX(BX15:BX22;MATCH(AB35;BW15:BW22;0));0))+BW36",
+      "references": [
+        "BW15",
+        "BW22",
+        "V35",
+        "BX15",
+        "BX22",
+        "X35",
+        "Z35",
+        "AB35",
+        "BW36"
+      ],
+      "error": "unsupported"
     },
     "AG35": {
       "value": "Eigensinn",
@@ -1868,10 +1964,20 @@
       "error": null
     },
     "AD49": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387dfd10>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V49;INDEX(BX15:BX22;MATCH(V49;BW15:BW22;0));0);IF(BW15:BW22=X49;INDEX(BX15:BX22;MATCH(X49;BW15:BW22;0));0);IF(BW15:BW22=Z49;INDEX(BX15:BX22;MATCH(Z49;BW15:BW22;0));0);IF(BW15:BW22=AB49;INDEX(BX15:BX22;MATCH(AB49;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V49;INDEX(BX15:BX22;MATCH(V49;BW15:BW22;0));0);IF(BW15:BW22=X49;INDEX(BX15:BX22;MATCH(X49;BW15:BW22;0));0);IF(BW15:BW22=Z49;INDEX(BX15:BX22;MATCH(Z49;BW15:BW22;0));0);IF(BW15:BW22=AB49;INDEX(BX15:BX22;MATCH(AB49;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V49",
+        "BX15",
+        "BX22",
+        "X49",
+        "Z49",
+        "AB49",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "AG49": {
       "value": "Reflexiv",
@@ -1887,23 +1993,33 @@
     },
     "BT49": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
       "error": null
     },
     "D51": {
-      "value": "Nahkampf ",
+      "value": "Nahkampf",
       "formula": null,
       "references": [],
       "error": null
     },
     "AD51": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3882d220>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V51;INDEX(BX15:BX22;MATCH(V51;BW15:BW22;0));0);IF(BW15:BW22=X51;INDEX(BX15:BX22;MATCH(X51;BW15:BW22;0));0);IF(BW15:BW22=Z51;INDEX(BX15:BX22;MATCH(Z51;BW15:BW22;0));0);IF(BW15:BW22=AB51;INDEX(BX15:BX22;MATCH(AB51;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V51;INDEX(BX15:BX22;MATCH(V51;BW15:BW22;0));0);IF(BW15:BW22=X51;INDEX(BX15:BX22;MATCH(X51;BW15:BW22;0));0);IF(BW15:BW22=Z51;INDEX(BX15:BX22;MATCH(Z51;BW15:BW22;0));0);IF(BW15:BW22=AB51;INDEX(BX15:BX22;MATCH(AB51;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V51",
+        "BX15",
+        "BX22",
+        "X51",
+        "Z51",
+        "AB51",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE51": {
       "value": "Anfangsattribut: Körper",
@@ -1913,7 +2029,7 @@
     },
     "BT51": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1926,10 +2042,20 @@
       "error": null
     },
     "AD53": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3882dc40>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V53;INDEX(BX15:BX22;MATCH(V53;BW15:BW22;0));0);IF(BW15:BW22=X53;INDEX(BX15:BX22;MATCH(X53;BW15:BW22;0));0);IF(BW15:BW22=Z53;INDEX(BX15:BX22;MATCH(Z53;BW15:BW22;0));0);IF(BW15:BW22=AB53;INDEX(BX15:BX22;MATCH(AB53;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V53;INDEX(BX15:BX22;MATCH(V53;BW15:BW22;0));0);IF(BW15:BW22=X53;INDEX(BX15:BX22;MATCH(X53;BW15:BW22;0));0);IF(BW15:BW22=Z53;INDEX(BX15:BX22;MATCH(Z53;BW15:BW22;0));0);IF(BW15:BW22=AB53;INDEX(BX15:BX22;MATCH(AB53;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V53",
+        "BX15",
+        "BX22",
+        "X53",
+        "Z53",
+        "AB53",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE53": {
       "value": "Anfangsattribut: Körper",
@@ -1939,7 +2065,7 @@
     },
     "BT53": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1952,10 +2078,20 @@
       "error": null
     },
     "AD55": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3885e930>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V55;INDEX(BX15:BX22;MATCH(V55;BW15:BW22;0));0);IF(BW15:BW22=X55;INDEX(BX15:BX22;MATCH(X55;BW15:BW22;0));0);IF(BW15:BW22=Z55;INDEX(BX15:BX22;MATCH(Z55;BW15:BW22;0));0);IF(BW15:BW22=AB55;INDEX(BX15:BX22;MATCH(AB55;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V55;INDEX(BX15:BX22;MATCH(V55;BW15:BW22;0));0);IF(BW15:BW22=X55;INDEX(BX15:BX22;MATCH(X55;BW15:BW22;0));0);IF(BW15:BW22=Z55;INDEX(BX15:BX22;MATCH(Z55;BW15:BW22;0));0);IF(BW15:BW22=AB55;INDEX(BX15:BX22;MATCH(AB55;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V55",
+        "BX15",
+        "BX22",
+        "X55",
+        "Z55",
+        "AB55",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "BE55": {
       "value": "Anfangsattribut: Geist",
@@ -1965,7 +2101,7 @@
     },
     "BT55": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -1978,10 +2114,20 @@
       "error": null
     },
     "AD57": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3886e390>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V57;INDEX(BX15:BX22;MATCH(V57;BW15:BW22;0));0);IF(BW15:BW22=X57;INDEX(BX15:BX22;MATCH(X57;BW15:BW22;0));0);IF(BW15:BW22=Z57;INDEX(BX15:BX22;MATCH(Z57;BW15:BW22;0));0);IF(BW15:BW22=AB57;INDEX(BX15:BX22;MATCH(AB57;BW15:BW22;0));0))+BW24",
+      "formula": "=SUM(IF(BW15:BW22=V57;INDEX(BX15:BX22;MATCH(V57;BW15:BW22;0));0);IF(BW15:BW22=X57;INDEX(BX15:BX22;MATCH(X57;BW15:BW22;0));0);IF(BW15:BW22=Z57;INDEX(BX15:BX22;MATCH(Z57;BW15:BW22;0));0);IF(BW15:BW22=AB57;INDEX(BX15:BX22;MATCH(AB57;BW15:BW22;0));0))+BW24",
+      "references": [
+        "BW15",
+        "BW22",
+        "V57",
+        "BX15",
+        "BX22",
+        "X57",
+        "Z57",
+        "AB57",
+        "BW24"
+      ],
+      "error": "unsupported"
     },
     "BE57": {
       "value": "Anfangsattribut: Körper",
@@ -1991,7 +2137,7 @@
     },
     "BT57": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -2004,10 +2150,19 @@
       "error": null
     },
     "AD59": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38838ce0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V59;INDEX(BX15:BX22;MATCH(V59;BW15:BW22;0));0);IF(BW15:BW22=X59;INDEX(BX15:BX22;MATCH(X59;BW15:BW22;0));0);IF(BW15:BW22=Z59;INDEX(BX15:BX22;MATCH(Z59;BW15:BW22;0));0);IF(BW15:BW22=AB59;INDEX(BX15:BX22;MATCH(AB59;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V59;INDEX(BX15:BX22;MATCH(V59;BW15:BW22;0));0);IF(BW15:BW22=X59;INDEX(BX15:BX22;MATCH(X59;BW15:BW22;0));0);IF(BW15:BW22=Z59;INDEX(BX15:BX22;MATCH(Z59;BW15:BW22;0));0);IF(BW15:BW22=AB59;INDEX(BX15:BX22;MATCH(AB59;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V59",
+        "BX15",
+        "BX22",
+        "X59",
+        "Z59",
+        "AB59"
+      ],
+      "error": "unsupported"
     },
     "BE59": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2034,10 +2189,20 @@
       "error": null
     },
     "AD61": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38844530>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V61;INDEX(BX15:BX22;MATCH(V61;BW15:BW22;0));0);IF(BW15:BW22=X61;INDEX(BX15:BX22;MATCH(X61;BW15:BW22;0));0);IF(BW15:BW22=Z61;INDEX(BX15:BX22;MATCH(Z61;BW15:BW22;0));0);IF(BW15:BW22=AB61;INDEX(BX15:BX22;MATCH(AB61;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V61;INDEX(BX15:BX22;MATCH(V61;BW15:BW22;0));0);IF(BW15:BW22=X61;INDEX(BX15:BX22;MATCH(X61;BW15:BW22;0));0);IF(BW15:BW22=Z61;INDEX(BX15:BX22;MATCH(Z61;BW15:BW22;0));0);IF(BW15:BW22=AB61;INDEX(BX15:BX22;MATCH(AB61;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V61",
+        "BX15",
+        "BX22",
+        "X61",
+        "Z61",
+        "AB61",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "AG61": {
       "value": "Natur, Umgebung, Support",
@@ -2053,7 +2218,7 @@
     },
     "BT61": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2162,10 +2327,20 @@
       "error": null
     },
     "AD75": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde386d1ee0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V75;INDEX(BX15:BX22;MATCH(V75;BW15:BW22;0));0);IF(BW15:BW22=X75;INDEX(BX15:BX22;MATCH(X75;BW15:BW22;0));0);IF(BW15:BW22=Z75;INDEX(BX15:BX22;MATCH(Z75;BW15:BW22;0));0);IF(BW15:BW22=AB75;INDEX(BX15:BX22;MATCH(AB75;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V75;INDEX(BX15:BX22;MATCH(V75;BW15:BW22;0));0);IF(BW15:BW22=X75;INDEX(BX15:BX22;MATCH(X75;BW15:BW22;0));0);IF(BW15:BW22=Z75;INDEX(BX15:BX22;MATCH(Z75;BW15:BW22;0));0);IF(BW15:BW22=AB75;INDEX(BX15:BX22;MATCH(AB75;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V75",
+        "BX15",
+        "BX22",
+        "X75",
+        "Z75",
+        "AB75",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "BE75": {
       "value": "Anfangsattribut: Geist",
@@ -2175,7 +2350,7 @@
     },
     "BT75": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -2188,10 +2363,20 @@
       "error": null
     },
     "AD77": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde386d1eb0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V77;INDEX(BX15:BX22;MATCH(V77;BW15:BW22;0));0);IF(BW15:BW22=X77;INDEX(BX15:BX22;MATCH(X77;BW15:BW22;0));0);IF(BW15:BW22=Z77;INDEX(BX15:BX22;MATCH(Z77;BW15:BW22;0));0);IF(BW15:BW22=AB77;INDEX(BX15:BX22;MATCH(AB77;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V77;INDEX(BX15:BX22;MATCH(V77;BW15:BW22;0));0);IF(BW15:BW22=X77;INDEX(BX15:BX22;MATCH(X77;BW15:BW22;0));0);IF(BW15:BW22=Z77;INDEX(BX15:BX22;MATCH(Z77;BW15:BW22;0));0);IF(BW15:BW22=AB77;INDEX(BX15:BX22;MATCH(AB77;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V77",
+        "BX15",
+        "BX22",
+        "X77",
+        "Z77",
+        "AB77",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "BE77": {
       "value": "Anfangsattribut: Geist",
@@ -2201,7 +2386,7 @@
     },
     "BT77": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2220,10 +2405,20 @@
       "error": null
     },
     "AD79": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38838b00>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V79;INDEX(BX15:BX22;MATCH(V79;BW15:BW22;0));0);IF(BW15:BW22=X79;INDEX(BX15:BX22;MATCH(X79;BW15:BW22;0));0);IF(BW15:BW22=Z79;INDEX(BX15:BX22;MATCH(Z79;BW15:BW22;0));0);IF(BW15:BW22=AB79;INDEX(BX15:BX22;MATCH(AB79;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V79;INDEX(BX15:BX22;MATCH(V79;BW15:BW22;0));0);IF(BW15:BW22=X79;INDEX(BX15:BX22;MATCH(X79;BW15:BW22;0));0);IF(BW15:BW22=Z79;INDEX(BX15:BX22;MATCH(Z79;BW15:BW22;0));0);IF(BW15:BW22=AB79;INDEX(BX15:BX22;MATCH(AB79;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V79",
+        "BX15",
+        "BX22",
+        "X79",
+        "Z79",
+        "AB79",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "AG79": {
       "value": "Mode",
@@ -2239,7 +2434,7 @@
     },
     "BT79": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2258,10 +2453,20 @@
       "error": null
     },
     "AD81": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3869ef00>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V81;INDEX(BX15:BX22;MATCH(V81;BW15:BW22;0));0);IF(BW15:BW22=X81;INDEX(BX15:BX22;MATCH(X81;BW15:BW22;0));0);IF(BW15:BW22=Z81;INDEX(BX15:BX22;MATCH(Z81;BW15:BW22;0));0);IF(BW15:BW22=AB81;INDEX(BX15:BX22;MATCH(AB81;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V81;INDEX(BX15:BX22;MATCH(V81;BW15:BW22;0));0);IF(BW15:BW22=X81;INDEX(BX15:BX22;MATCH(X81;BW15:BW22;0));0);IF(BW15:BW22=Z81;INDEX(BX15:BX22;MATCH(Z81;BW15:BW22;0));0);IF(BW15:BW22=AB81;INDEX(BX15:BX22;MATCH(AB81;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V81",
+        "BX15",
+        "BX22",
+        "X81",
+        "Z81",
+        "AB81",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "AG81": {
       "value": "Einheimische",
@@ -2277,7 +2482,7 @@
     },
     "BT81": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2296,10 +2501,20 @@
       "error": null
     },
     "AD83": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38700110>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V83;INDEX(BX15:BX22;MATCH(V83;BW15:BW22;0));0);IF(BW15:BW22=X83;INDEX(BX15:BX22;MATCH(X83;BW15:BW22;0));0);IF(BW15:BW22=Z83;INDEX(BX15:BX22;MATCH(Z83;BW15:BW22;0));0);IF(BW15:BW22=AB83;INDEX(BX15:BX22;MATCH(AB83;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V83;INDEX(BX15:BX22;MATCH(V83;BW15:BW22;0));0);IF(BW15:BW22=X83;INDEX(BX15:BX22;MATCH(X83;BW15:BW22;0));0);IF(BW15:BW22=Z83;INDEX(BX15:BX22;MATCH(Z83;BW15:BW22;0));0);IF(BW15:BW22=AB83;INDEX(BX15:BX22;MATCH(AB83;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V83",
+        "BX15",
+        "BX22",
+        "X83",
+        "Z83",
+        "AB83",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "AG83": {
       "value": "Magie",
@@ -2315,7 +2530,7 @@
     },
     "BT83": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2334,10 +2549,20 @@
       "error": null
     },
     "AD85": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38746a50>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V85;INDEX(BX15:BX22;MATCH(V85;BW15:BW22;0));0);IF(BW15:BW22=X85;INDEX(BX15:BX22;MATCH(X85;BW15:BW22;0));0);IF(BW15:BW22=Z85;INDEX(BX15:BX22;MATCH(Z85;BW15:BW22;0));0);IF(BW15:BW22=AB85;INDEX(BX15:BX22;MATCH(AB85;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V85;INDEX(BX15:BX22;MATCH(V85;BW15:BW22;0));0);IF(BW15:BW22=X85;INDEX(BX15:BX22;MATCH(X85;BW15:BW22;0));0);IF(BW15:BW22=Z85;INDEX(BX15:BX22;MATCH(Z85;BW15:BW22;0));0);IF(BW15:BW22=AB85;INDEX(BX15:BX22;MATCH(AB85;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V85",
+        "BX15",
+        "BX22",
+        "X85",
+        "Z85",
+        "AB85",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "AG85": {
       "value": "Natur",
@@ -2353,7 +2578,7 @@
     },
     "BT85": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2366,10 +2591,20 @@
       "error": null
     },
     "AD87": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde386c6450>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V87;INDEX(BX15:BX22;MATCH(V87;BW15:BW22;0));0);IF(BW15:BW22=X87;INDEX(BX15:BX22;MATCH(X87;BW15:BW22;0));0);IF(BW15:BW22=Z87;INDEX(BX15:BX22;MATCH(Z87;BW15:BW22;0));0);IF(BW15:BW22=AB87;INDEX(BX15:BX22;MATCH(AB87;BW15:BW22;0));0))+BW26",
+      "formula": "=SUM(IF(BW15:BW22=V87;INDEX(BX15:BX22;MATCH(V87;BW15:BW22;0));0);IF(BW15:BW22=X87;INDEX(BX15:BX22;MATCH(X87;BW15:BW22;0));0);IF(BW15:BW22=Z87;INDEX(BX15:BX22;MATCH(Z87;BW15:BW22;0));0);IF(BW15:BW22=AB87;INDEX(BX15:BX22;MATCH(AB87;BW15:BW22;0));0))+BW26",
+      "references": [
+        "BW15",
+        "BW22",
+        "V87",
+        "BX15",
+        "BX22",
+        "X87",
+        "Z87",
+        "AB87",
+        "BW26"
+      ],
+      "error": "unsupported"
     },
     "BE87": {
       "value": "Anfangsattribut: Geist",
@@ -2379,7 +2614,7 @@
     },
     "BT87": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2500,10 +2735,19 @@
       "error": null
     },
     "AD101": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3876cef0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V101;INDEX(BX15:BX22;MATCH(V101;BW15:BW22;0));0);IF(BW15:BW22=X101;INDEX(BX15:BX22;MATCH(X101;BW15:BW22;0));0);IF(BW15:BW22=Z101;INDEX(BX15:BX22;MATCH(Z101;BW15:BW22;0));0);IF(BW15:BW22=AB101;INDEX(BX15:BX22;MATCH(AB101;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V101;INDEX(BX15:BX22;MATCH(V101;BW15:BW22;0));0);IF(BW15:BW22=X101;INDEX(BX15:BX22;MATCH(X101;BW15:BW22;0));0);IF(BW15:BW22=Z101;INDEX(BX15:BX22;MATCH(Z101;BW15:BW22;0));0);IF(BW15:BW22=AB101;INDEX(BX15:BX22;MATCH(AB101;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V101",
+        "BX15",
+        "BX22",
+        "X101",
+        "Z101",
+        "AB101"
+      ],
+      "error": "unsupported"
     },
     "AG101": {
       "value": "Zeichnen, stifte (+3 Mind Attribut)",
@@ -2519,7 +2763,7 @@
     },
     "BT101": {
       "value": 0,
-      "formula": "=Charakterbogen!$J$14",
+      "formula": "=Charakterbogen!J14",
       "references": [
         "J14"
       ],
@@ -2532,10 +2776,19 @@
       "error": null
     },
     "AD103": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3876e2d0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V103;INDEX(BX15:BX22;MATCH(V103;BW15:BW22;0));0);IF(BW15:BW22=X103;INDEX(BX15:BX22;MATCH(X103;BW15:BW22;0));0);IF(BW15:BW22=Z103;INDEX(BX15:BX22;MATCH(Z103;BW15:BW22;0));0);IF(BW15:BW22=AB103;INDEX(BX15:BX22;MATCH(AB103;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V103;INDEX(BX15:BX22;MATCH(V103;BW15:BW22;0));0);IF(BW15:BW22=X103;INDEX(BX15:BX22;MATCH(X103;BW15:BW22;0));0);IF(BW15:BW22=Z103;INDEX(BX15:BX22;MATCH(Z103;BW15:BW22;0));0);IF(BW15:BW22=AB103;INDEX(BX15:BX22;MATCH(AB103;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V103",
+        "BX15",
+        "BX22",
+        "X103",
+        "Z103",
+        "AB103"
+      ],
+      "error": "unsupported"
     },
     "BE103": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2550,10 +2803,19 @@
       "error": null
     },
     "AD105": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38712ea0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V105;INDEX(BX15:BX22;MATCH(V105;BW15:BW22;0));0);IF(BW15:BW22=X105;INDEX(BX15:BX22;MATCH(X105;BW15:BW22;0));0);IF(BW15:BW22=Z105;INDEX(BX15:BX22;MATCH(Z105;BW15:BW22;0));0);IF(BW15:BW22=AB105;INDEX(BX15:BX22;MATCH(AB105;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V105;INDEX(BX15:BX22;MATCH(V105;BW15:BW22;0));0);IF(BW15:BW22=X105;INDEX(BX15:BX22;MATCH(X105;BW15:BW22;0));0);IF(BW15:BW22=Z105;INDEX(BX15:BX22;MATCH(Z105;BW15:BW22;0));0);IF(BW15:BW22=AB105;INDEX(BX15:BX22;MATCH(AB105;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V105",
+        "BX15",
+        "BX22",
+        "X105",
+        "Z105",
+        "AB105"
+      ],
+      "error": "unsupported"
     },
     "BE105": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2568,10 +2830,19 @@
       "error": null
     },
     "AD107": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde387444d0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V107;INDEX(BX15:BX22;MATCH(V107;BW15:BW22;0));0);IF(BW15:BW22=X107;INDEX(BX15:BX22;MATCH(X107;BW15:BW22;0));0);IF(BW15:BW22=Z107;INDEX(BX15:BX22;MATCH(Z107;BW15:BW22;0));0);IF(BW15:BW22=AB107;INDEX(BX15:BX22;MATCH(AB107;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V107;INDEX(BX15:BX22;MATCH(V107;BW15:BW22;0));0);IF(BW15:BW22=X107;INDEX(BX15:BX22;MATCH(X107;BW15:BW22;0));0);IF(BW15:BW22=Z107;INDEX(BX15:BX22;MATCH(Z107;BW15:BW22;0));0);IF(BW15:BW22=AB107;INDEX(BX15:BX22;MATCH(AB107;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V107",
+        "BX15",
+        "BX22",
+        "X107",
+        "Z107",
+        "AB107"
+      ],
+      "error": "unsupported"
     },
     "BE107": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2598,13 +2869,22 @@
       "error": null
     },
     "AD109": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3873bf80>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V109;INDEX(BX15:BX22;MATCH(V109;BW15:BW22;0));0);IF(BW15:BW22=X109;INDEX(BX15:BX22;MATCH(X109;BW15:BW22;0));0);IF(BW15:BW22=Z109;INDEX(BX15:BX22;MATCH(Z109;BW15:BW22;0));0);IF(BW15:BW22=AB109;INDEX(BX15:BX22;MATCH(AB109;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V109;INDEX(BX15:BX22;MATCH(V109;BW15:BW22;0));0);IF(BW15:BW22=X109;INDEX(BX15:BX22;MATCH(X109;BW15:BW22;0));0);IF(BW15:BW22=Z109;INDEX(BX15:BX22;MATCH(Z109;BW15:BW22;0));0);IF(BW15:BW22=AB109;INDEX(BX15:BX22;MATCH(AB109;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V109",
+        "BX15",
+        "BX22",
+        "X109",
+        "Z109",
+        "AB109"
+      ],
+      "error": "unsupported"
     },
     "AG109": {
-      "value": "Kleidung, Stoffe, Verarbeitung, Mode, (+3 Mind Attribut)\n",
+      "value": "Kleidung, Stoffe, Verarbeitung, Mode, (+3 Mind Attribut)",
       "formula": null,
       "references": [],
       "error": null
@@ -2622,10 +2902,19 @@
       "error": null
     },
     "AD111": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38552720>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V111;INDEX(BX15:BX22;MATCH(V111;BW15:BW22;0));0);IF(BW15:BW22=X111;INDEX(BX15:BX22;MATCH(X111;BW15:BW22;0));0);IF(BW15:BW22=Z111;INDEX(BX15:BX22;MATCH(Z111;BW15:BW22;0));0);IF(BW15:BW22=AB111;INDEX(BX15:BX22;MATCH(AB111;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V111;INDEX(BX15:BX22;MATCH(V111;BW15:BW22;0));0);IF(BW15:BW22=X111;INDEX(BX15:BX22;MATCH(X111;BW15:BW22;0));0);IF(BW15:BW22=Z111;INDEX(BX15:BX22;MATCH(Z111;BW15:BW22;0));0);IF(BW15:BW22=AB111;INDEX(BX15:BX22;MATCH(AB111;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V111",
+        "BX15",
+        "BX22",
+        "X111",
+        "Z111",
+        "AB111"
+      ],
+      "error": "unsupported"
     },
     "BE111": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2646,10 +2935,19 @@
       "error": null
     },
     "AD113": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3855e120>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V113;INDEX(BX15:BX22;MATCH(V113;BW15:BW22;0));0);IF(BW15:BW22=X113;INDEX(BX15:BX22;MATCH(X113;BW15:BW22;0));0);IF(BW15:BW22=Z113;INDEX(BX15:BX22;MATCH(Z113;BW15:BW22;0));0);IF(BW15:BW22=AB113;INDEX(BX15:BX22;MATCH(AB113;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V113;INDEX(BX15:BX22;MATCH(V113;BW15:BW22;0));0);IF(BW15:BW22=X113;INDEX(BX15:BX22;MATCH(X113;BW15:BW22;0));0);IF(BW15:BW22=Z113;INDEX(BX15:BX22;MATCH(Z113;BW15:BW22;0));0);IF(BW15:BW22=AB113;INDEX(BX15:BX22;MATCH(AB113;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V113",
+        "BX15",
+        "BX22",
+        "X113",
+        "Z113",
+        "AB113"
+      ],
+      "error": "unsupported"
     },
     "AG113": {
       "value": "Taming (+3 Mind Attribut)",
@@ -2670,10 +2968,19 @@
       "error": null
     },
     "AD115": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38778aa0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V115;INDEX(BX15:BX22;MATCH(V115;BW15:BW22;0));0);IF(BW15:BW22=X115;INDEX(BX15:BX22;MATCH(X115;BW15:BW22;0));0);IF(BW15:BW22=Z115;INDEX(BX15:BX22;MATCH(Z115;BW15:BW22;0));0);IF(BW15:BW22=AB115;INDEX(BX15:BX22;MATCH(AB115;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V115;INDEX(BX15:BX22;MATCH(V115;BW15:BW22;0));0);IF(BW15:BW22=X115;INDEX(BX15:BX22;MATCH(X115;BW15:BW22;0));0);IF(BW15:BW22=Z115;INDEX(BX15:BX22;MATCH(Z115;BW15:BW22;0));0);IF(BW15:BW22=AB115;INDEX(BX15:BX22;MATCH(AB115;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V115",
+        "BX15",
+        "BX22",
+        "X115",
+        "Z115",
+        "AB115"
+      ],
+      "error": "unsupported"
     },
     "BE115": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2683,7 +2990,7 @@
     },
     "BT115": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2702,10 +3009,19 @@
       "error": null
     },
     "AD117": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38779e50>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V117;INDEX(BX15:BX22;MATCH(V117;BW15:BW22;0));0);IF(BW15:BW22=X117;INDEX(BX15:BX22;MATCH(X117;BW15:BW22;0));0);IF(BW15:BW22=Z117;INDEX(BX15:BX22;MATCH(Z117;BW15:BW22;0));0);IF(BW15:BW22=AB117;INDEX(BX15:BX22;MATCH(AB117;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V117;INDEX(BX15:BX22;MATCH(V117;BW15:BW22;0));0);IF(BW15:BW22=X117;INDEX(BX15:BX22;MATCH(X117;BW15:BW22;0));0);IF(BW15:BW22=Z117;INDEX(BX15:BX22;MATCH(Z117;BW15:BW22;0));0);IF(BW15:BW22=AB117;INDEX(BX15:BX22;MATCH(AB117;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V117",
+        "BX15",
+        "BX22",
+        "X117",
+        "Z117",
+        "AB117"
+      ],
+      "error": "unsupported"
     },
     "AG117": {
       "value": "Pflanzlich, (+3 Mind Attribut)",
@@ -2726,10 +3042,19 @@
       "error": null
     },
     "AD119": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3857a0c0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V119;INDEX(BX15:BX22;MATCH(V119;BW15:BW22;0));0);IF(BW15:BW22=X119;INDEX(BX15:BX22;MATCH(X119;BW15:BW22;0));0);IF(BW15:BW22=Z119;INDEX(BX15:BX22;MATCH(Z119;BW15:BW22;0));0);IF(BW15:BW22=AB119;INDEX(BX15:BX22;MATCH(AB119;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V119;INDEX(BX15:BX22;MATCH(V119;BW15:BW22;0));0);IF(BW15:BW22=X119;INDEX(BX15:BX22;MATCH(X119;BW15:BW22;0));0);IF(BW15:BW22=Z119;INDEX(BX15:BX22;MATCH(Z119;BW15:BW22;0));0);IF(BW15:BW22=AB119;INDEX(BX15:BX22;MATCH(AB119;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V119",
+        "BX15",
+        "BX22",
+        "X119",
+        "Z119",
+        "AB119"
+      ],
+      "error": "unsupported"
     },
     "BE119": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2750,10 +3075,19 @@
       "error": null
     },
     "AD121": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde385d41a0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V121;INDEX(BX15:BX22;MATCH(V121;BW15:BW22;0));0);IF(BW15:BW22=X121;INDEX(BX15:BX22;MATCH(X121;BW15:BW22;0));0);IF(BW15:BW22=Z121;INDEX(BX15:BX22;MATCH(Z121;BW15:BW22;0));0);IF(BW15:BW22=AB121;INDEX(BX15:BX22;MATCH(AB121;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V121;INDEX(BX15:BX22;MATCH(V121;BW15:BW22;0));0);IF(BW15:BW22=X121;INDEX(BX15:BX22;MATCH(X121;BW15:BW22;0));0);IF(BW15:BW22=Z121;INDEX(BX15:BX22;MATCH(Z121;BW15:BW22;0));0);IF(BW15:BW22=AB121;INDEX(BX15:BX22;MATCH(AB121;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V121",
+        "BX15",
+        "BX22",
+        "X121",
+        "Z121",
+        "AB121"
+      ],
+      "error": "unsupported"
     },
     "AG121": {
       "value": "Organisches (+3 Mind Attribut)",
@@ -2769,7 +3103,7 @@
     },
     "BT121": {
       "value": 0,
-      "formula": "=Charakterbogen!$W$14",
+      "formula": "=Charakterbogen!W14",
       "references": [
         "W14"
       ],
@@ -2782,10 +3116,19 @@
       "error": null
     },
     "AD123": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde38551af0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V123;INDEX(BX15:BX22;MATCH(V123;BW15:BW22;0));0);IF(BW15:BW22=X123;INDEX(BX15:BX22;MATCH(X123;BW15:BW22;0));0);IF(BW15:BW22=Z123;INDEX(BX15:BX22;MATCH(Z123;BW15:BW22;0));0);IF(BW15:BW22=AB123;INDEX(BX15:BX22;MATCH(AB123;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V123;INDEX(BX15:BX22;MATCH(V123;BW15:BW22;0));0);IF(BW15:BW22=X123;INDEX(BX15:BX22;MATCH(X123;BW15:BW22;0));0);IF(BW15:BW22=Z123;INDEX(BX15:BX22;MATCH(Z123;BW15:BW22;0));0);IF(BW15:BW22=AB123;INDEX(BX15:BX22;MATCH(AB123;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V123",
+        "BX15",
+        "BX22",
+        "X123",
+        "Z123",
+        "AB123"
+      ],
+      "error": "unsupported"
     },
     "BE123": {
       "value": "Anfangsattribut: freie Wahl",
@@ -2800,10 +3143,19 @@
       "error": null
     },
     "AD125": {
-      "value": "<openpyxl.worksheet.formula.ArrayFormula object at 0x7fde3855c2c0>",
-      "formula": null,
-      "references": [],
-      "error": null
+      "value": "=SUM(IF(BW15:BW22=V125;INDEX(BX15:BX22;MATCH(V125;BW15:BW22;0));0);IF(BW15:BW22=X125;INDEX(BX15:BX22;MATCH(X125;BW15:BW22;0));0);IF(BW15:BW22=Z125;INDEX(BX15:BX22;MATCH(Z125;BW15:BW22;0));0);IF(BW15:BW22=AB125;INDEX(BX15:BX22;MATCH(AB125;BW15:BW22;0));0))",
+      "formula": "=SUM(IF(BW15:BW22=V125;INDEX(BX15:BX22;MATCH(V125;BW15:BW22;0));0);IF(BW15:BW22=X125;INDEX(BX15:BX22;MATCH(X125;BW15:BW22;0));0);IF(BW15:BW22=Z125;INDEX(BX15:BX22;MATCH(Z125;BW15:BW22;0));0);IF(BW15:BW22=AB125;INDEX(BX15:BX22;MATCH(AB125;BW15:BW22;0));0))",
+      "references": [
+        "BW15",
+        "BW22",
+        "V125",
+        "BX15",
+        "BX22",
+        "X125",
+        "Z125",
+        "AB125"
+      ],
+      "error": "unsupported"
     },
     "BE125": {
       "value": "Anfangsattribut: freie Wahl",
@@ -3072,7 +3424,7 @@
       "error": null
     },
     "T20": {
-      "value": "Spelltome:  2/4 ladungen lightning (märchenbuch)\nWolke als schlange dessen zunge ein blitz repräsentiert?",
+      "value": "Spelltome:2/4 ladungen lightning (märchenbuch)\nWolke als schlange dessen zunge ein blitz repräsentiert?",
       "formula": null,
       "references": [],
       "error": null
@@ -3120,7 +3472,7 @@
       "error": null
     },
     "AL22": {
-      "value": "Fluffy-Wupple-Fur (Gives Fluffy Lv:1 on melee hit\n Roll d20 (14+ deal d8 Poison Dmg back)",
+      "value": "Fluffy-Wupple-Fur (Gives Fluffy Lv:1 on melee hit\nRoll d20 (14+ deal d8 Poison Dmg back)",
       "formula": null,
       "references": [],
       "error": null
@@ -3138,7 +3490,7 @@
       "error": null
     },
     "B24": {
-      "value": "Flashe (Quellwasser) ",
+      "value": "Flashe (Quellwasser)",
       "formula": null,
       "references": [],
       "error": null
@@ -3282,7 +3634,7 @@
       "error": null
     },
     "AL32": {
-      "value": "Starbrood Wing-Membrane On Hit: Poison-Cloud\n (d3 Poi Dmg) Will-Save (d20+10) / on Fail: (-1) roll next Turn",
+      "value": "Starbrood Wing-Membrane On Hit: Poison-Cloud\n(d3 Poi Dmg) Will-Save (d20+10) / on Fail: (-1) roll next Turn",
       "formula": null,
       "references": [],
       "error": null
@@ -3300,7 +3652,7 @@
       "error": null
     },
     "AL38": {
-      "value": "\"Butterfly-Wing\"/Teleport (1) On Worldmap: \nTeleport up to (1 ZE) closer to next City",
+      "value": "\"Butterfly-Wing\"/Teleport (1) On Worldmap:\nTeleport up to (1 ZE) closer to next City",
       "formula": null,
       "references": [],
       "error": null
@@ -3570,7 +3922,7 @@
       "error": null
     },
     "B55": {
-      "value": "Wupple-Fibre-Larvae (Status: Loyal) Name: Dally\nProgress 12/40 Ernten: Woppelsilk ",
+      "value": "Wupple-Fibre-Larvae (Status: Loyal) Name: Dally\nProgress 12/40 Ernten: Woppelsilk",
       "formula": null,
       "references": [],
       "error": null
@@ -3588,7 +3940,7 @@
       "error": null
     },
     "B57": {
-      "value": "Wupple-Fibre-Larvae (Status: Loyal) Name: Dilly\nProgress 11/40 Ernten: Woppelsilk ",
+      "value": "Wupple-Fibre-Larvae (Status: Loyal) Name: Dilly\nProgress 11/40 Ernten: Woppelsilk",
       "formula": null,
       "references": [],
       "error": null
@@ -4145,7 +4497,7 @@
     },
     "M27": {
       "value": 0,
-      "formula": "=SUM(M9,M11,M13,M15,M17,M21,M23,M25)",
+      "formula": "=SUM(M9;M11;M13;M15;M17;M21;M23;M25)",
       "references": [
         "M9",
         "M11",
@@ -4160,7 +4512,7 @@
     },
     "O27": {
       "value": 0,
-      "formula": "=SUM(O9,O11,O13,O15,O17,O21,O23,O25)",
+      "formula": "=SUM(O9;O11;O13;O15;O17;O21;O23;O25)",
       "references": [
         "O9",
         "O11",
@@ -4175,7 +4527,7 @@
     },
     "Q27": {
       "value": 0,
-      "formula": "=SUM(Q9,Q11,Q13,Q15,Q17,Q21,Q23,Q25)",
+      "formula": "=SUM(Q9;Q11;Q13;Q15;Q17;Q21;Q23;Q25)",
       "references": [
         "Q9",
         "Q11",
@@ -4190,7 +4542,7 @@
     },
     "S27": {
       "value": 0,
-      "formula": "=SUM(S9,S11,S13,S15,S17,S21,S23,S25)",
+      "formula": "=SUM(S9;S11;S13;S15;S17;S21;S23;S25)",
       "references": [
         "S9",
         "S11",
@@ -4205,7 +4557,7 @@
     },
     "U27": {
       "value": 0,
-      "formula": "=SUM(U9,U11,U13,U15,U17,U21,U23,U25)",
+      "formula": "=SUM(U9;U11;U13;U15;U17;U21;U23;U25)",
       "references": [
         "U9",
         "U11",
@@ -4220,7 +4572,7 @@
     },
     "W27": {
       "value": 0,
-      "formula": "=SUM(W9,W11,W13,W17,W15,W21,W23,W25)",
+      "formula": "=SUM(W9;W11;W13;W17;W15;W21;W23;W25)",
       "references": [
         "W9",
         "W11",
@@ -4235,7 +4587,7 @@
     },
     "Y27": {
       "value": 0,
-      "formula": "=SUM(Y9,Y11,Y13,Y15,Y17,Y21,Y23,Y25)",
+      "formula": "=SUM(Y9;Y11;Y13;Y15;Y17;Y21;Y23;Y25)",
       "references": [
         "Y9",
         "Y11",
@@ -4250,7 +4602,7 @@
     },
     "AA27": {
       "value": 0,
-      "formula": "=SUM(AA9,AA11,AA13,AA15,AA17,AA21,AA23,AA25)",
+      "formula": "=SUM(AA9;AA11;AA13;AA15;AA17;AA21;AA23;AA25)",
       "references": [
         "AA9",
         "AA11",
@@ -4265,7 +4617,7 @@
     },
     "AC27": {
       "value": 0,
-      "formula": "=SUM(AC9,AC11,AC13,AC15,AC17,AC21,AC23,AC25)",
+      "formula": "=SUM(AC9;AC11;AC13;AC15;AC17;AC21;AC23;AC25)",
       "references": [
         "AC9",
         "AC11",
@@ -4280,7 +4632,7 @@
     },
     "AE27": {
       "value": 0,
-      "formula": "=SUM(AE9,AE11,AE13,AE15,AE17,AE21,AE23,AE25)",
+      "formula": "=SUM(AE9;AE11;AE13;AE15;AE17;AE21;AE23;AE25)",
       "references": [
         "AE9",
         "AE11",
@@ -4295,7 +4647,7 @@
     },
     "AG27": {
       "value": 0,
-      "formula": "=SUM(AG9,AG11,AG13,AG15,AG17,AG21,AG23,AG25)",
+      "formula": "=SUM(AG9;AG11;AG13;AG15;AG17;AG21;AG23;AG25)",
       "references": [
         "AG9",
         "AG11",
@@ -4310,7 +4662,7 @@
     },
     "AI27": {
       "value": 0,
-      "formula": "=SUM(AI9,AI11,AI13,AI15,AI17,AI21,AI23,AI25)",
+      "formula": "=SUM(AI9;AI11;AI13;AI15;AI17;AI21;AI23;AI25)",
       "references": [
         "AI9",
         "AI11",
@@ -4325,7 +4677,7 @@
     },
     "AK27": {
       "value": 0,
-      "formula": "=SUM(AK9,AK11,AK13,AK15,AK17,AK21,AK23,AK25)",
+      "formula": "=SUM(AK9;AK11;AK13;AK15;AK17;AK21;AK23;AK25)",
       "references": [
         "AK9",
         "AK11",
