@@ -295,7 +295,7 @@
       "perk_panel": {
         "asset": "panels/perk_panel.png",
         "x": 810,
-        "y": 0,
+        "y": -10,
         "w": 650,
         "h": 882
       }
@@ -612,7 +612,7 @@
           "bp_color": "#7fd0ff",
           "effect_color": "#ffffff",
 
-          "name_x": 41,
+          "name_x": 43,
           "name_w": 65,
 
           "bp_x": 114,
@@ -640,7 +640,7 @@
           "bp_color": "#ff8f8f",
           "effect_color": "#ffffff",
 
-          "name_x": 339,
+          "name_x": 343,
           "name_w": 65,
 
           "bp_x": 410,

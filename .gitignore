@@ -10,3 +10,6 @@ data/current_character.json
 data/cache/ferris.json
 data/current_character.json
 
+assets/config/theme_config.json
+assets/themes/diablo/ui_layout.json
+data/current_character.json

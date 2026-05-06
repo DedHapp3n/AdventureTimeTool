@@ -2137,6 +2137,36 @@ class MainWindow(QMainWindow):
             self.settings_character_active_label.setText(active_character_name)
 
     def on_settings_load_character_clicked(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Charakter-Datei auswählen",
+            "",
+            "Charakter-Dateien (*.xlsx *.xlsm *.ods);;Excel Dateien (*.xlsx *.xlsm);;ODS Dateien (*.ods);;Alle Dateien (*)",
+        )
+
+        if not file_path:
+            return
+
+        print("[CHARACTER IMPORT] selected:", file_path)
+        try:
+            self.loader.load_file(file_path)
+        except ValueError as exc:
+            print("[LOAD ERROR]", str(exc))
+            QMessageBox.warning(
+                self,
+                "Dateiformat nicht unterstützt",
+                str(exc),
+            )
+            return
+
+        self.create_tabs_from_cache()
+        self.refresh_character_cache_list()
+        if self.settings_character_active_label is not None:
+            self.settings_character_active_label.setText(self.loader.current_character_name)
+        print("[CHARACTER IMPORT] loaded:", self.loader.current_character_name)
+        self.show_main_section("character")
+
+    def load_selected_character_cache(self):
         if self.settings_character_combo is None:
             return
         cache_path = self.settings_character_combo.currentData()
@@ -2150,7 +2180,9 @@ class MainWindow(QMainWindow):
         if self.settings_character_active_label is not None:
             self.settings_character_active_label.setText(self.loader.current_character_name)
         self.create_tabs_from_cache()
-        print("[CHARACTER] loaded:", cache_path)
+        if self.current_main_section == "character":
+            self.show_main_section("character")
+        print("[CHARACTER CACHE] loaded:", cache_path)
 
     def on_settings_refresh_character_list_clicked(self):
         self.refresh_character_cache_list()
