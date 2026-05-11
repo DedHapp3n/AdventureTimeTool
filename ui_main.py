@@ -2659,6 +2659,8 @@ class MainWindow(QMainWindow):
         )
         debug_preview_enabled = bool(debug_cfg.get("preview", False))
         debug_toggles_enabled = bool(debug_cfg.get("toggles", True))
+        debug_info_only_enabled = bool(debug_cfg.get("info_only", False))
+        debug_paradigm_enabled = bool(debug_cfg.get("paradigm", False))
         perk_suggestions_title = str(
             perk_suggestions_cfg.get("title", "Perk-/Nachteil-Vorschläge:")
         )
@@ -3132,8 +3134,9 @@ class MainWindow(QMainWindow):
                 if flat_malus != 0:
                     collected["extra_bonuses"].append(-abs(flat_malus))
 
-            for info_label in collected["info_only"]:
-                print(f'[ROLL EFFECT INFO_ONLY] source={source_label} label="{info_label}"')
+            if debug_info_only_enabled:
+                for info_label in collected["info_only"]:
+                    print(f'[ROLL EFFECT INFO_ONLY] source={source_label} label="{info_label}"')
             return collected
 
         def update_roll_preview():
@@ -3162,7 +3165,8 @@ class MainWindow(QMainWindow):
             extra_bonuses = []
             if paradigm_checkbox.isChecked():
                 extra_bonuses.append(paradigm_bonus)
-                print(f"[ROLL PARADIGM] active=True bonus={paradigm_bonus}")
+                if debug_paradigm_enabled:
+                    print(f"[ROLL PARADIGM] active=True bonus={paradigm_bonus}")
             extra_bonuses.extend(perk_effects["extra_bonuses"])
             extra_bonuses.extend(wellbeing_effects["extra_bonuses"])
             command = self.build_roll20_command(

@@ -99,6 +99,8 @@
   },
   "debug": {
     "preview": false,
-    "toggles": true
+    "toggles": true,
+    "info_only": false,
+    "paradigm": false
   }
 }
