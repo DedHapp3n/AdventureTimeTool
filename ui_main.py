@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
-    QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox
+    QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog,
+    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout
 )
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon
@@ -607,6 +608,8 @@ class MainWindow(QMainWindow):
 
     def on_settings_cache_reload_clicked(self):
         if hasattr(self.loader, "load_cache_from_json"):
+            if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
+                print("[CHARACTER WARNING] unsaved changes before switching character")
             if self.loader.load_cache_from_json():
                 self.reset_character_runtime_state()
                 self.create_tabs_from_cache()
@@ -1023,6 +1026,46 @@ class MainWindow(QMainWindow):
             return str(int(number))
         return f"{number:.10f}".rstrip("0").rstrip(".")
 
+    def get_wellbeing_entries(self, cfg=None):
+        data_cfg = cfg if isinstance(cfg, dict) else {}
+        sheet_name = str(data_cfg.get("sheet", "Charakterbogen"))
+        marker_col = str(data_cfg.get("marker_col", "AA")).strip() or "AA"
+        label_col = str(data_cfg.get("label_col", "AB")).strip() or "AB"
+        start_row = self._safe_int(data_cfg.get("start_row", 23), 23)
+        end_row = self._safe_int(data_cfg.get("end_row", 44), 44)
+        if end_row < start_row:
+            start_row, end_row = end_row, start_row
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        entries = []
+
+        def read_cached_text(cell_ref):
+            cell_data = sheet_cache.get(cell_ref)
+            if isinstance(cell_data, dict):
+                value = cell_data.get("value")
+            else:
+                value = cell_data
+            if value is None:
+                return ""
+            return str(value).strip()
+
+        for row in range(start_row, end_row + 1):
+            marker_cell = f"{marker_col}{row}"
+            label_cell = f"{label_col}{row}"
+            marker_text = read_cached_text(marker_cell)
+            label_text = read_cached_text(label_cell)
+            active = marker_text.lower() == "x"
+            entries.append(
+                {
+                    "row": row,
+                    "marker_cell": marker_cell,
+                    "label_cell": label_cell,
+                    "active": active,
+                    "label": label_text,
+                }
+            )
+            print(f'[WELLBEING] row={row} active={active} label="{label_text}"')
+        return entries
+
     def load_skill_definitions(self):
         definitions_path = self.base_dir / "assets" / "config" / "skill_definitions.json"
         empty = {"attribute_map": {}, "categories": []}
@@ -1124,6 +1167,85 @@ class MainWindow(QMainWindow):
             except Exception:
                 continue
         return self.get_default_skills_layout_config()
+
+    def get_default_roll_dialog_layout_config(self):
+        return {
+            "dialog": {
+                "title": "Roll20 Wurf-Assistent",
+                "w": 700,
+                "h": 620,
+                "background": "#202426",
+                "text_color": "#f2f2f2",
+                "muted_text_color": "#c8c0aa",
+                "accent_color": "#f2d28b",
+                "border_color": "#8a6a32",
+                "font_size": 13,
+                "title_font_size": 18,
+            },
+            "sections": {
+                "spacing": 12,
+                "label_height": 24,
+                "box_height": 56,
+            },
+            "specialization_box": {
+                "background": "#141618",
+                "border_color": "#3a3a3a",
+                "text_color": "#ffffff",
+                "font_size": 13,
+                "height": 64,
+            },
+            "counter": {
+                "button_w": 30,
+                "button_h": 26,
+                "value_w": 42,
+                "button_background": "#34383c",
+                "button_text_color": "#ffffff",
+                "button_border_color": "#5c6268",
+            },
+            "keep_options": {
+                "kh_text": "Höchsten behalten (kh1)",
+                "kl_text": "Niedrigsten behalten (kl1)",
+                "none_text": "Kein Keep",
+            },
+            "roll_preview": {
+                "label": "Roll20-Befehl:",
+                "background": "#101214",
+                "border_color": "#8a6a32",
+                "text_color": "#f2d28b",
+                "font_size": 22,
+                "height": 58,
+            },
+            "direct_send": {
+                "enabled": True,
+                "text": "Direkt an Roll20 senden",
+                "tooltip": "Noch nicht implementiert. Aktuell wird nur kopiert.",
+            },
+            "buttons": {
+                "copy_text": "Kopieren",
+                "close_text": "Schließen",
+            },
+        }
+
+    def load_roll_dialog_layout_config(self):
+        active_theme = self.get_active_theme()
+        default_config = self.get_default_roll_dialog_layout_config()
+        candidates = [
+            self.base_dir / "assets" / "themes" / active_theme / "roll_dialog_layout.json",
+            self.base_dir / "assets" / "themes" / "diablo" / "roll_dialog_layout.json",
+        ]
+        for layout_path in candidates:
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("dialog"), dict):
+                    print(f"[ROLL LAYOUT] loaded: {layout_path}")
+                    return data
+            except Exception:
+                continue
+        print("[ROLL LAYOUT] fallback: internal defaults")
+        return default_config
 
     def get_default_skill_sheet_mapping_config(self):
         return {
@@ -1459,17 +1581,25 @@ class MainWindow(QMainWindow):
             attr_cols = []
         return [f"{str(col)}{row}" for col in attr_cols[:4]]
 
-    def get_skill_attribute_letters_from_row(self, row, block=None):
+    def get_skill_attribute_slot_values_from_row(self, row, block=None):
         if block is None:
             block = self.get_skill_block_config_for_row(row)
         sheet_name = str((block or {}).get("sheet", self.get_skill_sheet_mapping_config().get("sheet", "Fertigkeiten")))
-        letters = []
-        for cell_ref in self.get_skill_attribute_cells_for_row(row, block):
+        valid_values = {"", "K", "G", "Z", "R", "I", "W", "C", "S"}
+        slot_values = []
+        for cell_ref in self.get_skill_attribute_cells_for_row(row, block)[:4]:
             raw_value = self.get_cache_cell_value(sheet_name, cell_ref, "")
-            letter = str(raw_value or "").strip().upper()
-            if letter:
-                letters.append(letter)
-        return letters[:4]
+            value = str(raw_value or "").strip().upper()
+            if value not in valid_values:
+                value = ""
+            slot_values.append(value)
+        while len(slot_values) < 4:
+            slot_values.append("")
+        return slot_values[:4]
+
+    def get_skill_attribute_letters_from_row(self, row, block=None):
+        slot_values = self.get_skill_attribute_slot_values_from_row(row, block)
+        return [value for value in slot_values if value][:4]
 
     def get_skill_lookup_value(self, block, attribute_letter):
         letter = str(attribute_letter or "").strip().upper()
@@ -1662,6 +1792,8 @@ class MainWindow(QMainWindow):
             "match_type": "missing",
             "visible_source": "structure",
             "display_attributes": [],
+            "display_attribute_slots": ["", "", "", ""],
+            "resolved_attribute_slots": ["", "", "", ""],
             "display_specialization": "",
             "display_note": "",
         }
@@ -1739,10 +1871,13 @@ class MainWindow(QMainWindow):
             info["display_note"] = cache_note
 
         if not block:
-            cache_letters = self.get_skill_attribute_letters_from_row(row, None)
+            cache_slots = self.get_skill_attribute_slot_values_from_row(row, None)
+            cache_letters = [value for value in cache_slots if value]
+            info["resolved_attribute_slots"] = cache_slots
             info["resolved_attribute_letters"] = cache_letters
             if use_cache_display_fields:
-                info["display_attributes"] = cache_letters
+                info["display_attribute_slots"] = cache_slots
+                info["display_attributes"] = cache_slots
                 info["visible_source"] = "mixed_field_fallback" if field_fallback_used else "cache"
             info["source_status"] = "missing_block"
             info["display_value"] = "0"
@@ -1767,10 +1902,13 @@ class MainWindow(QMainWindow):
             info["lookup_value_range"] = f"{lookup_value_col}{lookup_start}:{lookup_value_col}{lookup_end}"
         info["bonus_cells"] = block.get("bonus_rows", []) if isinstance(block.get("bonus_rows"), list) else []
 
-        letters = self.get_skill_attribute_letters_from_row(row, block)
+        slot_values = self.get_skill_attribute_slot_values_from_row(row, block)
+        letters = [value for value in slot_values if value]
+        info["resolved_attribute_slots"] = slot_values
         info["resolved_attribute_letters"] = letters
         if use_cache_display_fields:
-            info["display_attributes"] = letters
+            info["display_attribute_slots"] = slot_values
+            info["display_attributes"] = slot_values
             info["visible_source"] = "mixed_field_fallback" if field_fallback_used else "cache"
         total = 0
         status = "ok"
@@ -1878,6 +2016,563 @@ class MainWindow(QMainWindow):
 
     def get_skill_cache_value(self, skill):
         return self.calculate_skill_value_from_fertigkeiten_sheet(skill)
+
+    def get_skill_attribute_slot_options(self):
+        return [
+            ("Leer", ""),
+            ("K", "K"),
+            ("G", "G"),
+            ("Z", "Z"),
+            ("R", "R"),
+            ("I", "I"),
+            ("W", "W"),
+            ("C", "C"),
+            ("S", "S"),
+        ]
+
+    def is_skill_attribute_slot_editable(self, source_info, slot_index):
+        if not isinstance(source_info, dict):
+            return False
+        if source_info.get("row") is None:
+            return False
+        attribute_cells = source_info.get("attribute_cells", [])
+        if not isinstance(attribute_cells, list) or slot_index >= len(attribute_cells):
+            return False
+        cell_ref = str(attribute_cells[slot_index] or "").strip().upper()
+        if not re.fullmatch(r"(V|X|Z|AB)[0-9]+", cell_ref):
+            return False
+        return str(source_info.get("sheet_name", "")) == "Fertigkeiten"
+
+    def open_skill_attribute_slot_menu(self, slot_widget):
+        if slot_widget is None:
+            return
+        source_key = str(slot_widget.property("source_key") or "")
+        slot_index = slot_widget.property("slot_index")
+        cell_ref = str(slot_widget.property("cell_ref") or "").strip().upper()
+        sheet_name = str(slot_widget.property("sheet_name") or "")
+        source_info = self.skill_source_infos.get(source_key)
+        if not isinstance(slot_index, int):
+            try:
+                slot_index = int(slot_index)
+            except Exception:
+                return
+        if sheet_name != "Fertigkeiten" or not cell_ref:
+            return
+        if not self.is_skill_attribute_slot_editable(source_info, slot_index):
+            return
+
+        current_value = str(self.get_cache_cell_value(sheet_name, cell_ref, "") or "").strip().upper()
+        valid_values = {"", "K", "G", "Z", "R", "I", "W", "C", "S"}
+        if current_value not in valid_values:
+            current_value = ""
+
+        menu = QMenu(slot_widget)
+        selected_value = None
+        for label, value in self.get_skill_attribute_slot_options():
+            action = menu.addAction(label)
+            action.setData(value)
+            if value == current_value:
+                action.setEnabled(False)
+
+        chosen_action = menu.exec(slot_widget.mapToGlobal(slot_widget.rect().bottomLeft()))
+        if chosen_action is None:
+            return
+        selected_value = str(chosen_action.data() or "").strip().upper()
+        if selected_value not in valid_values:
+            selected_value = ""
+        print(f'[SKILLS EDIT ATTR MENU] {sheet_name}!{cell_ref} selected="{selected_value}"')
+        self.save_skill_attribute_slot_value(source_key, slot_index, selected_value)
+
+    def save_skill_attribute_slot_value(self, source_key, slot_index, new_value):
+        source_info = self.skill_source_infos.get(source_key)
+        if not self.is_skill_attribute_slot_editable(source_info, slot_index):
+            return
+        attribute_cells = source_info.get("attribute_cells", [])
+        cell_ref = str(attribute_cells[slot_index]).strip().upper()
+        sheet_name = str(source_info.get("sheet_name", "Fertigkeiten"))
+        valid_values = {"", "K", "G", "Z", "R", "I", "W", "C", "S"}
+        old_value = str(self.get_cache_cell_value(sheet_name, cell_ref, "") or "").strip().upper()
+        if old_value not in valid_values:
+            old_value = ""
+        normalized_new_value = str(new_value or "").strip().upper()
+        if normalized_new_value not in valid_values:
+            normalized_new_value = ""
+
+        if normalized_new_value == old_value:
+            return
+
+        before_values = {}
+        for other_cell_ref in attribute_cells[:4]:
+            normalized_ref = str(other_cell_ref or "").strip().upper()
+            before_values[normalized_ref] = str(
+                self.get_cache_cell_value(sheet_name, normalized_ref, "") or ""
+            ).strip().upper()
+        before_snapshot = [before_values.get(str(ref or "").strip().upper(), "") for ref in attribute_cells[:4]]
+
+        try:
+            print(f'[SKILLS EDIT ATTR] {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
+            self.loader.set_cell_value(sheet_name, cell_ref, normalized_new_value)
+            after_snapshot = []
+            for other_cell_ref in attribute_cells[:4]:
+                normalized_ref = str(other_cell_ref or "").strip().upper()
+                after_value = str(
+                    self.get_cache_cell_value(sheet_name, normalized_ref, "") or ""
+                ).strip().upper()
+                after_snapshot.append(after_value)
+                if normalized_ref == cell_ref:
+                    continue
+                if after_value != before_values.get(normalized_ref, ""):
+                    print(
+                        "[SKILLS EDIT ERROR]",
+                        f"unexpected slot change {sheet_name}!{normalized_ref}",
+                        f'"{before_values.get(normalized_ref, "")}" -> "{after_value}"',
+                    )
+            print(
+                "[SKILLS EDIT SLOT SNAPSHOT]",
+                f"row={source_info.get('row')}",
+                f"before={before_snapshot}",
+                f"after={after_snapshot}",
+            )
+            self.loader.save_active_character_json()
+            print("[SKILLS EDIT SAVE] active character saved")
+            self.create_tabs_from_cache()
+            self.show_main_section("skills")
+        except Exception as exc:
+            print("[SKILLS EDIT ERROR]", str(exc))
+
+    def is_skill_specialization_editable(self, source_info):
+        if not isinstance(source_info, dict):
+            return False
+        if source_info.get("row") is None:
+            return False
+        if str(source_info.get("sheet_name", "")) != "Fertigkeiten":
+            return False
+        cell_ref = str(source_info.get("specialization_cell", "") or "").strip().upper()
+        return bool(re.fullmatch(r"AG[0-9]+", cell_ref))
+
+    def on_skill_specialization_clicked(self, source_key):
+        source_info = self.skill_source_infos.get(source_key)
+        if not self.is_skill_specialization_editable(source_info):
+            return
+        sheet_name = str(source_info.get("sheet_name", "Fertigkeiten"))
+        cell_ref = str(source_info.get("specialization_cell", "") or "").strip().upper()
+        old_value = str(self.get_cache_cell_value(sheet_name, cell_ref, "") or "")
+
+        new_value, ok = QInputDialog.getText(
+            self,
+            "Spezialisierung bearbeiten",
+            "Spezialisierung:",
+            text=old_value,
+        )
+        if not ok:
+            return
+
+        normalized_new_value = str(new_value).strip()
+        if normalized_new_value == old_value:
+            return
+
+        try:
+            print(f'[SKILLS EDIT SPEC] {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
+            self.loader.set_cell_value(sheet_name, cell_ref, normalized_new_value)
+            self.loader.save_active_character_json()
+            print("[SKILLS EDIT SAVE] active character saved")
+            self.create_tabs_from_cache()
+            self.show_main_section("skills")
+        except Exception as exc:
+            print("[SKILLS EDIT ERROR]", str(exc))
+
+    def build_roll20_command(self, dice_count, keep_mode, skill_bonus, manual_bonus, extra_bonuses=None):
+        try:
+            dice_count = int(dice_count)
+        except Exception:
+            dice_count = 1
+        if dice_count <= 1:
+            dice_count = 1
+        dice_part = "1d20"
+        if dice_count > 1:
+            if keep_mode == "kh1":
+                dice_part = f"{dice_count}d20kh1"
+            elif keep_mode == "kl1":
+                dice_part = f"{dice_count}d20kl1"
+            else:
+                dice_part = f"{dice_count}d20"
+
+        bonus_parts = []
+        values_to_add = [skill_bonus]
+        if isinstance(extra_bonuses, list):
+            values_to_add.extend(extra_bonuses)
+        values_to_add.append(manual_bonus)
+        for value in values_to_add:
+            try:
+                number = int(value)
+            except Exception:
+                continue
+            if number == 0:
+                continue
+            if number > 0:
+                bonus_parts.append(f"+{number}")
+            else:
+                bonus_parts.append(str(number))
+        return f"/r {dice_part}{''.join(bonus_parts)}"
+
+    def split_specialization_text(self, text):
+        raw = str(text or "")
+        if not raw.strip():
+            return []
+        parts = []
+        for item in raw.split(","):
+            value = str(item).strip()
+            if value:
+                parts.append(value)
+        return parts
+
+    def build_specialization_preview_text(self, full_text, max_chars):
+        text = str(full_text or "").strip()
+        if not text:
+            return "-"
+        if max_chars <= 0 or len(text) <= max_chars:
+            return text
+        preview = text[:max_chars].rstrip(" ,")
+        if not preview:
+            return "..."
+        return f"{preview} ..."
+
+    def on_skill_row_roll_clicked(self, source_key):
+        source_info = self.skill_source_infos.get(source_key)
+        if not isinstance(source_info, dict):
+            return
+        if source_info.get("row") is None:
+            return
+
+        display_name = str(source_info.get("display_name", ""))
+        display_value = str(source_info.get("display_value", "0"))
+        specialization_text = str(source_info.get("display_specialization", "") or "")
+        slot_values = source_info.get("display_attribute_slots", [])
+        if not isinstance(slot_values, list):
+            slot_values = []
+        attribute_letters = [str(v).strip().upper() for v in slot_values if str(v).strip()]
+        try:
+            value_number = int(display_value) if display_value else 0
+        except Exception:
+            value_number = 0
+        print(
+            "[ROLL SELECT]",
+            source_key,
+            f"row={source_info.get('row')}",
+            f'name="{display_name}"',
+            f"value={value_number}",
+            f"attrs={attribute_letters}",
+            f'specialization="{specialization_text}"',
+        )
+        self.open_skill_roll_dialog(source_key)
+
+    def open_skill_roll_dialog(self, source_key):
+        source_info = self.skill_source_infos.get(source_key)
+        if not isinstance(source_info, dict) or source_info.get("row") is None:
+            return
+
+        display_name = str(source_info.get("display_name", ""))
+        specialization_text = str(source_info.get("display_specialization", "") or "")
+        slot_values = source_info.get("display_attribute_slots", [])
+        if not isinstance(slot_values, list):
+            slot_values = []
+        slot_values = (slot_values + ["", "", "", ""])[:4]
+        resolved_letters = [str(v).strip().upper() for v in slot_values if str(v).strip()]
+        attrs_text = ", ".join(resolved_letters) if resolved_letters else "-"
+        try:
+            skill_value = int(source_info.get("display_value", "0") or 0)
+        except Exception:
+            skill_value = 0
+        skill_value_allowed = bool(resolved_letters) or bool(specialization_text.strip())
+        roll_layout = self.load_roll_dialog_layout_config()
+        dialog_cfg = roll_layout.get("dialog", {})
+        sections_cfg = roll_layout.get("sections", {})
+        spec_cfg = roll_layout.get("specialization_box", {})
+        counter_cfg = roll_layout.get("counter", {})
+        keep_cfg = roll_layout.get("keep_options", {})
+        preview_cfg = roll_layout.get("roll_preview", {})
+        direct_send_cfg = roll_layout.get("direct_send", {})
+        buttons_cfg = roll_layout.get("buttons", {})
+        spec_options_cfg = roll_layout.get("specialization_options", {})
+        paradigm_cfg = roll_layout.get("paradigm", {})
+
+        dialog_title = str(dialog_cfg.get("title", "Roll20 Wurf-Assistent"))
+        dialog_w = self._safe_int(dialog_cfg.get("w", 700), 700)
+        dialog_h = self._safe_int(dialog_cfg.get("h", 620), 620)
+        text_color = str(dialog_cfg.get("text_color", "#f2f2f2"))
+        muted_text_color = str(dialog_cfg.get("muted_text_color", "#c8c0aa"))
+        accent_color = str(dialog_cfg.get("accent_color", "#f2d28b"))
+        border_color = str(dialog_cfg.get("border_color", "#8a6a32"))
+        base_font_size = self._safe_int(dialog_cfg.get("font_size", 13), 13)
+        title_font_size = self._safe_int(dialog_cfg.get("title_font_size", 18), 18)
+        dialog_bg = str(dialog_cfg.get("background", "#202426"))
+        spacing = self._safe_int(sections_cfg.get("spacing", 12), 12)
+        spec_height = self._safe_int(spec_cfg.get("height", 64), 64)
+        spec_font_size = self._safe_int(spec_cfg.get("font_size", 13), 13)
+        preview_label_text = str(preview_cfg.get("label", "Roll20-Befehl:"))
+        preview_font_size = self._safe_int(preview_cfg.get("font_size", 22), 22)
+        preview_height = self._safe_int(preview_cfg.get("height", 58), 58)
+        paradigm_text = str(paradigm_cfg.get("text", "Paradigma / Brennen verwenden (+10)"))
+        paradigm_bonus = self._safe_int(paradigm_cfg.get("bonus", 10), 10)
+        paradigm_tooltip = str(
+            paradigm_cfg.get(
+                "tooltip",
+                "Manueller Schalter. Es wird kein Paradigma automatisch verbraucht.",
+            )
+        )
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(dialog_title)
+        dialog.setModal(True)
+        dialog.resize(dialog_w, dialog_h)
+        dialog.setStyleSheet(
+            f"QDialog {{ background: {dialog_bg}; color: {text_color}; font-size: {base_font_size}px; }}"
+        )
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(spacing)
+
+        header = QLabel(f"Fertigkeit: {display_name}")
+        header.setStyleSheet(f"font-size: {title_font_size}px; font-weight: 700; color: {accent_color};")
+        layout.addWidget(header)
+        layout.addWidget(QLabel(f"Wert: {skill_value}"))
+        layout.addWidget(QLabel(f"Attribute: {attrs_text}"))
+
+        spec_title = QLabel("Spezialisierung:")
+        spec_title.setStyleSheet(f"font-weight: 700; color: {accent_color};")
+        layout.addWidget(spec_title)
+        spec_options_max_rows_per_column = self._safe_int(
+            spec_options_cfg.get("max_rows_per_column", 6), 6
+        )
+        if spec_options_max_rows_per_column <= 0:
+            spec_options_max_rows_per_column = 6
+        spec_options_column_spacing = self._safe_int(spec_options_cfg.get("column_spacing", 24), 24)
+        spec_options_row_spacing = self._safe_int(spec_options_cfg.get("row_spacing", 8), 8)
+        spec_preview_max_chars = self._safe_int(spec_options_cfg.get("preview_max_chars", 48), 48)
+        specialization_preview_text = self.build_specialization_preview_text(
+            specialization_text,
+            spec_preview_max_chars,
+        )
+
+        spec_value = QLabel(specialization_preview_text)
+        spec_value.setWordWrap(True)
+        spec_value.setStyleSheet(
+            f"background: {str(spec_cfg.get('background', '#141618'))}; "
+            f"border: 1px solid {str(spec_cfg.get('border_color', '#3a3a3a'))}; "
+            f"padding: 8px; color: {str(spec_cfg.get('text_color', '#ffffff'))}; "
+            f"font-size: {spec_font_size}px;"
+        )
+        spec_value.setMinimumHeight(spec_height)
+        layout.addWidget(spec_value)
+
+        specialization_items = self.split_specialization_text(specialization_text)
+        spec_options_title = str(spec_options_cfg.get("title", "Spezialisierungen:"))
+        spec_options_hint = str(
+            spec_options_cfg.get("hint", "Spezialisierungen: +1 Vorteil je Auswahl")
+        )
+        spec_options_empty_text = str(
+            spec_options_cfg.get("empty_text", "Keine Spezialisierung vorhanden")
+        )
+        spec_options_text_color = str(spec_options_cfg.get("text_color", text_color))
+        spec_options_hint_color = str(spec_options_cfg.get("hint_color", muted_text_color))
+        spec_options_font_size = self._safe_int(spec_options_cfg.get("font_size", base_font_size), base_font_size)
+
+        spec_options_title_label = QLabel(spec_options_title)
+        spec_options_title_label.setStyleSheet(
+            f"font-weight: 700; color: {accent_color}; font-size: {spec_options_font_size}px;"
+        )
+        layout.addWidget(spec_options_title_label)
+
+        specialization_checkboxes = []
+        if specialization_items:
+            checkboxes_grid_widget = QWidget(dialog)
+            checkboxes_grid_layout = QGridLayout(checkboxes_grid_widget)
+            checkboxes_grid_layout.setContentsMargins(0, 0, 0, 0)
+            checkboxes_grid_layout.setHorizontalSpacing(spec_options_column_spacing)
+            checkboxes_grid_layout.setVerticalSpacing(spec_options_row_spacing)
+            for index, item in enumerate(specialization_items):
+                checkbox = QCheckBox(item, dialog)
+                checkbox.setChecked(False)
+                checkbox.setStyleSheet(
+                    f"color: {spec_options_text_color}; font-size: {spec_options_font_size}px;"
+                )
+                row = index % spec_options_max_rows_per_column
+                col = index // spec_options_max_rows_per_column
+                checkboxes_grid_layout.addWidget(checkbox, row, col)
+                specialization_checkboxes.append(checkbox)
+            checkboxes_grid_layout.setColumnStretch(99, 1)
+            layout.addWidget(checkboxes_grid_widget)
+            spec_hint_label = QLabel(spec_options_hint)
+            spec_hint_label.setStyleSheet(f"color: {spec_options_hint_color};")
+            layout.addWidget(spec_hint_label)
+        else:
+            spec_empty_label = QLabel(spec_options_empty_text)
+            spec_empty_label.setStyleSheet(
+                f"color: {spec_options_hint_color}; font-size: {spec_options_font_size}px;"
+            )
+            layout.addWidget(spec_empty_label)
+
+        skill_usage_text = (
+            f"Skillwert wird verwendet: Ja (+{skill_value})"
+            if skill_value_allowed
+            else "Skillwert wird verwendet: Nein (keine Attribute/Spezialisierung)"
+        )
+        skill_usage_label = QLabel(skill_usage_text)
+        skill_usage_label.setStyleSheet(f"color: {muted_text_color};")
+        layout.addWidget(skill_usage_label)
+
+        controls = QHBoxLayout()
+        advantages_spin = QSpinBox(dialog)
+        advantages_spin.setRange(0, 99)
+        advantages_spin.setValue(0)
+        advantages_spin.setButtonSymbols(QSpinBox.NoButtons)
+        advantages_spin.setFixedWidth(self._safe_int(counter_cfg.get("value_w", 42), 42))
+        disadvantages_spin = QSpinBox(dialog)
+        disadvantages_spin.setRange(0, 99)
+        disadvantages_spin.setValue(0)
+        disadvantages_spin.setButtonSymbols(QSpinBox.NoButtons)
+        disadvantages_spin.setFixedWidth(self._safe_int(counter_cfg.get("value_w", 42), 42))
+        manual_bonus_spin = QSpinBox(dialog)
+        manual_bonus_spin.setRange(-999, 999)
+        manual_bonus_spin.setValue(0)
+
+        adv_minus = QPushButton("-", dialog)
+        adv_plus = QPushButton("+", dialog)
+        dis_minus = QPushButton("-", dialog)
+        dis_plus = QPushButton("+", dialog)
+        for button in (adv_minus, adv_plus, dis_minus, dis_plus):
+            button.setFixedSize(
+                self._safe_int(counter_cfg.get("button_w", 30), 30),
+                self._safe_int(counter_cfg.get("button_h", 26), 26),
+            )
+            button.setStyleSheet(
+                f"background: {str(counter_cfg.get('button_background', '#34383c'))}; "
+                f"color: {str(counter_cfg.get('button_text_color', '#ffffff'))}; "
+                f"border: 1px solid {str(counter_cfg.get('button_border_color', '#5c6268'))};"
+            )
+
+        controls.addWidget(QLabel("Vorteile:"))
+        controls.addWidget(adv_minus)
+        controls.addWidget(advantages_spin)
+        controls.addWidget(adv_plus)
+        controls.addWidget(QLabel("Nachteile:"))
+        controls.addWidget(dis_minus)
+        controls.addWidget(disadvantages_spin)
+        controls.addWidget(dis_plus)
+        controls.addSpacing(10)
+        controls.addWidget(QLabel("Manueller Bonus/Malus:"))
+        controls.addWidget(manual_bonus_spin)
+        controls.addStretch()
+        layout.addLayout(controls)
+
+        keep_layout = QHBoxLayout()
+        keep_group = QButtonGroup(dialog)
+        keep_none = QRadioButton(str(keep_cfg.get("none_text", "Kein Keep")), dialog)
+        keep_high = QRadioButton(str(keep_cfg.get("kh_text", "Höchsten behalten (kh1)")), dialog)
+        keep_low = QRadioButton(str(keep_cfg.get("kl_text", "Niedrigsten behalten (kl1)")), dialog)
+        keep_group.addButton(keep_none)
+        keep_group.addButton(keep_high)
+        keep_group.addButton(keep_low)
+        keep_high.setChecked(True)
+        keep_layout.addWidget(QLabel("Keep:"))
+        keep_layout.addWidget(keep_high)
+        keep_layout.addWidget(keep_low)
+        keep_layout.addWidget(keep_none)
+        keep_layout.addStretch()
+        layout.addLayout(keep_layout)
+
+        paradigm_checkbox = QCheckBox(paradigm_text, dialog)
+        paradigm_checkbox.setChecked(False)
+        paradigm_checkbox.setToolTip(paradigm_tooltip)
+        layout.addWidget(paradigm_checkbox)
+
+        preview_title = QLabel(preview_label_text)
+        preview_title.setStyleSheet(f"font-weight: 700; color: {accent_color};")
+        layout.addWidget(preview_title)
+
+        preview_label = QLabel("")
+        preview_label.setStyleSheet(
+            f"font-size: {preview_font_size}px; font-weight: 700; "
+            f"color: {str(preview_cfg.get('text_color', '#f2d28b'))}; "
+            f"background: {str(preview_cfg.get('background', '#101214'))}; "
+            f"border: 1px solid {str(preview_cfg.get('border_color', '#8a6a32'))}; padding: 10px;"
+        )
+        preview_label.setMinimumHeight(preview_height)
+        layout.addWidget(preview_label)
+
+        direct_send_checkbox = None
+        if bool(direct_send_cfg.get("enabled", True)):
+            direct_send_checkbox = QCheckBox(str(direct_send_cfg.get("text", "Direkt an Roll20 senden")), dialog)
+            direct_send_checkbox.setToolTip(
+                str(direct_send_cfg.get("tooltip", "Noch nicht implementiert. Aktuell wird nur kopiert."))
+            )
+            layout.addWidget(direct_send_checkbox)
+
+        buttons_layout = QHBoxLayout()
+        copy_button = QPushButton(str(buttons_cfg.get("copy_text", "Kopieren")), dialog)
+        close_button = QPushButton(str(buttons_cfg.get("close_text", "Schließen")), dialog)
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(copy_button)
+        buttons_layout.addWidget(close_button)
+        layout.addLayout(buttons_layout)
+
+        def current_keep_mode():
+            if keep_high.isChecked():
+                return "kh1"
+            if keep_low.isChecked():
+                return "kl1"
+            return ""
+
+        def adjust_spin(spinbox, delta):
+            spinbox.setValue(max(spinbox.minimum(), min(spinbox.maximum(), spinbox.value() + delta)))
+
+        def update_roll_preview():
+            specialization_advantages = sum(
+                1 for checkbox in specialization_checkboxes if checkbox.isChecked()
+            )
+            dice_count = 1 + advantages_spin.value() + specialization_advantages - disadvantages_spin.value()
+            if dice_count <= 0:
+                dice_count = 1
+            skill_bonus = skill_value if skill_value_allowed else 0
+            manual_bonus = manual_bonus_spin.value()
+            extra_bonuses = []
+            if paradigm_checkbox.isChecked():
+                extra_bonuses.append(paradigm_bonus)
+                print(f"[ROLL PARADIGM] active=True bonus={paradigm_bonus}")
+            command = self.build_roll20_command(
+                dice_count,
+                current_keep_mode(),
+                skill_bonus,
+                manual_bonus,
+                extra_bonuses,
+            )
+            preview_label.setText(command)
+            if specialization_advantages:
+                print(f"[ROLL SPEC] selected={specialization_advantages} bonus_dice={specialization_advantages}")
+
+        def copy_roll_command():
+            command = preview_label.text().strip()
+            QApplication.clipboard().setText(command)
+            print("[ROLL COPY]", command)
+            if direct_send_checkbox is not None and direct_send_checkbox.isChecked():
+                print("[ROLL SEND PLACEHOLDER] direct Roll20 send requested but not implemented")
+
+        advantages_spin.valueChanged.connect(update_roll_preview)
+        disadvantages_spin.valueChanged.connect(update_roll_preview)
+        manual_bonus_spin.valueChanged.connect(update_roll_preview)
+        keep_none.toggled.connect(update_roll_preview)
+        keep_high.toggled.connect(update_roll_preview)
+        keep_low.toggled.connect(update_roll_preview)
+        paradigm_checkbox.toggled.connect(update_roll_preview)
+        adv_minus.clicked.connect(lambda: adjust_spin(advantages_spin, -1))
+        adv_plus.clicked.connect(lambda: adjust_spin(advantages_spin, 1))
+        dis_minus.clicked.connect(lambda: adjust_spin(disadvantages_spin, -1))
+        dis_plus.clicked.connect(lambda: adjust_spin(disadvantages_spin, 1))
+        for checkbox in specialization_checkboxes:
+            checkbox.toggled.connect(update_roll_preview)
+        copy_button.clicked.connect(copy_roll_command)
+        close_button.clicked.connect(dialog.close)
+        update_roll_preview()
+        dialog.exec()
 
     def render_skills_screen(self):
         if self.content_layer is None:
@@ -2136,9 +2831,12 @@ class MainWindow(QMainWindow):
                         display_value,
                     )
             print("[SKILLS] skill value:", display_name, attributes[:4], "->", display_value)
-            display_attributes = source_info.get("display_attributes", [])
-            if not isinstance(display_attributes, list):
-                display_attributes = []
+            slot_values = source_info.get("display_attribute_slots", [])
+            if not isinstance(slot_values, list) or len(slot_values) < 4:
+                row_value = source_info.get("row")
+                block = self.get_skill_block_config_for_row(row_value, category_id) if row_value is not None else None
+                slot_values = self.get_skill_attribute_slot_values_from_row(row_value, block) if row_value is not None else ["", "", "", ""]
+            slot_values = (slot_values + ["", "", "", ""])[:4]
             display_specialization = source_info.get("display_specialization", "")
             display_note = source_info.get("display_note", "")
 
@@ -2148,74 +2846,143 @@ class MainWindow(QMainWindow):
             spec_col = columns.get("specialization", {})
             note_col = columns.get("note", {})
 
-            self.create_panel_text(
-                table,
-                {
-                    "x": self._safe_int(skill_col.get("x", 0), 0) + 8,
-                    "y": y,
-                    "w": max(1, self._safe_int(skill_col.get("w", 360), 360) - 12),
-                    "h": row_h,
-                },
-                display_name,
-                font_size,
-                str(table_cfg.get("skill_name_color", "#f2d28b")),
-                bold=True,
+            skill_x = self._safe_int(skill_col.get("x", 0), 0) + 8
+            skill_w = max(1, self._safe_int(skill_col.get("w", 360), 360) - 12)
+            skill_button = QPushButton(table)
+            skill_button.setGeometry(skill_x, y, skill_w, row_h)
+            skill_button.setText(display_name)
+            skill_button.setFlat(True)
+            skill_button.setCursor(Qt.PointingHandCursor)
+            skill_button.setStyleSheet(
+                "QPushButton {"
+                "background: transparent;"
+                "border: none;"
+                f"color: {str(table_cfg.get('skill_name_color', '#f2d28b'))};"
+                f"font-size: {font_size}px;"
+                "font-weight: 700;"
+                "text-align: left;"
+                "padding: 0px;"
+                "}"
+                "QPushButton:hover { border: 1px solid rgba(242, 210, 139, 60); }"
             )
+            skill_button.clicked.connect(
+                lambda checked=False, sk=source_key: self.on_skill_row_roll_clicked(sk)
+            )
+            skill_button.show()
 
             slot_w = self._safe_int(attr_col.get("slot_w", 42), 42)
             slot_gap = self._safe_int(attr_col.get("slot_gap", 8), 8)
             attr_x = self._safe_int(attr_col.get("x", 370), 370)
+            attribute_cells = source_info.get("attribute_cells", [])
+            if not isinstance(attribute_cells, list):
+                attribute_cells = []
             for slot_index in range(4):
-                letter = str(display_attributes[slot_index]) if slot_index < len(display_attributes) else ""
-                slot = QFrame(table)
+                letter = str(slot_values[slot_index] or "")
+                slot_x = attr_x + slot_index * (slot_w + slot_gap)
+                slot_h = max(1, row_h - 10)
+                slot_y = y + 5
+                slot = QPushButton(table)
                 slot.setGeometry(
-                    attr_x + slot_index * (slot_w + slot_gap),
-                    y + 5,
+                    slot_x,
+                    slot_y,
                     slot_w,
-                    max(1, row_h - 10),
+                    slot_h,
                 )
                 slot.setStyleSheet(
+                    "QPushButton {"
                     "background: rgba(0, 0, 0, 105);"
                     "border: 1px solid rgba(255, 255, 255, 42);"
                     "border-radius: 3px;"
+                    f"color: {str(table_cfg.get('attribute_color', '#ffffff'))};"
+                    f"font-size: {font_size}px;"
+                    "font-weight: 700;"
+                    "padding: 0px;"
+                    "}"
+                    "QPushButton:hover { border: 1px solid rgba(242, 210, 139, 140); }"
                 )
+                slot.setText(letter)
+                slot.setFlat(True)
+                slot.setProperty("source_key", source_key)
+                slot.setProperty("slot_index", slot_index)
+                slot.setProperty("sheet_name", "Fertigkeiten")
+                slot.setProperty(
+                    "cell_ref",
+                    str(attribute_cells[slot_index]).strip().upper()
+                    if slot_index < len(attribute_cells)
+                    else "",
+                )
+                if self.is_skill_attribute_slot_editable(source_info, slot_index):
+                    slot.setCursor(Qt.PointingHandCursor)
+                    slot.setToolTip("Attribut ändern")
+                    slot.clicked.connect(
+                        lambda checked=False, widget=slot: self.open_skill_attribute_slot_menu(widget)
+                    )
+                else:
+                    slot.setCursor(Qt.ArrowCursor)
                 slot.show()
-                self.create_panel_text(
-                    slot,
-                    {"x": 0, "y": 0, "w": slot_w, "h": max(1, row_h - 10)},
-                    letter,
-                    font_size,
-                    str(table_cfg.get("attribute_color", "#ffffff")),
-                    bold=True,
-                    align="center",
-                )
 
-            self.create_panel_text(
-                table,
-                {
-                    "x": self._safe_int(value_col.get("x", 600), 600),
-                    "y": y,
-                    "w": self._safe_int(value_col.get("w", 80), 80),
-                    "h": row_h,
-                },
-                display_value,
-                font_size,
-                str(table_cfg.get("value_color", "#7fd0ff")),
-                bold=True,
-                align="center",
+            value_x = self._safe_int(value_col.get("x", 600), 600)
+            value_w = self._safe_int(value_col.get("w", 80), 80)
+            value_button = QPushButton(table)
+            value_button.setGeometry(value_x, y, value_w, row_h)
+            value_button.setText(display_value)
+            value_button.setFlat(True)
+            value_button.setCursor(Qt.PointingHandCursor)
+            value_button.setStyleSheet(
+                "QPushButton {"
+                "background: transparent;"
+                "border: none;"
+                f"color: {str(table_cfg.get('value_color', '#7fd0ff'))};"
+                f"font-size: {font_size}px;"
+                "font-weight: 700;"
+                "text-align: center;"
+                "padding: 0px;"
+                "}"
+                "QPushButton:hover { border: 1px solid rgba(127, 208, 255, 60); }"
             )
-            self.create_panel_text(
-                table,
-                {
-                    "x": self._safe_int(spec_col.get("x", 690), 690) + 8,
-                    "y": y,
-                    "w": max(1, self._safe_int(spec_col.get("w", 470), 470) - 12),
-                    "h": row_h,
-                },
-                str(display_specialization),
-                font_size,
-                str(table_cfg.get("specialization_color", "#ffffff")),
+            value_button.clicked.connect(
+                lambda checked=False, sk=source_key: self.on_skill_row_roll_clicked(sk)
             )
+            value_button.show()
+            spec_x = self._safe_int(spec_col.get("x", 690), 690) + 8
+            spec_w = max(1, self._safe_int(spec_col.get("w", 470), 470) - 12)
+            spec_text = str(display_specialization)
+            if self.is_skill_specialization_editable(source_info):
+                spec_button = QPushButton(table)
+                spec_button.setGeometry(spec_x, y, spec_w, row_h)
+                spec_button.setText(spec_text)
+                spec_button.setFlat(True)
+                spec_button.setCursor(Qt.PointingHandCursor)
+                spec_button.setToolTip("Spezialisierung bearbeiten")
+                spec_button.setStyleSheet(
+                    "QPushButton {"
+                    "background: transparent;"
+                    "border: none;"
+                    f"color: {str(table_cfg.get('specialization_color', '#ffffff'))};"
+                    f"font-size: {font_size}px;"
+                    "font-weight: 500;"
+                    "text-align: left;"
+                    "padding: 0px;"
+                    "}"
+                    "QPushButton:hover { color: #ffffff; border: 1px solid rgba(242, 210, 139, 70); }"
+                )
+                spec_button.clicked.connect(
+                    lambda checked=False, sk=source_key: self.on_skill_specialization_clicked(sk)
+                )
+                spec_button.show()
+            else:
+                self.create_panel_text(
+                    table,
+                    {
+                        "x": spec_x,
+                        "y": y,
+                        "w": spec_w,
+                        "h": row_h,
+                    },
+                    spec_text,
+                    font_size,
+                    str(table_cfg.get("specialization_color", "#ffffff")),
+                )
             self.create_panel_text(
                 table,
                 {
@@ -2880,6 +3647,227 @@ class MainWindow(QMainWindow):
         render_attr_rows("body", body_map.get("items", []), body_rows_layout)
         render_attr_rows("mind", mind_map.get("items", []), mind_rows_layout)
 
+        def render_wellbeing_block():
+            wellbeing_cfg = character_screen.get("wellbeing_panel", {})
+            if not isinstance(wellbeing_cfg, dict):
+                wellbeing_cfg = {}
+            if wellbeing_cfg.get("enabled") is False:
+                return
+
+            fallback_x = attribute_panel.x()
+            fallback_y = attribute_panel.y() + attribute_panel.height() + 8
+            fallback_w = attribute_panel.width()
+            fallback_h = max(430, min(450, self.content_layer.height() - fallback_y - 8))
+            panel_x = self._safe_int(wellbeing_cfg.get("x", fallback_x), fallback_x)
+            panel_y = self._safe_int(wellbeing_cfg.get("y", fallback_y), fallback_y)
+            panel_w = self._safe_int(wellbeing_cfg.get("w", fallback_w), fallback_w)
+            panel_h = self._safe_int(wellbeing_cfg.get("h", fallback_h), fallback_h)
+            style_cfg = wellbeing_cfg.get("style", {})
+            if not isinstance(style_cfg, dict):
+                style_cfg = {}
+            background = str(style_cfg.get("background", "rgba(12, 12, 12, 150)"))
+            border_color = str(style_cfg.get("border_color", "rgba(242, 210, 139, 95)"))
+            border_radius = self._safe_int(style_cfg.get("border_radius", 6), 6)
+
+            panel = QFrame(self.content_layer)
+            panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
+            panel.setStyleSheet(
+                "QFrame {"
+                f"background: {background};"
+                f"border: 1px solid {border_color};"
+                f"border-radius: {border_radius}px;"
+                "}"
+            )
+            panel.show()
+
+            title_cfg = wellbeing_cfg.get("title", {})
+            if not isinstance(title_cfg, dict):
+                title_cfg = {}
+            self.create_panel_text(
+                panel,
+                title_cfg or {"x": 16, "y": 8, "w": panel_w - 32, "h": 24},
+                str(title_cfg.get("text", "Wohlbefinden")),
+                self.get_text_font_size(title_cfg, 18),
+                self.get_text_color(title_cfg, default_color),
+                bold=self.get_text_bold(title_cfg, True),
+                align=self.get_text_align(title_cfg, "center"),
+            )
+
+            def elide_label(text, max_chars=36):
+                value = str(text or "").strip()
+                if len(value) <= max_chars:
+                    return value
+                return value[: max(0, max_chars - 3)] + "..."
+
+            entries = self.get_wellbeing_entries(wellbeing_cfg.get("data", {}))
+            default_color_ranges = [
+                {"start_row": 23, "end_row": 24, "color": "#7d1f20"},
+                {"start_row": 25, "end_row": 28, "color": "#b74335"},
+                {"start_row": 29, "end_row": 32, "color": "#d18a26"},
+                {"start_row": 33, "end_row": 34, "color": "#8a877f"},
+                {"start_row": 35, "end_row": 38, "color": "#8fbf5a"},
+                {"start_row": 39, "end_row": 42, "color": "#4f9b45"},
+                {"start_row": 43, "end_row": 44, "color": "#1f6f37"},
+            ]
+            color_ranges = wellbeing_cfg.get("color_ranges", default_color_ranges)
+            if not isinstance(color_ranges, list) or not color_ranges:
+                color_ranges = default_color_ranges
+
+            def wellbeing_bar_color(row):
+                for color_range in color_ranges:
+                    if not isinstance(color_range, dict):
+                        continue
+                    start = self._safe_int(color_range.get("start_row", 0), 0)
+                    end = self._safe_int(color_range.get("end_row", start), start)
+                    if start <= row <= end:
+                        return str(color_range.get("color", "#777777"))
+                return "#777777"
+
+            def entry_tooltip(entry, full_label, active):
+                marker_cell = str(entry.get("marker_cell", ""))
+                label_cell = str(entry.get("label_cell", ""))
+                label_for_tooltip = full_label if full_label else "(leer)"
+                active_text = "ja" if active else "nein"
+                return (
+                    f"{marker_cell} / {label_cell}\n"
+                    f"{label_cell}: {label_for_tooltip}\n"
+                    f"Aktiv: {active_text}"
+                )
+
+            def render_vertical_mode():
+                vertical_cfg = wellbeing_cfg.get("vertical", {})
+                if not isinstance(vertical_cfg, dict):
+                    vertical_cfg = {}
+                margin_x = self._safe_int(vertical_cfg.get("margin_x", 14), 14)
+                row_y_start = self._safe_int(vertical_cfg.get("row_y_start", 38), 38)
+                row_h = self._safe_int(vertical_cfg.get("row_h", 17), 17)
+                row_gap = self._safe_int(vertical_cfg.get("row_gap", 1), 1)
+                color_bar_w = self._safe_int(vertical_cfg.get("color_bar_w", 18), 18)
+                grouped_color_bars = bool(vertical_cfg.get("grouped_color_bars", True))
+                group_bar_w = self._safe_int(vertical_cfg.get("group_bar_w", color_bar_w), color_bar_w)
+                group_bar_radius = self._safe_int(vertical_cfg.get("group_bar_radius", 3), 3)
+                row_background_enabled = bool(vertical_cfg.get("row_background_enabled", True))
+                x_field_w = self._safe_int(vertical_cfg.get("x_field_w", 28), 28)
+                gap = self._safe_int(vertical_cfg.get("gap", 7), 7)
+                font_size = self._safe_int(vertical_cfg.get("font_size", 11), 11)
+                active_font_size = self._safe_int(vertical_cfg.get("active_font_size", font_size), font_size)
+                max_label_chars = self._safe_int(vertical_cfg.get("max_label_chars", 38), 38)
+                row_x = margin_x + color_bar_w + gap
+                text_x = x_field_w + gap
+                text_w = max(80, panel_w - row_x - text_x - margin_x)
+
+                inactive_row_background = str(style_cfg.get("inactive_row_background", "rgba(255, 255, 255, 6)"))
+                active_row_background = str(style_cfg.get("active_row_background", "rgba(242, 210, 139, 36)"))
+                inactive_border = str(style_cfg.get("inactive_border", "rgba(232, 224, 200, 24)"))
+                active_border = str(style_cfg.get("active_border", "rgba(242, 210, 139, 170)"))
+                text_color = str(style_cfg.get("text_color", "rgba(232, 224, 200, 175)"))
+                active_text_color = str(style_cfg.get("active_text_color", "#ffffff"))
+                x_inactive_background = str(style_cfg.get("x_inactive_background", "rgba(0, 0, 0, 85)"))
+                x_active_background = str(style_cfg.get("x_active_background", "rgba(242, 210, 139, 72)"))
+                x_inactive_border = str(style_cfg.get("x_inactive_border", "rgba(232, 224, 200, 55)"))
+                x_active_border = str(style_cfg.get("x_active_border", "rgba(242, 210, 139, 220)"))
+                data_cfg = wellbeing_cfg.get("data", {})
+                if not isinstance(data_cfg, dict):
+                    data_cfg = {}
+                data_start_row = self._safe_int(data_cfg.get("start_row", 23), 23)
+                data_end_row = self._safe_int(data_cfg.get("end_row", 44), 44)
+                if data_end_row < data_start_row:
+                    data_start_row, data_end_row = data_end_row, data_start_row
+
+                if grouped_color_bars:
+                    for color_range in color_ranges:
+                        if not isinstance(color_range, dict):
+                            continue
+                        start_row = self._safe_int(color_range.get("start_row", data_start_row), data_start_row)
+                        end_row = self._safe_int(color_range.get("end_row", start_row), start_row)
+                        start_row = max(data_start_row, start_row)
+                        end_row = min(data_end_row, end_row)
+                        if end_row < start_row:
+                            continue
+                        start_index = start_row - data_start_row
+                        end_index = end_row - data_start_row
+                        group_y = row_y_start + start_index * (row_h + row_gap)
+                        group_h = (end_index - start_index + 1) * row_h + (end_index - start_index) * row_gap
+                        group_bar = QLabel(panel)
+                        group_bar.setGeometry(margin_x, group_y, group_bar_w, max(1, group_h))
+                        group_bar.setStyleSheet(
+                            "QLabel {"
+                            f"background: {str(color_range.get('color', '#777777'))};"
+                            "border: none;"
+                            f"border-radius: {group_bar_radius}px;"
+                            "}"
+                        )
+                        group_bar.show()
+
+                for index, entry in enumerate(entries):
+                    y = row_y_start + index * (row_h + row_gap)
+                    active = bool(entry.get("active"))
+                    full_label = str(entry.get("label", "") or "")
+                    tooltip = entry_tooltip(entry, full_label, active)
+
+                    row_frame = QFrame(panel)
+                    row_frame.setGeometry(row_x, y, panel_w - row_x - margin_x, row_h)
+                    row_frame.setStyleSheet(
+                        "QFrame {"
+                        f"background: {active_row_background if active else inactive_row_background if row_background_enabled else 'transparent'};"
+                        f"border: 1px solid {active_border if active else inactive_border};"
+                        "border-radius: 3px;"
+                        "}"
+                    )
+                    row_frame.show()
+
+                    if not grouped_color_bars:
+                        color_bar = QLabel(panel)
+                        color_bar.setGeometry(margin_x, y + 2, color_bar_w, max(1, row_h - 4))
+                        color_bar.setStyleSheet(
+                            "QLabel {"
+                            f"background: {wellbeing_bar_color(int(entry.get('row', 0)))};"
+                            "border: none;"
+                            f"border-radius: {group_bar_radius}px;"
+                            "}"
+                        )
+                        color_bar.setToolTip(tooltip)
+                        color_bar.show()
+
+                    x_field = QLabel(row_frame)
+                    x_field.setGeometry(0, 1, x_field_w, max(1, row_h - 2))
+                    x_field.setText("X" if active else "")
+                    x_field.setAlignment(Qt.AlignCenter)
+                    x_field.setStyleSheet(
+                        "QLabel {"
+                        f"background: {x_active_background if active else x_inactive_background};"
+                        f"border: 1px solid {x_active_border if active else x_inactive_border};"
+                        "border-radius: 2px;"
+                        f"color: {active_text_color if active else text_color};"
+                        "font-size: 10px;"
+                        "font-weight: 700;"
+                        "}"
+                    )
+                    x_field.setToolTip(tooltip)
+                    x_field.show()
+
+                    text_label = QLabel(row_frame)
+                    text_label.setGeometry(text_x, 0, text_w, row_h)
+                    text_label.setText(elide_label(full_label, max_label_chars))
+                    text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                    text_label.setStyleSheet(
+                        "QLabel {"
+                        "background: transparent;"
+                        "border: none;"
+                        f"color: {active_text_color if active else text_color};"
+                        f"font-size: {active_font_size if active else font_size}px;"
+                        f"font-weight: {'700' if active else '500'};"
+                        "}"
+                    )
+                    text_label.setToolTip(tooltip)
+                    text_label.show()
+
+            render_vertical_mode()
+
+            panel.raise_()
+
+        render_wellbeing_block()
+
         perks_layout = text_layout.get("perk_panel", text_layout.get("perks", {}))
         disadv_layout = text_layout.get("disadvantages", perks_layout.get("disadvantage_table", {}))
         perks_map = data_map.get("perks", {})
@@ -3375,6 +4363,8 @@ class MainWindow(QMainWindow):
             return
 
         print("[CHARACTER IMPORT] selected:", file_path)
+        if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
+            print("[CHARACTER WARNING] unsaved changes before switching character")
         try:
             self.loader.load_file(file_path)
         except ValueError as exc:
@@ -3410,6 +4400,8 @@ class MainWindow(QMainWindow):
         active_cache_path = self.loader.active_cache_path
         if active_cache_path and Path(cache_path) == Path(active_cache_path):
             return
+        if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
+            print("[CHARACTER WARNING] unsaved changes before switching character")
         ok = self.loader.load_character_cache(cache_path)
         if not ok:
             QMessageBox.warning(self, "Charakter laden", "Charakter-Cache konnte nicht geladen werden.")
@@ -3515,6 +4507,8 @@ class MainWindow(QMainWindow):
         self.clear_reference_highlights()
         self.sheet_tabs = {}
 
+        if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
+            print("[CHARACTER WARNING] unsaved changes before switching character")
         try:
             self.loader.load_file(file_path)
         except ValueError as exc:

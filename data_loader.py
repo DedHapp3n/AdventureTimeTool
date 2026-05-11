@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -56,7 +57,19 @@ class DataLoader:
         self.active_cache_path = ""
         self.current_character_name = "unknown_character"
         self.source_file_path = ""
+        self.is_dirty = False
+        self.dirty_reason = ""
+        self.last_loaded_snapshot_hash = ""
+        self.last_saved_hash = ""
         self.load_cache_from_json()
+
+    @property
+    def active_character_path(self):
+        return self.active_cache_path
+
+    @active_character_path.setter
+    def active_character_path(self, value):
+        self.active_cache_path = value or ""
 
     def load_file(self, file_path):
         lower_path = str(file_path).lower()
@@ -123,20 +136,41 @@ class DataLoader:
             character_name = self._get_character_name_from_cache()
             slug = self.make_character_slug(character_name)
             path = os.path.join("data", "cache", f"{slug}.json")
+        return self.save_active_character_json(path)
+
+    def save_active_character_json(self, path=None):
+        if path is None:
+            character_name = self._get_character_name_from_cache()
+            slug = self.make_character_slug(character_name)
+            path = self.active_cache_path or os.path.join("data", "cache", f"{slug}.json")
         else:
             character_name = self._get_character_name_from_cache()
 
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self._to_serializable(self.cell_cache), f, ensure_ascii=False, indent=2)
+        path = str(path)
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        payload = self._to_serializable(self.cell_cache)
+        tmp_path = f"{path}.tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
         self.active_cache_path = path
         self.current_character_name = character_name
-        self._write_current_character_metadata(path, character_name)
+        self._write_current_character_metadata(path, character_name, saved=True)
+        self._remember_clean_snapshot()
         print("[CACHE] character:", character_name)
         print("[CACHE] saved character cache:", path)
         print("[CACHE] active:", path)
+        print("[CHARACTER SAVE] active character saved:", path)
+        return True
+
+    def save_character_json(self, path=None):
+        return self.save_active_character_json(path)
 
     def load_cache_from_json(self, path=None):
+        metadata_source_file = ""
+        metadata_character_name = "unknown_character"
         if path is None:
             metadata_path = os.path.join("data", "current_character.json")
             if os.path.exists(metadata_path):
@@ -146,33 +180,49 @@ class DataLoader:
                     active_cache = metadata.get("active_cache")
                     if isinstance(active_cache, str) and active_cache:
                         path = active_cache
-                        self.current_character_name = str(
-                            metadata.get("character_name", "unknown_character")
-                        )
-                        self.source_file_path = str(metadata.get("source_file", ""))
+                        metadata_character_name = str(metadata.get("character_name", "unknown_character"))
+                        metadata_source_file = str(metadata.get("source_file", ""))
                 except Exception:
                     path = None
 
         if path is None:
             self.cell_cache = {}
-            print("[CACHE] no active character cache found")
+            self.active_cache_path = ""
+            self.current_character_name = "unknown_character"
+            self.source_file_path = ""
+            self._remember_clean_snapshot()
+            print("[CHARACTER LOAD] no active character configured")
             return False
         if not os.path.exists(path):
             self.cell_cache = {}
-            print("[CACHE] no active character cache found")
+            self.active_cache_path = ""
+            self.current_character_name = "unknown_character"
+            self.source_file_path = ""
+            self._remember_clean_snapshot()
+            print("[CHARACTER LOAD] active character file missing:", path)
             return False
         try:
             with open(path, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
             self.cell_cache = loaded if isinstance(loaded, dict) else {}
             self.active_cache_path = path
-            if not self.current_character_name or self.current_character_name == "unknown_character":
-                self.current_character_name = self._get_character_name_from_cache()
+            detected_name = self._get_character_name_from_cache()
+            self.current_character_name = (
+                detected_name
+                if detected_name != "unknown_character"
+                else metadata_character_name
+            )
+            self.source_file_path = metadata_source_file or self.source_file_path
+            self._remember_clean_snapshot()
             print("[CACHE] active:", path)
+            print("[CHARACTER LOAD] active character loaded:", path)
             return True
         except Exception:
             self.cell_cache = {}
-            print("[CACHE] no active character cache found")
+            self.active_cache_path = ""
+            self.current_character_name = "unknown_character"
+            self._remember_clean_snapshot()
+            print("[CHARACTER LOAD] active character file missing:", path)
             return False
 
     def make_character_slug(self, name: str) -> str:
@@ -230,10 +280,47 @@ class DataLoader:
             self.active_cache_path = cache_path
             self.current_character_name = self._get_character_name_from_cache()
             self._write_current_character_metadata(cache_path, self.current_character_name)
+            self._remember_clean_snapshot()
             print("[CACHE] active:", cache_path)
+            print("[CHARACTER LOAD] active character loaded:", cache_path)
             return True
         except Exception:
             return False
+
+    def mark_dirty(self, reason=""):
+        self.is_dirty = True
+        self.dirty_reason = str(reason or "")
+        print("[CHARACTER DIRTY]", self.dirty_reason)
+
+    def has_unsaved_changes(self):
+        if self.is_dirty:
+            return True
+        current_hash = self._snapshot_hash()
+        saved_hash = self.last_saved_hash or self.last_loaded_snapshot_hash
+        return bool(saved_hash and current_hash != saved_hash)
+
+    def set_cell_value(self, sheet_name, cell_ref, value, mark_dirty=True):
+        if not sheet_name or not cell_ref:
+            return False
+        sheet_cache = self.cell_cache.setdefault(sheet_name, {})
+        cell_data = sheet_cache.get(cell_ref)
+        if not isinstance(cell_data, dict):
+            cell_data = {
+                "value": None,
+                "formula": None,
+                "references": [],
+                "error": None,
+            }
+            sheet_cache[cell_ref] = cell_data
+
+        cell_data["value"] = value
+        cell_data.setdefault("formula", None)
+        cell_data.setdefault("references", [])
+        cell_data.setdefault("error", None)
+        print(f"[CHARACTER CELL SET] {sheet_name}!{cell_ref} = {value}")
+        if mark_dirty:
+            self.mark_dirty(f"{sheet_name}!{cell_ref}")
+        return True
 
     def _build_cache(self):
         if self.workbook is None:
@@ -438,6 +525,23 @@ class DataLoader:
             return value
         return str(value)
 
+    def _snapshot_hash(self, payload=None):
+        serializable = self._to_serializable(self.cell_cache if payload is None else payload)
+        encoded = json.dumps(
+            serializable,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _remember_clean_snapshot(self):
+        snapshot_hash = self._snapshot_hash()
+        self.last_loaded_snapshot_hash = snapshot_hash
+        self.last_saved_hash = snapshot_hash
+        self.is_dirty = False
+        self.dirty_reason = ""
+
     def _get_character_name_from_cache(self) -> str:
         return self._get_character_name_from_payload(self.cell_cache)
 
@@ -494,14 +598,17 @@ class DataLoader:
             return False
         return text.lower() not in {"name", "unknown_character", "attribute"}
 
-    def _write_current_character_metadata(self, active_cache_path: str, character_name: str) -> None:
+    def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = os.path.join("data", "current_character.json")
         os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
+        now = datetime.now().isoformat()
         payload = {
             "active_cache": active_cache_path,
             "character_name": character_name,
             "source_file": self.source_file_path,
-            "last_loaded": datetime.now().isoformat(),
+            "last_loaded": now,
         }
+        if saved:
+            payload["last_saved"] = now
         with open(metadata_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)

@@ -1,0 +1,73 @@
+{
+  "dialog": {
+    "title": "Roll20 Wurf-Assistent",
+    "w": 700,
+    "h": 620,
+    "background": "#1d2420",
+    "text_color": "#f2f2f2",
+    "muted_text_color": "#c4cfbf",
+    "accent_color": "#b8d98a",
+    "border_color": "#4f6e39",
+    "font_size": 13,
+    "title_font_size": 18
+  },
+  "sections": {
+    "spacing": 12,
+    "label_height": 24,
+    "box_height": 56
+  },
+  "specialization_box": {
+    "background": "#141a16",
+    "border_color": "#304034",
+    "text_color": "#ffffff",
+    "font_size": 13,
+    "height": 64
+  },
+  "counter": {
+    "button_w": 30,
+    "button_h": 26,
+    "value_w": 42,
+    "button_background": "#334036",
+    "button_text_color": "#ffffff",
+    "button_border_color": "#55685a"
+  },
+  "keep_options": {
+    "kh_text": "Höchsten behalten (kh1)",
+    "kl_text": "Niedrigsten behalten (kl1)",
+    "none_text": "Kein Keep"
+  },
+  "roll_preview": {
+    "label": "Roll20-Befehl:",
+    "background": "#101512",
+    "border_color": "#4f6e39",
+    "text_color": "#b8d98a",
+    "font_size": 22,
+    "height": 58
+  },
+  "direct_send": {
+    "enabled": true,
+    "text": "Direkt an Roll20 senden",
+    "tooltip": "Noch nicht implementiert. Aktuell wird nur kopiert."
+  },
+  "paradigm": {
+    "text": "Paradigma / Brennen verwenden (+10)",
+    "bonus": 10,
+    "tooltip": "Manueller Schalter. Es wird kein Paradigma automatisch verbraucht."
+  },
+  "specialization_options": {
+    "title": "Spezialisierungen:",
+    "hint": "Aktivierte Spezialisierung: +1d20 pro Auswahl",
+    "empty_text": "Keine Spezialisierung vorhanden",
+    "max_rows_per_column": 6,
+    "column_spacing": 24,
+    "row_spacing": 8,
+    "preview_max_chars": 48,
+    "text_color": "#f2f2f2",
+    "hint_color": "#c4cfbf",
+    "font_size": 13
+  },
+  "buttons": {
+    "copy_text": "Kopieren",
+    "close_text": "Schließen"
+  }
+}
