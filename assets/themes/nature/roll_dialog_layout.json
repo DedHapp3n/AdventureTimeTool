@@ -29,7 +29,10 @@
     "value_w": 42,
     "button_background": "#334036",
     "button_text_color": "#ffffff",
-    "button_border_color": "#55685a"
+    "button_border_color": "#55685a",
+    "use_assets": false,
+    "minus_asset": "buttons/minus.png",
+    "plus_asset": "buttons/plus.png"
   },
   "keep_options": {
     "kh_text": "Höchsten behalten (kh1)",
@@ -66,8 +69,36 @@
     "hint_color": "#c4cfbf",
     "font_size": 13
   },
+  "perk_suggestions": {
+    "title": "Perk-/Nachteil-Vorschläge:",
+    "empty_text": "Keine passenden Perk-/Nachteil-Vorschläge",
+    "hint": "Angehakte Vorschläge wirken nur manuell auf diesen Wurf.",
+    "max_visible": 4
+  },
   "buttons": {
     "copy_text": "Kopieren",
     "close_text": "Schließen"
+  },
+  "labels": {
+    "section_title_color": "#f2d28b",
+    "section_title_font_size": 13,
+    "normal_text_color": "#f2f2f2",
+    "normal_text_font_size": 13,
+    "muted_text_color": "#c8c0aa",
+    "muted_text_font_size": 12,
+    "hint_text_color": "#c8c0aa",
+    "hint_text_font_size": 12
+  },
+  "checkbox": {
+    "use_assets": false,
+    "asset_checked": "icons/checkmark_true.png",
+    "asset_unchecked": "icons/checkmark_false.png",
+    "text_color": "#f2f2f2",
+    "font_size": 13,
+    "spacing": 6
+  },
+  "debug": {
+    "preview": false,
+    "toggles": true
   }
 }

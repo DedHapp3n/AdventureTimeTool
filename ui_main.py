@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog,
-    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout
+    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit
 )
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon
@@ -1224,6 +1224,12 @@ class MainWindow(QMainWindow):
                 "copy_text": "Kopieren",
                 "close_text": "Schließen",
             },
+            "perk_suggestions": {
+                "title": "Perk-/Nachteil-Vorschläge:",
+                "empty_text": "Keine passenden Perk-/Nachteil-Vorschläge",
+                "hint": "Angehakte Vorschläge wirken nur manuell auf diesen Wurf.",
+                "max_visible": 4,
+            },
         }
 
     def load_roll_dialog_layout_config(self):
@@ -1246,6 +1252,35 @@ class MainWindow(QMainWindow):
                 continue
         print("[ROLL LAYOUT] fallback: internal defaults")
         return default_config
+
+    def load_perk_rules_config(self):
+        rules_path = self.base_dir / "assets" / "config" / "perk_rules.json"
+        empty = {"version": 1, "description": "", "rules": []}
+        try:
+            if not rules_path.exists():
+                print("[PERK RULES] missing, using empty rules")
+                return empty
+            with open(rules_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                print("[PERK RULES] missing, using empty rules")
+                return empty
+            rules = data.get("rules", [])
+            if not isinstance(rules, list):
+                rules = []
+            enabled_rules = []
+            for rule in rules:
+                if not isinstance(rule, dict):
+                    continue
+                if not bool(rule.get("enabled", False)):
+                    continue
+                enabled_rules.append(rule)
+            data["rules"] = enabled_rules
+            print(f"[PERK RULES] loaded: {rules_path} rules={len(enabled_rules)}")
+            return data
+        except Exception:
+            print("[PERK RULES] missing, using empty rules")
+            return empty
 
     def get_default_skill_sheet_mapping_config(self):
         return {
@@ -2226,6 +2261,170 @@ class MainWindow(QMainWindow):
                 parts.append(value)
         return parts
 
+    def _norm_match_text(self, value):
+        return str(value or "").strip().lower()
+
+    def _contains_any_keyword(self, text, keywords):
+        if not isinstance(keywords, list):
+            return False
+        normalized_text = self._norm_match_text(text)
+        if not normalized_text:
+            return False
+        for keyword in keywords:
+            needle = self._norm_match_text(keyword)
+            if needle and needle in normalized_text:
+                return True
+        return False
+
+    def collect_character_perk_entries(self):
+        entries = []
+        character_screen = self.main_ui_layout_config.get("character_screen", {})
+        if not isinstance(character_screen, dict):
+            return entries
+        data_map = character_screen.get("data_map", {})
+        if not isinstance(data_map, dict):
+            return entries
+
+        def collect_section(section_key, entry_type):
+            section_map = data_map.get(section_key, {})
+            if not isinstance(section_map, dict):
+                return
+            start_row = self._safe_int(section_map.get("start_row", 0), 0)
+            end_row = self._safe_int(section_map.get("end_row", -1), -1)
+            if start_row <= 0 or end_row < start_row:
+                return
+            sheet_name = str(section_map.get("sheet", data_map.get("sheet", "Charakterbogen")))
+            name_col = str(section_map.get("name_col", "A"))
+            bp_col = str(section_map.get("bp_col", "B"))
+            effect_col = str(section_map.get("effect_col", "C"))
+
+            for row in range(start_row, end_row + 1):
+                name = str(self.get_cache_cell_value(sheet_name, f"{name_col}{row}", "") or "").strip()
+                bp = str(self.get_cache_cell_value(sheet_name, f"{bp_col}{row}", "") or "").strip()
+                effect = str(self.get_cache_cell_value(sheet_name, f"{effect_col}{row}", "") or "").strip()
+                if not name and not effect:
+                    continue
+                entry = {
+                    "type": entry_type,
+                    "name": name,
+                    "bp": bp,
+                    "effect": effect,
+                    "row": row,
+                }
+                entries.append(entry)
+                print(
+                    "[PERK DATA]",
+                    entry_type,
+                    f"row={row}",
+                    f'name="{name}"',
+                    f'effect="{effect}"',
+                )
+
+        collect_section("perks", "perk")
+        collect_section("disadvantages", "disadvantage")
+        return entries
+
+    def find_matching_roll_suggestions(self, skill_info, character_entries, rules):
+        matches = []
+        if not isinstance(skill_info, dict) or not isinstance(character_entries, list) or not isinstance(rules, list):
+            return matches
+
+        skill_name = str(skill_info.get("display_name", "") or "")
+        specialization_text = str(skill_info.get("display_specialization", "") or "")
+        specialization_items = self.split_specialization_text(specialization_text)
+        source_key = str(skill_info.get("source_key", "") or "")
+
+        for rule in rules:
+            if not isinstance(rule, dict):
+                continue
+            rule_type = str(rule.get("type", "")).strip().lower()
+            rule_id = str(rule.get("id", "")).strip()
+            name_keywords = rule.get("name_keywords", [])
+            effect_keywords = rule.get("effect_keywords", [])
+            skill_keywords = rule.get("skill_keywords", [])
+            specialization_keywords = rule.get("specialization_keywords", [])
+            context_keywords = rule.get("context_keywords", [])
+
+            for entry in character_entries:
+                if not isinstance(entry, dict):
+                    continue
+                entry_type = str(entry.get("type", "")).strip().lower()
+                if rule_type and entry_type != rule_type:
+                    continue
+
+                entry_name = str(entry.get("name", "") or "")
+                entry_effect = str(entry.get("effect", "") or "")
+
+                if isinstance(name_keywords, list) and name_keywords:
+                    name_match = self._contains_any_keyword(entry_name, name_keywords)
+                else:
+                    name_match = False
+
+                if isinstance(effect_keywords, list) and effect_keywords:
+                    effect_match = self._contains_any_keyword(entry_effect, effect_keywords)
+                else:
+                    effect_match = False
+
+                if not (name_match or effect_match):
+                    continue
+
+                skill_match = self._contains_any_keyword(skill_name, skill_keywords)
+                spec_match = any(
+                    self._contains_any_keyword(item, specialization_keywords) for item in specialization_items
+                )
+                context_match = (
+                    self._contains_any_keyword(skill_name, context_keywords)
+                    or self._contains_any_keyword(specialization_text, context_keywords)
+                )
+                all_context_lists_empty = not (skill_keywords or specialization_keywords or context_keywords)
+                if not (skill_match or spec_match or context_match or all_context_lists_empty):
+                    continue
+
+                suggestion = {
+                    "rule_id": rule_id,
+                    "type": rule_type,
+                    "label": str(rule.get("label", rule_id or "Regelvorschlag")),
+                    "source_name": entry_name,
+                    "source_effect": entry_effect,
+                    "source_type": entry_type,
+                    "suggested_effect": rule.get("suggested_effect", {}),
+                }
+                matches.append(suggestion)
+                print(
+                    "[PERK MATCH]",
+                    f'skill="{skill_name}"',
+                    f"rule={rule_id}",
+                    f'source="{entry_name}"',
+                    f'label="{suggestion["label"]}"',
+                )
+
+        grouped = {}
+        for suggestion in matches:
+            rule_id = str(suggestion.get("rule_id", "") or "")
+            label = str(suggestion.get("label", "") or "")
+            group_key = (rule_id, label)
+            grouped.setdefault(group_key, []).append(suggestion)
+
+        deduped = []
+        for _, group in grouped.items():
+            named = [s for s in group if str(s.get("source_name", "") or "").strip()]
+            candidates = named if named else group
+            seen_source = set()
+            for suggestion in candidates:
+                source_key = (
+                    str(suggestion.get("source_type", "") or ""),
+                    str(suggestion.get("source_name", "") or ""),
+                )
+                if source_key in seen_source:
+                    continue
+                seen_source.add(source_key)
+                deduped.append(suggestion)
+
+        matches = deduped
+        if not matches:
+            print("[PERK MATCH]", f'skill="{skill_name}"', "none")
+        return matches
+
     def build_specialization_preview_text(self, full_text, max_chars):
         text = str(full_text or "").strip()
         if not text:
@@ -2236,6 +2435,131 @@ class MainWindow(QMainWindow):
         if not preview:
             return "..."
         return f"{preview} ..."
+
+    def build_compact_preview_text(self, text, max_chars=60):
+        value = str(text or "").strip()
+        if not value:
+            return ""
+        if max_chars <= 0 or len(value) <= max_chars:
+            return value
+        return value[:max_chars].rstrip(" ,") + "..."
+
+    def get_active_wellbeing_roll_suggestions(self, skill_info):
+        suggestions = []
+        if not isinstance(skill_info, dict):
+            print("[WELLBEING ROLL SUGGESTION] none")
+            return suggestions
+
+        entries = self.get_wellbeing_entries(
+            {
+                "sheet": "Charakterbogen",
+                "marker_col": "AA",
+                "label_col": "AB",
+                "start_row": 23,
+                "end_row": 44,
+            }
+        )
+        if not isinstance(entries, list):
+            print("[WELLBEING ROLL SUGGESTION] none")
+            return suggestions
+
+        skill_name = self._norm_match_text(skill_info.get("display_name", ""))
+        specialization_text = self._norm_match_text(skill_info.get("display_specialization", ""))
+        slots = skill_info.get("display_attribute_slots", [])
+        if not isinstance(slots, list):
+            slots = []
+        attr_letters = [str(v).strip().upper() for v in slots if str(v).strip()]
+
+        has_initiative_context = (
+            "initiative" in skill_name
+            or "ini-wurf" in skill_name
+            or "initiative" in specialization_text
+            or "ini-wurf" in specialization_text
+        )
+        has_body_attr = any(letter in {"K", "G", "Z", "R"} for letter in attr_letters)
+        has_mind_attr = any(letter in {"I", "W", "C", "S"} for letter in attr_letters)
+        has_any_attr = bool(attr_letters)
+
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            if not bool(entry.get("active", False)):
+                continue
+            raw_label = str(entry.get("label", "") or "").strip()
+            if not raw_label:
+                continue
+            normalized = self._norm_match_text(raw_label)
+            if "bewegung" in normalized:
+                print(f'[WELLBEING ROLL SKIP] movement label="{raw_label}"')
+                continue
+            if normalized in {"+/- 0", "+ / - 0", "+- 0", "+ - 0"}:
+                continue
+
+            suggestion = None
+            if normalized == "+1 würfel":
+                suggestion = {
+                    "label": "Wohlbefinden: +1 Würfel",
+                    "source_label": raw_label,
+                    "suggested_effect": {"advantage": 1},
+                }
+            elif normalized == "-1 würfel":
+                suggestion = {
+                    "label": "Wohlbefinden: -1 Würfel",
+                    "source_label": raw_label,
+                    "suggested_effect": {"disadvantage": 1},
+                }
+            elif normalized == "-1 vorteil":
+                suggestion = {
+                    "label": "Wohlbefinden: -1 Vorteil",
+                    "source_label": raw_label,
+                    "suggested_effect": {"disadvantage": 1},
+                }
+            elif normalized == "+1 wurf körper/geist":
+                if has_any_attr:
+                    suggestion = {
+                        "label": "Wohlbefinden: +1 Wurf Körper/Geist",
+                        "source_label": raw_label,
+                        "suggested_effect": {"advantage": 1},
+                    }
+            elif normalized == "-1 wurf geist":
+                if has_mind_attr:
+                    suggestion = {
+                        "label": "Wohlbefinden: -1 Wurf Geist",
+                        "source_label": raw_label,
+                        "suggested_effect": {"disadvantage": 1},
+                    }
+            elif normalized == "-1 wurf körper":
+                if has_body_attr:
+                    suggestion = {
+                        "label": "Wohlbefinden: -1 Wurf Körper",
+                        "source_label": raw_label,
+                        "suggested_effect": {"disadvantage": 1},
+                    }
+            elif normalized == "initiative im vorteil":
+                if has_initiative_context:
+                    suggestion = {
+                        "label": "Wohlbefinden: Initiative im Vorteil",
+                        "source_label": raw_label,
+                        "suggested_effect": {"advantage": 1},
+                    }
+            elif normalized == "initiative im nachteil":
+                if has_initiative_context:
+                    suggestion = {
+                        "label": "Wohlbefinden: Initiative im Nachteil",
+                        "source_label": raw_label,
+                        "suggested_effect": {"disadvantage": 1},
+                    }
+            if suggestion is None:
+                continue
+            suggestions.append(suggestion)
+            compact_effect = json.dumps(suggestion.get("suggested_effect", {}), ensure_ascii=False, separators=(",", ":"))
+            print(
+                f'[WELLBEING ROLL SUGGESTION] label="{raw_label}" effect={compact_effect}'
+            )
+
+        if not suggestions:
+            print("[WELLBEING ROLL SUGGESTION] none")
+        return suggestions
 
     def on_skill_row_roll_clicked(self, source_key):
         source_info = self.skill_source_infos.get(source_key)
@@ -2295,6 +2619,10 @@ class MainWindow(QMainWindow):
         buttons_cfg = roll_layout.get("buttons", {})
         spec_options_cfg = roll_layout.get("specialization_options", {})
         paradigm_cfg = roll_layout.get("paradigm", {})
+        perk_suggestions_cfg = roll_layout.get("perk_suggestions", {})
+        labels_cfg = roll_layout.get("labels", {})
+        checkbox_cfg = roll_layout.get("checkbox", {})
+        debug_cfg = roll_layout.get("debug", {})
 
         dialog_title = str(dialog_cfg.get("title", "Roll20 Wurf-Assistent"))
         dialog_w = self._safe_int(dialog_cfg.get("w", 700), 700)
@@ -2312,6 +2640,42 @@ class MainWindow(QMainWindow):
         preview_label_text = str(preview_cfg.get("label", "Roll20-Befehl:"))
         preview_font_size = self._safe_int(preview_cfg.get("font_size", 22), 22)
         preview_height = self._safe_int(preview_cfg.get("height", 58), 58)
+        section_title_color = str(labels_cfg.get("section_title_color", accent_color))
+        section_title_font_size = self._safe_int(
+            labels_cfg.get("section_title_font_size", base_font_size), base_font_size
+        )
+        normal_text_color = str(labels_cfg.get("normal_text_color", text_color))
+        normal_text_font_size = self._safe_int(
+            labels_cfg.get("normal_text_font_size", base_font_size), base_font_size
+        )
+        muted_text_cfg_color = str(labels_cfg.get("muted_text_color", muted_text_color))
+        muted_text_font_size = self._safe_int(
+            labels_cfg.get("muted_text_font_size", max(10, base_font_size - 1)),
+            max(10, base_font_size - 1),
+        )
+        hint_text_color = str(labels_cfg.get("hint_text_color", muted_text_cfg_color))
+        hint_text_font_size = self._safe_int(
+            labels_cfg.get("hint_text_font_size", muted_text_font_size), muted_text_font_size
+        )
+        debug_preview_enabled = bool(debug_cfg.get("preview", False))
+        debug_toggles_enabled = bool(debug_cfg.get("toggles", True))
+        perk_suggestions_title = str(
+            perk_suggestions_cfg.get("title", "Perk-/Nachteil-Vorschläge:")
+        )
+        perk_suggestions_empty_text = str(
+            perk_suggestions_cfg.get("empty_text", "Keine passenden Perk-/Nachteil-Vorschläge")
+        )
+        perk_suggestions_hint = str(
+            perk_suggestions_cfg.get(
+                "hint",
+                "Angehakte Vorschläge wirken nur manuell auf diesen Wurf.",
+            )
+        )
+        perk_suggestions_max_visible = self._safe_int(
+            perk_suggestions_cfg.get("max_visible", 4), 4
+        )
+        if perk_suggestions_max_visible <= 0:
+            perk_suggestions_max_visible = 4
         paradigm_text = str(paradigm_cfg.get("text", "Paradigma / Brennen verwenden (+10)"))
         paradigm_bonus = self._safe_int(paradigm_cfg.get("bonus", 10), 10)
         paradigm_tooltip = str(
@@ -2321,10 +2685,96 @@ class MainWindow(QMainWindow):
             )
         )
 
+        specialization_items = self.split_specialization_text(specialization_text)
+        skill_info_for_perks = {
+            "display_name": display_name,
+            "display_specialization": specialization_text,
+            "source_key": source_key,
+        }
+        try:
+            perk_rules_config = self.load_perk_rules_config()
+            perk_rules = perk_rules_config.get("rules", [])
+            character_perk_entries = self.collect_character_perk_entries()
+            perk_suggestions = self.find_matching_roll_suggestions(
+                skill_info_for_perks,
+                character_perk_entries,
+                perk_rules,
+            )
+        except Exception as exc:
+            perk_suggestions = []
+            print("[ROLL PERK SUGGESTIONS ERROR]", str(exc))
+        if not isinstance(perk_suggestions, list):
+            perk_suggestions = []
+        try:
+            wellbeing_suggestions = self.get_active_wellbeing_roll_suggestions(
+                {
+                    "display_name": display_name,
+                    "display_specialization": specialization_text,
+                    "display_attribute_slots": slot_values,
+                }
+            )
+        except Exception as exc:
+            wellbeing_suggestions = []
+            print("[ROLL WELLBEING SUGGESTIONS ERROR]", str(exc))
+        if not isinstance(wellbeing_suggestions, list):
+            wellbeing_suggestions = []
+
+        dynamic_extra = 0
+        dynamic_extra += max(0, len(specialization_items) - 6) * 14
+        dynamic_extra += max(0, len(perk_suggestions) - 2) * 18
+        dynamic_extra += max(0, len(wellbeing_suggestions) - 2) * 18
+
+        checkbox_text_color = str(checkbox_cfg.get("text_color", normal_text_color))
+        checkbox_font_size = self._safe_int(checkbox_cfg.get("font_size", normal_text_font_size), normal_text_font_size)
+        checkbox_spacing = self._safe_int(checkbox_cfg.get("spacing", 6), 6)
+        checkbox_use_assets = bool(checkbox_cfg.get("use_assets", False))
+        checkbox_asset_checked = str(checkbox_cfg.get("asset_checked", "") or "")
+        checkbox_asset_unchecked = str(checkbox_cfg.get("asset_unchecked", "") or "")
+
+        counter_use_assets = bool(counter_cfg.get("use_assets", False))
+        counter_minus_asset = str(counter_cfg.get("minus_asset", "") or "")
+        counter_plus_asset = str(counter_cfg.get("plus_asset", "") or "")
+
+        theme_dir = self.base_dir / "assets" / "themes" / self.get_active_theme()
+        fallback_theme_dir = self.base_dir / "assets" / "themes" / "diablo"
+
+        def resolve_roll_asset_path(relative_path):
+            rel = str(relative_path or "").strip()
+            if not rel:
+                return None
+            candidate_paths = [
+                theme_dir / rel,
+                theme_dir / "ui" / rel,
+                fallback_theme_dir / rel,
+                fallback_theme_dir / "ui" / rel,
+            ]
+            for path in candidate_paths:
+                if path.exists():
+                    return path
+            return None
+
+        def build_checkbox_style():
+            style = (
+                f"QCheckBox {{ color: {checkbox_text_color}; font-size: {checkbox_font_size}px; spacing: {checkbox_spacing}px; }}"
+            )
+            if checkbox_use_assets:
+                checked_path = resolve_roll_asset_path(checkbox_asset_checked)
+                unchecked_path = resolve_roll_asset_path(checkbox_asset_unchecked)
+                if checked_path is not None and unchecked_path is not None:
+                    checked_url = checked_path.as_posix()
+                    unchecked_url = unchecked_path.as_posix()
+                    style += (
+                        "QCheckBox::indicator { width: 16px; height: 16px; }"
+                        f"QCheckBox::indicator:checked {{ image: url({checked_url}); }}"
+                        f"QCheckBox::indicator:unchecked {{ image: url({unchecked_url}); }}"
+                    )
+            return style
+
+        checkbox_style = build_checkbox_style()
         dialog = QDialog(self)
         dialog.setWindowTitle(dialog_title)
         dialog.setModal(True)
-        dialog.resize(dialog_w, dialog_h)
+        dialog.resize(dialog_w, min(980, dialog_h + dynamic_extra))
         dialog.setStyleSheet(
             f"QDialog {{ background: {dialog_bg}; color: {text_color}; font-size: {base_font_size}px; }}"
         )
@@ -2334,11 +2784,17 @@ class MainWindow(QMainWindow):
         header = QLabel(f"Fertigkeit: {display_name}")
         header.setStyleSheet(f"font-size: {title_font_size}px; font-weight: 700; color: {accent_color};")
         layout.addWidget(header)
-        layout.addWidget(QLabel(f"Wert: {skill_value}"))
-        layout.addWidget(QLabel(f"Attribute: {attrs_text}"))
+        value_label = QLabel(f"Wert: {skill_value}")
+        value_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+        layout.addWidget(value_label)
+        attrs_label = QLabel(f"Attribute: {attrs_text}")
+        attrs_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+        layout.addWidget(attrs_label)
 
         spec_title = QLabel("Spezialisierung:")
-        spec_title.setStyleSheet(f"font-weight: 700; color: {accent_color};")
+        spec_title.setStyleSheet(
+            f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
+        )
         layout.addWidget(spec_title)
         spec_options_max_rows_per_column = self._safe_int(
             spec_options_cfg.get("max_rows_per_column", 6), 6
@@ -2364,7 +2820,6 @@ class MainWindow(QMainWindow):
         spec_value.setMinimumHeight(spec_height)
         layout.addWidget(spec_value)
 
-        specialization_items = self.split_specialization_text(specialization_text)
         spec_options_title = str(spec_options_cfg.get("title", "Spezialisierungen:"))
         spec_options_hint = str(
             spec_options_cfg.get("hint", "Spezialisierungen: +1 Vorteil je Auswahl")
@@ -2378,7 +2833,7 @@ class MainWindow(QMainWindow):
 
         spec_options_title_label = QLabel(spec_options_title)
         spec_options_title_label.setStyleSheet(
-            f"font-weight: 700; color: {accent_color}; font-size: {spec_options_font_size}px;"
+            f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
         )
         layout.addWidget(spec_options_title_label)
 
@@ -2392,9 +2847,7 @@ class MainWindow(QMainWindow):
             for index, item in enumerate(specialization_items):
                 checkbox = QCheckBox(item, dialog)
                 checkbox.setChecked(False)
-                checkbox.setStyleSheet(
-                    f"color: {spec_options_text_color}; font-size: {spec_options_font_size}px;"
-                )
+                checkbox.setStyleSheet(checkbox_style)
                 row = index % spec_options_max_rows_per_column
                 col = index // spec_options_max_rows_per_column
                 checkboxes_grid_layout.addWidget(checkbox, row, col)
@@ -2402,14 +2855,91 @@ class MainWindow(QMainWindow):
             checkboxes_grid_layout.setColumnStretch(99, 1)
             layout.addWidget(checkboxes_grid_widget)
             spec_hint_label = QLabel(spec_options_hint)
-            spec_hint_label.setStyleSheet(f"color: {spec_options_hint_color};")
+            spec_hint_label.setStyleSheet(
+                f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
+            )
             layout.addWidget(spec_hint_label)
         else:
             spec_empty_label = QLabel(spec_options_empty_text)
             spec_empty_label.setStyleSheet(
-                f"color: {spec_options_hint_color}; font-size: {spec_options_font_size}px;"
+                f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
             )
             layout.addWidget(spec_empty_label)
+
+        perk_suggestion_checkboxes = []
+        if perk_suggestions:
+            perk_title_label = QLabel(perk_suggestions_title)
+            perk_title_label.setStyleSheet(
+                f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
+            )
+            layout.addWidget(perk_title_label)
+            visible_suggestions = perk_suggestions[:perk_suggestions_max_visible]
+            for suggestion in visible_suggestions:
+                label_text = str(suggestion.get("label", "Regelvorschlag"))
+                source_type = "Perk" if str(suggestion.get("source_type", "")) == "perk" else "Nachteil"
+                source_name = str(suggestion.get("source_name", "") or "")
+                source_effect = str(suggestion.get("source_effect", "") or "")
+                source_text = f"{source_type} {source_name}".strip()
+                compact_effect = self.build_compact_preview_text(source_effect, 60)
+                compact_source_line = source_text if not compact_effect else f"{source_text} · {compact_effect}"
+                compact_source_line = self.build_compact_preview_text(compact_source_line, 70)
+                checkbox = QCheckBox(label_text, dialog)
+                checkbox.setChecked(False)
+                checkbox.setStyleSheet(checkbox_style)
+                checkbox.setProperty("rule_id", str(suggestion.get("rule_id", "")))
+                checkbox.setProperty("suggested_effect", suggestion.get("suggested_effect", {}))
+                checkbox.setToolTip(
+                    source_text if not source_effect else f"{source_text}\nEffekt: {source_effect}"
+                )
+                layout.addWidget(checkbox)
+                source_label = QLabel(compact_source_line)
+                source_label.setStyleSheet(
+                    f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;"
+                )
+                source_label.setToolTip(
+                    source_text if not source_effect else f"{source_text}\nEffekt: {source_effect}"
+                )
+                layout.addWidget(source_label)
+                perk_suggestion_checkboxes.append(checkbox)
+
+            remaining = len(perk_suggestions) - len(visible_suggestions)
+            if remaining > 0:
+                more_label = QLabel(f"... +{remaining} weitere Vorschläge")
+                more_label.setStyleSheet(
+                    f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;"
+                )
+                layout.addWidget(more_label)
+            perk_hint_label = QLabel(perk_suggestions_hint)
+            perk_hint_label.setStyleSheet(
+                f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
+            )
+            layout.addWidget(perk_hint_label)
+
+        wellbeing_suggestion_checkboxes = []
+        if wellbeing_suggestions:
+            wellbeing_title_label = QLabel("Wohlbefinden-Vorschläge:")
+            wellbeing_title_label.setStyleSheet(
+                f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
+            )
+            layout.addWidget(wellbeing_title_label)
+            for suggestion in wellbeing_suggestions:
+                label_text = str(suggestion.get("label", "Wohlbefinden-Vorschlag"))
+                source_label = str(suggestion.get("source_label", "") or "")
+                source_text = f"Quelle: {source_label}" if source_label else "Quelle: Wohlbefinden"
+                checkbox = QCheckBox(label_text, dialog)
+                checkbox.setChecked(False)
+                checkbox.setStyleSheet(checkbox_style)
+                checkbox.setProperty("wellbeing_label", source_label)
+                checkbox.setProperty("suggested_effect", suggestion.get("suggested_effect", {}))
+                checkbox.setToolTip(source_text)
+                layout.addWidget(checkbox)
+                source_row = QLabel(source_text)
+                source_row.setStyleSheet(
+                    f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;"
+                )
+                source_row.setToolTip(source_text)
+                layout.addWidget(source_row)
+                wellbeing_suggestion_checkboxes.append(checkbox)
 
         skill_usage_text = (
             f"Skillwert wird verwendet: Ja (+{skill_value})"
@@ -2417,7 +2947,9 @@ class MainWindow(QMainWindow):
             else "Skillwert wird verwendet: Nein (keine Attribute/Spezialisierung)"
         )
         skill_usage_label = QLabel(skill_usage_text)
-        skill_usage_label.setStyleSheet(f"color: {muted_text_color};")
+        skill_usage_label.setStyleSheet(
+            f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;"
+        )
         layout.addWidget(skill_usage_label)
 
         controls = QHBoxLayout()
@@ -2450,54 +2982,78 @@ class MainWindow(QMainWindow):
                 f"border: 1px solid {str(counter_cfg.get('button_border_color', '#5c6268'))};"
             )
 
-        controls.addWidget(QLabel("Vorteile:"))
+        if counter_use_assets:
+            minus_icon_path = resolve_roll_asset_path(counter_minus_asset)
+            plus_icon_path = resolve_roll_asset_path(counter_plus_asset)
+            if minus_icon_path is not None and plus_icon_path is not None:
+                minus_icon = QIcon(str(minus_icon_path))
+                plus_icon = QIcon(str(plus_icon_path))
+                for button in (adv_minus, dis_minus):
+                    button.setIcon(minus_icon)
+                    button.setText("")
+                for button in (adv_plus, dis_plus):
+                    button.setIcon(plus_icon)
+                    button.setText("")
+
+        advantages_label = QLabel("Vorteile:")
+        advantages_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+        disadvantages_label = QLabel("Nachteile:")
+        disadvantages_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+        manual_label = QLabel("Manueller Bonus/Malus:")
+        manual_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+        controls.addWidget(advantages_label)
         controls.addWidget(adv_minus)
         controls.addWidget(advantages_spin)
         controls.addWidget(adv_plus)
-        controls.addWidget(QLabel("Nachteile:"))
+        controls.addWidget(disadvantages_label)
         controls.addWidget(dis_minus)
         controls.addWidget(disadvantages_spin)
         controls.addWidget(dis_plus)
         controls.addSpacing(10)
-        controls.addWidget(QLabel("Manueller Bonus/Malus:"))
+        controls.addWidget(manual_label)
         controls.addWidget(manual_bonus_spin)
         controls.addStretch()
         layout.addLayout(controls)
 
         keep_layout = QHBoxLayout()
         keep_group = QButtonGroup(dialog)
-        keep_none = QRadioButton(str(keep_cfg.get("none_text", "Kein Keep")), dialog)
         keep_high = QRadioButton(str(keep_cfg.get("kh_text", "Höchsten behalten (kh1)")), dialog)
         keep_low = QRadioButton(str(keep_cfg.get("kl_text", "Niedrigsten behalten (kl1)")), dialog)
-        keep_group.addButton(keep_none)
         keep_group.addButton(keep_high)
         keep_group.addButton(keep_low)
         keep_high.setChecked(True)
-        keep_layout.addWidget(QLabel("Keep:"))
+        keep_title = QLabel("Keep:")
+        keep_title.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+        keep_high.setStyleSheet(checkbox_style)
+        keep_low.setStyleSheet(checkbox_style)
+        keep_layout.addWidget(keep_title)
         keep_layout.addWidget(keep_high)
         keep_layout.addWidget(keep_low)
-        keep_layout.addWidget(keep_none)
         keep_layout.addStretch()
         layout.addLayout(keep_layout)
 
         paradigm_checkbox = QCheckBox(paradigm_text, dialog)
         paradigm_checkbox.setChecked(False)
         paradigm_checkbox.setToolTip(paradigm_tooltip)
+        paradigm_checkbox.setStyleSheet(checkbox_style)
         layout.addWidget(paradigm_checkbox)
 
         preview_title = QLabel(preview_label_text)
-        preview_title.setStyleSheet(f"font-weight: 700; color: {accent_color};")
+        preview_title.setStyleSheet(
+            f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
+        )
         layout.addWidget(preview_title)
 
-        preview_label = QLabel("")
-        preview_label.setStyleSheet(
+        roll_command_edit = QLineEdit(dialog)
+        roll_command_edit.setPlaceholderText("/r 1d20")
+        roll_command_edit.setStyleSheet(
             f"font-size: {preview_font_size}px; font-weight: 700; "
             f"color: {str(preview_cfg.get('text_color', '#f2d28b'))}; "
             f"background: {str(preview_cfg.get('background', '#101214'))}; "
             f"border: 1px solid {str(preview_cfg.get('border_color', '#8a6a32'))}; padding: 10px;"
         )
-        preview_label.setMinimumHeight(preview_height)
-        layout.addWidget(preview_label)
+        roll_command_edit.setMinimumHeight(preview_height)
+        layout.addWidget(roll_command_edit)
 
         direct_send_checkbox = None
         if bool(direct_send_cfg.get("enabled", True)):
@@ -2505,6 +3061,7 @@ class MainWindow(QMainWindow):
             direct_send_checkbox.setToolTip(
                 str(direct_send_cfg.get("tooltip", "Noch nicht implementiert. Aktuell wird nur kopiert."))
             )
+            direct_send_checkbox.setStyleSheet(checkbox_style)
             layout.addWidget(direct_send_checkbox)
 
         buttons_layout = QHBoxLayout()
@@ -2525,11 +3082,79 @@ class MainWindow(QMainWindow):
         def adjust_spin(spinbox, delta):
             spinbox.setValue(max(spinbox.minimum(), min(spinbox.maximum(), spinbox.value() + delta)))
 
+        def collect_checked_suggestion_effects(checkboxes, source_label):
+            collected = {
+                "advantage": 0,
+                "disadvantage": 0,
+                "extra_bonuses": [],
+                "info_only": [],
+            }
+            if not isinstance(checkboxes, list):
+                return collected
+            for checkbox in checkboxes:
+                if checkbox is None or not checkbox.isChecked():
+                    continue
+                effect = checkbox.property("suggested_effect")
+                if not isinstance(effect, dict):
+                    effect = {}
+                label = str(
+                    checkbox.property("rule_id")
+                    or checkbox.property("wellbeing_label")
+                    or checkbox.text()
+                    or ""
+                )
+
+                if bool(effect.get("info_only", False)):
+                    collected["info_only"].append(label)
+                    continue
+
+                try:
+                    advantage = int(effect.get("advantage", 0) or 0)
+                except Exception:
+                    advantage = 0
+                try:
+                    disadvantage = int(effect.get("disadvantage", 0) or 0)
+                except Exception:
+                    disadvantage = 0
+                try:
+                    flat_bonus = int(effect.get("flat_bonus", 0) or 0)
+                except Exception:
+                    flat_bonus = 0
+                try:
+                    flat_malus = int(effect.get("flat_malus", 0) or 0)
+                except Exception:
+                    flat_malus = 0
+
+                collected["advantage"] += max(0, advantage)
+                collected["disadvantage"] += max(0, disadvantage)
+                if flat_bonus != 0:
+                    collected["extra_bonuses"].append(flat_bonus)
+                if flat_malus != 0:
+                    collected["extra_bonuses"].append(-abs(flat_malus))
+
+            for info_label in collected["info_only"]:
+                print(f'[ROLL EFFECT INFO_ONLY] source={source_label} label="{info_label}"')
+            return collected
+
         def update_roll_preview():
             specialization_advantages = sum(
                 1 for checkbox in specialization_checkboxes if checkbox.isChecked()
             )
-            dice_count = 1 + advantages_spin.value() + specialization_advantages - disadvantages_spin.value()
+            perk_effects = collect_checked_suggestion_effects(perk_suggestion_checkboxes, "perk")
+            wellbeing_effects = collect_checked_suggestion_effects(
+                wellbeing_suggestion_checkboxes, "wellbeing"
+            )
+
+            dice_count = (
+                1
+                + advantages_spin.value()
+                + specialization_advantages
+                + perk_effects["advantage"]
+                + wellbeing_effects["advantage"]
+                - disadvantages_spin.value()
+                - perk_effects["disadvantage"]
+                - wellbeing_effects["disadvantage"]
+            )
             if dice_count <= 0:
                 dice_count = 1
             skill_bonus = skill_value if skill_value_allowed else 0
@@ -2538,6 +3163,8 @@ class MainWindow(QMainWindow):
             if paradigm_checkbox.isChecked():
                 extra_bonuses.append(paradigm_bonus)
                 print(f"[ROLL PARADIGM] active=True bonus={paradigm_bonus}")
+            extra_bonuses.extend(perk_effects["extra_bonuses"])
+            extra_bonuses.extend(wellbeing_effects["extra_bonuses"])
             command = self.build_roll20_command(
                 dice_count,
                 current_keep_mode(),
@@ -2545,21 +3172,56 @@ class MainWindow(QMainWindow):
                 manual_bonus,
                 extra_bonuses,
             )
-            preview_label.setText(command)
-            if specialization_advantages:
-                print(f"[ROLL SPEC] selected={specialization_advantages} bonus_dice={specialization_advantages}")
+            roll_command_edit.setText(command)
+            if debug_preview_enabled:
+                print(
+                    "[ROLL PREVIEW]",
+                    f"dice={dice_count}",
+                    f"skill={skill_bonus}",
+                    f"manual={manual_bonus}",
+                    f"extras={extra_bonuses}",
+                    f'command="{command}"',
+                )
 
         def copy_roll_command():
-            command = preview_label.text().strip()
+            command = roll_command_edit.text().strip()
             QApplication.clipboard().setText(command)
             print("[ROLL COPY]", command)
             if direct_send_checkbox is not None and direct_send_checkbox.isChecked():
                 print("[ROLL SEND PLACEHOLDER] direct Roll20 send requested but not implemented")
+            dialog.accept()
+
+        def on_perk_suggestion_toggled(checkbox, checked):
+            if checkbox is None:
+                return
+            rule_id = str(checkbox.property("rule_id") or "")
+            effect = checkbox.property("suggested_effect")
+            if not isinstance(effect, dict):
+                effect = {}
+            compact_effect = json.dumps(effect, ensure_ascii=False, separators=(",", ":"))
+            if debug_toggles_enabled:
+                print(
+                    f"[PERK SUGGESTION TOGGLE] rule={rule_id} checked={bool(checked)} effect={compact_effect}"
+                )
+            update_roll_preview()
+
+        def on_wellbeing_suggestion_toggled(checkbox, checked):
+            if checkbox is None:
+                return
+            label = str(checkbox.property("wellbeing_label") or "")
+            effect = checkbox.property("suggested_effect")
+            if not isinstance(effect, dict):
+                effect = {}
+            compact_effect = json.dumps(effect, ensure_ascii=False, separators=(",", ":"))
+            if debug_toggles_enabled:
+                print(
+                    f'[WELLBEING SUGGESTION TOGGLE] label="{label}" checked={bool(checked)} effect={compact_effect}'
+                )
+            update_roll_preview()
 
         advantages_spin.valueChanged.connect(update_roll_preview)
         disadvantages_spin.valueChanged.connect(update_roll_preview)
         manual_bonus_spin.valueChanged.connect(update_roll_preview)
-        keep_none.toggled.connect(update_roll_preview)
         keep_high.toggled.connect(update_roll_preview)
         keep_low.toggled.connect(update_roll_preview)
         paradigm_checkbox.toggled.connect(update_roll_preview)
@@ -2569,6 +3231,14 @@ class MainWindow(QMainWindow):
         dis_plus.clicked.connect(lambda: adjust_spin(disadvantages_spin, 1))
         for checkbox in specialization_checkboxes:
             checkbox.toggled.connect(update_roll_preview)
+        for checkbox in perk_suggestion_checkboxes:
+            checkbox.toggled.connect(
+                lambda checked=False, cb=checkbox: on_perk_suggestion_toggled(cb, checked)
+            )
+        for checkbox in wellbeing_suggestion_checkboxes:
+            checkbox.toggled.connect(
+                lambda checked=False, cb=checkbox: on_wellbeing_suggestion_toggled(cb, checked)
+            )
         copy_button.clicked.connect(copy_roll_command)
         close_button.clicked.connect(dialog.close)
         update_roll_preview()

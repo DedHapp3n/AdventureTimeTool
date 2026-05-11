@@ -1,0 +1,457 @@
+{
+  "version": 1,
+  "description": "Manuelle Vorschlagsregeln für Perks/Nachteile im Roll20-Wurf-Assistenten. Regeln werden nur angezeigt und nicht automatisch angewendet.",
+  "rules": [
+    {
+      "id": "balance_athletik_bewegung",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "balance"
+      ],
+      "effect_keywords": [
+        "athletik",
+        "bewegung",
+        "fall",
+        "umwerfen"
+      ],
+      "skill_keywords": [
+        "klettern",
+        "athletik"
+      ],
+      "specialization_keywords": [
+        "parcour",
+        "bewegung",
+        "rennen",
+        "springen",
+        "fallen",
+        "umwerfen"
+      ],
+      "context_keywords": [
+        "bewegung",
+        "fallen",
+        "umwerfen",
+        "sturz"
+      ],
+      "label": "Balance: Vorteil auf Klettern/Athletik/Bewegung",
+      "suggested_effect": {
+        "advantage": 1
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "flink_initiative_bonus",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "flink"
+      ],
+      "effect_keywords": [
+        "initiative",
+        "+4"
+      ],
+      "skill_keywords": [
+        "initiative",
+        "ini-wurf"
+      ],
+      "specialization_keywords": [
+        "initiative"
+      ],
+      "context_keywords": [
+        "initiative"
+      ],
+      "label": "Flink: Initiative +4",
+      "suggested_effect": {
+        "flat_bonus": 4
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "flink_mobilitaet_athletik",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "flink"
+      ],
+      "effect_keywords": [
+        "mobilität",
+        "athletik",
+        "eigenbewegung"
+      ],
+      "skill_keywords": [
+        "athletik",
+        "klettern",
+        "bewegung",
+        "mobilität"
+      ],
+      "specialization_keywords": [
+        "bewegung",
+        "mobilität",
+        "rennen",
+        "parcour"
+      ],
+      "context_keywords": [
+        "mobilität",
+        "bewegung",
+        "eigenbewegung"
+      ],
+      "label": "Flink: Mobilität/Athletik im Vorteil",
+      "suggested_effect": {
+        "advantage": 1
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "eiserner_wille_defense",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "eiserner wille"
+      ],
+      "effect_keywords": [
+        "willensstärke",
+        "verteidigen",
+        "willensbeeinflussung"
+      ],
+      "skill_keywords": [
+        "willensstärke"
+      ],
+      "specialization_keywords": [
+        "eigensinn",
+        "durchhalten",
+        "verteidigen"
+      ],
+      "context_keywords": [
+        "verteidigen",
+        "willensbeeinflussung",
+        "magisch",
+        "widerstehen"
+      ],
+      "label": "Eiserner Wille: Willensstärke-Verteidigung im Vorteil",
+      "suggested_effect": {
+        "advantage": 1
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "samtpfoten_akrobatik_schleichen",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "samtpfoten"
+      ],
+      "effect_keywords": [
+        "akrobatik",
+        "schleichen",
+        "springen",
+        "abrollen",
+        "landen"
+      ],
+      "skill_keywords": [
+        "tanz und akrobatik",
+        "akrobatik",
+        "schleichen",
+        "heimlichkeit"
+      ],
+      "specialization_keywords": [
+        "springen",
+        "abrollen",
+        "landen",
+        "tarnen",
+        "verstecken"
+      ],
+      "context_keywords": [
+        "schleichen",
+        "springen",
+        "abrollen",
+        "landen",
+        "heimlichkeit"
+      ],
+      "label": "Samtpfoten: Akrobatik/Schleichen im Vorteil",
+      "suggested_effect": {
+        "advantage": 1
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "verstaerkter_sinn_mustern",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "verstärkter sinn",
+        "verbesserter sinn",
+        "feines gehör",
+        "witterungssicht"
+      ],
+      "effect_keywords": [
+        "mustern",
+        "sinn",
+        "gehör",
+        "riechen",
+        "sehen",
+        "lauschen"
+      ],
+      "skill_keywords": [
+        "mustern",
+        "menschenkenntnis"
+      ],
+      "specialization_keywords": [
+        "lauschen",
+        "hören",
+        "riechen",
+        "sehen",
+        "beobachten"
+      ],
+      "context_keywords": [
+        "lauschen",
+        "hören",
+        "riechen",
+        "sehen",
+        "sinn",
+        "geruch"
+      ],
+      "label": "Verstärkter Sinn: passender Mustern-/Sinneswurf im Vorteil",
+      "suggested_effect": {
+        "advantage": 1
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "glueck_once_bonus",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "glück",
+        "glückspilz"
+      ],
+      "effect_keywords": [
+        "+10",
+        "wurf"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "glück",
+        "notfall"
+      ],
+      "label": "Glück: einmalig +10 auf eigenen Wurf",
+      "suggested_effect": {
+        "flat_bonus": 10
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Verbrauch/Negativeffekt nicht automatisch verwalten."
+    },
+    {
+      "id": "unglueck_info",
+      "type": "disadvantage",
+      "enabled": true,
+      "name_keywords": [
+        "unglück"
+      ],
+      "effect_keywords": [
+        "neu würfeln",
+        "missgeschick"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "pech",
+        "missgeschick"
+      ],
+      "label": "Unglück: DM darf Würfel neu würfeln / Missgeschick",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Keine automatische Wirkung."
+    },
+    {
+      "id": "rage_info",
+      "type": "disadvantage",
+      "enabled": true,
+      "name_keywords": [
+        "rage",
+        "zorn",
+        "wut"
+      ],
+      "effect_keywords": [
+        "zorn",
+        "wut",
+        "raserei"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "zorn",
+        "wut",
+        "raserei"
+      ],
+      "label": "Rage: Situativer Zustand / DM-Hinweis",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "nahrung_info",
+      "type": "disadvantage",
+      "enabled": true,
+      "name_keywords": [
+        "nahrungssensibel",
+        "nahrungseinschränkung"
+      ],
+      "effect_keywords": [
+        "nahrung",
+        "versorgung",
+        "essbar"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "nahrung",
+        "versorgung"
+      ],
+      "label": "Nahrung: Situativer Nachteil / Versorgung prüfen",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "drittes_auge_info",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "3tes auge",
+        "drittes auge"
+      ],
+      "effect_keywords": [
+        "sicht",
+        "wahrnehmung",
+        "spüren"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "wahrnehmung",
+        "sehen"
+      ],
+      "label": "Drittes Auge: Situativer Wahrnehmungs-/Magie-Hinweis",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "illusion_magie_info",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "illusion magie",
+        "illusionistisches talent",
+        "illusion"
+      ],
+      "effect_keywords": [
+        "illusion",
+        "täuschung",
+        "trugbild"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "illusion",
+        "magie"
+      ],
+      "label": "Illusion: Situativer Magie-Hinweis",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "schlangenmann_info",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "schlangenmann",
+        "griff",
+        "umschlingung"
+      ],
+      "effect_keywords": [
+        "griff",
+        "umschlingen",
+        "halten"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "nahkampf",
+        "griff"
+      ],
+      "label": "Schlangenmann: Situativer Griff-/Nahkampf-Hinweis",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "tierform_info",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "tierform"
+      ],
+      "effect_keywords": [
+        "tiergestalt",
+        "verwandlung"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "tierform",
+        "verwandlung"
+      ],
+      "label": "Tierform: Situativer Formwechsel-Hinweis",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    },
+    {
+      "id": "zauberhaar_info",
+      "type": "perk",
+      "enabled": true,
+      "name_keywords": [
+        "zauberhaar"
+      ],
+      "effect_keywords": [
+        "haar",
+        "zauber"
+      ],
+      "skill_keywords": [],
+      "specialization_keywords": [],
+      "context_keywords": [
+        "magie",
+        "zauber"
+      ],
+      "label": "Zauberhaar: Situativer Magie-/Trick-Hinweis",
+      "suggested_effect": {
+        "info_only": true
+      },
+      "manual_confirm": true,
+      "notes": "Nur Vorschlag. Nicht automatisch anwenden."
+    }
+  ]
+}
