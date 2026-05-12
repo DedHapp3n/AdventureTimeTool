@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog,
-    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit
+    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics
@@ -3850,6 +3850,8 @@ class MainWindow(QMainWindow):
                 ]
             )
             table.setEditTriggers(QTableWidget.NoEditTriggers)
+            table.setSelectionMode(QAbstractItemView.NoSelection)
+            table.setFocusPolicy(Qt.NoFocus)
             table.setWordWrap(True)
             table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -3863,7 +3865,8 @@ class MainWindow(QMainWindow):
                 f"gridline-color: {border_color};"
                 f"font-size: {font_size}px;"
                 "border: none;"
-                "selection-background-color: rgba(242, 210, 139, 45);"
+                "selection-background-color: transparent;"
+                "selection-color: inherit;"
                 "}"
                 "QHeaderView::section {"
                 "background: rgba(24, 16, 8, 175);"
