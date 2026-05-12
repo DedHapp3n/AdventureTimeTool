@@ -1,0 +1,104 @@
+{
+  "inventory_screen": {
+    "x": 20,
+    "y": 20,
+    "w": 1420,
+    "h": 820,
+    "title": {
+      "text": "Inventar",
+      "x": 0,
+      "y": 0,
+      "w": 1380,
+      "h": 42,
+      "font_size": 24,
+      "color": "#bde6c8",
+      "align": "center"
+    },
+    "money": {
+      "x": 20,
+      "y": 60,
+      "w": 420,
+      "h": 110,
+      "title": "Geldbeutel",
+      "font_size": 18,
+      "label_font_size": 14,
+      "value_font_size": 20,
+      "title_color": "#bde6c8",
+      "label_color": "#bde6c8",
+      "value_color": "#ffffff",
+      "columns": [
+        { "id": "gulden", "label": "Gulden" },
+        { "id": "schilling", "label": "Schilling" },
+        { "id": "heller", "label": "Heller" },
+        { "id": "pfifferling", "label": "Pfifferling" }
+      ]
+    },
+    "tables": {
+      "y": 200,
+      "h": 600,
+      "row_mode": "table_widget",
+      "min_row_h": 28,
+      "max_row_h": 72,
+      "row_h": 42,
+      "name_max_lines": 3,
+      "name_line_h": 22,
+      "meta_line_h": 16,
+      "row_gap": 4,
+      "item_padding_x": 8,
+      "item_padding_y": 4,
+      "item_border_enabled": false,
+      "separator_enabled": true,
+      "wrap_text": true,
+      "meta_format": "PL: {pl}    Anzahl: {count}",
+      "header_h": 38,
+      "font_size": 14,
+      "meta_font_size": 11,
+      "header_font_size": 16,
+      "header_color": "#bde6c8",
+      "text_color": "#ffffff",
+      "muted_text_color": "#c8c0aa",
+      "value_color": "#7fd0ff",
+      "meta_text_color": "#7fd0ff",
+      "border_color": "rgba(189, 230, 200, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "row_background": "rgba(0, 0, 0, 18)",
+      "separator_color": "rgba(255, 255, 255, 22)",
+      "max_visible_rows": 15,
+      "sections": [
+        {
+          "id": "inventory_left",
+          "title": "Inventar",
+          "x": 20,
+          "w": 440,
+          "columns": {
+            "name": { "title": "Inventar", "w": 330 },
+            "pl": { "title": "PL", "w": 45 },
+            "count": { "title": "Anzahl", "w": 65 }
+          }
+        },
+        {
+          "id": "inventory_middle",
+          "title": "Inventar",
+          "x": 480,
+          "w": 440,
+          "columns": {
+            "name": { "title": "Inventar", "w": 330 },
+            "pl": { "title": "PL", "w": 45 },
+            "count": { "title": "Anzahl", "w": 65 }
+          }
+        },
+        {
+          "id": "books",
+          "title": "Bücher",
+          "x": 940,
+          "w": 440,
+          "columns": {
+            "name": { "title": "Bücher", "w": 330 },
+            "pl": { "title": "PL", "w": 45 },
+            "count": { "title": "Anzahl", "w": 65 }
+          }
+        }
+      ]
+    }
+  }
+}

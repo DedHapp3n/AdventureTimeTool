@@ -6,11 +6,12 @@ from PySide6.QtWidgets import (
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit
 )
 from PySide6.QtCore import Qt, QEvent
-from PySide6.QtGui import QColor, QPen, QPixmap, QIcon
+from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics
 import re
 import os
 import json
 import math
+import html
 from pathlib import Path
 
 from data_loader import DataLoader
@@ -619,6 +620,8 @@ class MainWindow(QMainWindow):
                     self.show_main_section("character")
                 elif self.current_main_section in ("skills", "fertigkeiten"):
                     self.show_main_section("skills")
+                elif self.current_main_section == "inventory":
+                    self.show_main_section("inventory")
             print("[SETTINGS] Cache reload clicked")
             return
         print("[SETTINGS] Cache reload clicked")
@@ -650,6 +653,8 @@ class MainWindow(QMainWindow):
             self.render_character_screen()
         elif section_id in ("skills", "fertigkeiten"):
             self.render_skills_screen()
+        elif section_id == "inventory":
+            self.render_inventory_screen()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -1167,6 +1172,138 @@ class MainWindow(QMainWindow):
             except Exception:
                 continue
         return self.get_default_skills_layout_config()
+
+    def get_default_inventory_layout_config(self):
+        return {
+            "inventory_screen": {
+                "x": 20,
+                "y": 20,
+                "w": 1420,
+                "h": 820,
+                "title": {
+                    "text": "Inventar",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1380,
+                    "h": 42,
+                    "font_size": 24,
+                    "color": "#f2d28b",
+                    "align": "center",
+                },
+                "money": {
+                    "x": 20,
+                    "y": 60,
+                    "w": 420,
+                    "h": 110,
+                    "title": "Geldbeutel",
+                    "font_size": 18,
+                    "label_font_size": 14,
+                    "value_font_size": 20,
+                    "title_color": "#f2d28b",
+                    "label_color": "#f2d28b",
+                    "value_color": "#ffffff",
+                    "columns": [
+                        {"id": "gulden", "label": "Gulden"},
+                        {"id": "schilling", "label": "Schilling"},
+                        {"id": "heller", "label": "Heller"},
+                        {"id": "pfifferling", "label": "Pfifferling"},
+                    ],
+                },
+                "tables": {
+                    "y": 200,
+                    "h": 600,
+                    "row_mode": "table_widget",
+                    "min_row_h": 28,
+                    "max_row_h": 72,
+                    "row_h": 42,
+                    "name_max_lines": 3,
+                    "name_line_h": 22,
+                    "meta_line_h": 16,
+                    "row_gap": 4,
+                    "item_padding_x": 8,
+                    "item_padding_y": 4,
+                    "item_border_enabled": False,
+                    "separator_enabled": True,
+                    "wrap_text": True,
+                    "meta_format": "PL: {pl}    Anzahl: {count}",
+                    "header_h": 38,
+                    "font_size": 14,
+                    "meta_font_size": 11,
+                    "header_font_size": 16,
+                    "header_color": "#f2d28b",
+                    "text_color": "#ffffff",
+                    "muted_text_color": "#c8c0aa",
+                    "value_color": "#7fd0ff",
+                    "meta_text_color": "#7fd0ff",
+                    "border_color": "rgba(242, 210, 139, 90)",
+                    "row_background": "rgba(0, 0, 0, 18)",
+                    "separator_color": "rgba(255, 255, 255, 22)",
+                    "max_visible_rows": 15,
+                    "sections": [
+                        {
+                            "id": "inventory_left",
+                            "title": "Inventar",
+                            "x": 20,
+                            "w": 430,
+                            "columns": {
+                                "name": {"title": "Inventar", "x": 0, "w": 330},
+                                "pl": {"title": "PL", "x": 335, "w": 45},
+                                "count": {"title": "Anzahl", "x": 385, "w": 45},
+                            },
+                        },
+                        {
+                            "id": "inventory_middle",
+                            "title": "Inventar",
+                            "x": 480,
+                            "w": 430,
+                            "columns": {
+                                "name": {"title": "Inventar", "x": 0, "w": 330},
+                                "pl": {"title": "PL", "x": 335, "w": 45},
+                                "count": {"title": "Anzahl", "x": 385, "w": 45},
+                            },
+                        },
+                        {
+                            "id": "books",
+                            "title": "Bücher",
+                            "x": 940,
+                            "w": 430,
+                            "columns": {
+                                "name": {"title": "Bücher", "x": 0, "w": 330},
+                                "pl": {"title": "PL", "x": 335, "w": 45},
+                                "count": {"title": "Anzahl", "x": 385, "w": 45},
+                            },
+                        },
+                    ],
+                },
+            }
+        }
+
+    def load_inventory_layout_config(self):
+        active_theme = self.get_active_theme()
+        layout_file = ""
+        screen_cfg = self.main_ui_layout_config.get("inventory_screen", {})
+        if isinstance(screen_cfg, dict):
+            layout_file = str(screen_cfg.get("layout_file", "")).strip()
+        if not layout_file:
+            layout_file = "inventory_layout.json"
+
+        candidates = [
+            self.base_dir / "assets" / "themes" / active_theme / layout_file,
+            self.base_dir / "assets" / "themes" / "diablo" / "inventory_layout.json",
+        ]
+        for layout_path in candidates:
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("inventory_screen"), dict):
+                    print(f"[INVENTORY LAYOUT] loaded: {layout_path}")
+                    return data
+            except Exception:
+                continue
+        print("[INVENTORY LAYOUT] fallback: internal default")
+        return self.get_default_inventory_layout_config()
 
     def get_default_roll_dialog_layout_config(self):
         return {
@@ -3248,6 +3385,778 @@ class MainWindow(QMainWindow):
         update_roll_preview()
         dialog.exec()
 
+    def _inventory_cache_text(self, sheet_cache, cell_ref):
+        cell_data = sheet_cache.get(cell_ref)
+        value = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    def _inventory_cell_ref(self, col_index, row_index):
+        return f"{self._col_index_to_letters(col_index)}{row_index}"
+
+    def _inventory_cell_sort_key(self, cell_ref):
+        match = re.match(r"^([A-Z]+)(\d+)$", str(cell_ref).strip().upper())
+        if not match:
+            return (0, 0)
+        return (int(match.group(2)), self._col_letters_to_index(match.group(1)))
+
+    def _normalize_inventory_header(self, value):
+        text = str(value or "").strip().lower()
+        return text.replace("ü", "ue")
+
+    def _get_inventory_sheet_cache(self):
+        sheet_cache = self.loader.cell_cache.get("Inventar", {})
+        return sheet_cache if isinstance(sheet_cache, dict) else {}
+
+    def _find_inventory_title_left_of_pair(self, row_values, row, pl_col, title_kind):
+        if title_kind == "books":
+            accepted = {"buecher"}
+        else:
+            accepted = {"inventar", "im inventar"}
+        for col in range(pl_col - 1, max(0, pl_col - 21), -1):
+            normalized = self._normalize_inventory_header(row_values.get((row, col), ""))
+            if normalized in accepted:
+                return col
+        return None
+
+    def _build_inventory_section_from_columns(
+        self, sheet_cache, section_id, title, header_row, name_col, pl_col, count_col
+    ):
+        max_row = header_row
+        for cell_ref in sheet_cache.keys():
+            row, _col = self._inventory_cell_sort_key(cell_ref)
+            if row > max_row:
+                max_row = row
+
+        rows = []
+        for row_index in range(header_row + 1, max_row + 1):
+            name = self._inventory_cache_text(
+                sheet_cache, self._inventory_cell_ref(name_col, row_index)
+            )
+            pl = self._inventory_cache_text(sheet_cache, self._inventory_cell_ref(pl_col, row_index))
+            count = self._inventory_cache_text(
+                sheet_cache, self._inventory_cell_ref(count_col, row_index)
+            )
+            if not name and not pl and not count:
+                continue
+            rows.append({"name": name, "pl": pl, "count": count})
+
+        header = (
+            f"{self._inventory_cell_ref(name_col, header_row)}:"
+            f"{self._inventory_cell_ref(count_col, header_row)}"
+        )
+        data_range = (
+            f"{self._inventory_cell_ref(name_col, header_row + 1)}:"
+            f"{self._inventory_cell_ref(count_col, max_row)}"
+        )
+        return {
+            "id": section_id,
+            "title": title,
+            "header": header,
+            "range": data_range,
+            "rows": rows,
+        }
+
+    def get_inventory_display_data(self):
+        sheet_cache = self._get_inventory_sheet_cache()
+        money = {
+            "gulden": self.format_character_display_value(
+                self.get_cache_cell_value("Inventar", "B9", None), "auto"
+            ),
+            "schilling": self.format_character_display_value(
+                self.get_cache_cell_value("Inventar", "E9", None), "auto"
+            ),
+            "heller": self.format_character_display_value(
+                self.get_cache_cell_value("Inventar", "H9", None), "auto"
+            ),
+            "pfifferling": self.format_character_display_value(
+                self.get_cache_cell_value("Inventar", "K9", None), "auto"
+            ),
+        }
+        print(
+            "[INVENTORY] money "
+            f"Gulden={money['gulden']} Schilling={money['schilling']} "
+            f"Heller={money['heller']} Pfifferling={money['pfifferling']}"
+        )
+
+        row_values = {}
+        for cell_ref, cell_data in sheet_cache.items():
+            row, col = self._inventory_cell_sort_key(cell_ref)
+            if row <= 0 or col <= 0:
+                continue
+            row_values[(row, col)] = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
+
+        header_pairs = []
+        for (row, col), value in row_values.items():
+            if self._normalize_inventory_header(value) != "pl":
+                continue
+            next_value = row_values.get((row, col + 1), "")
+            if self._normalize_inventory_header(next_value) == "anzahl":
+                header_pairs.append({"row": row, "pl_col": col, "count_col": col + 1})
+        header_pairs.sort(key=lambda item: (item["row"], item["pl_col"]))
+
+        books_pairs = []
+        inventory_pairs = []
+        for pair in header_pairs:
+            book_col = self._find_inventory_title_left_of_pair(
+                row_values, pair["row"], pair["pl_col"], "books"
+            )
+            if book_col is not None:
+                pair["name_col"] = book_col
+                books_pairs.append(pair)
+                continue
+            inv_col = self._find_inventory_title_left_of_pair(
+                row_values, pair["row"], pair["pl_col"], "inventory"
+            )
+            if inv_col is not None:
+                pair["name_col"] = inv_col
+            inventory_pairs.append(pair)
+
+        previous_count_col = None
+        for pair in inventory_pairs:
+            if pair.get("name_col") is None and previous_count_col is not None:
+                candidate = previous_count_col + 3
+                if candidate < pair["pl_col"]:
+                    pair["name_col"] = candidate
+            previous_count_col = pair["count_col"]
+
+        sections = []
+        expected = [
+            ("inventory_left", "Inventar", inventory_pairs[0] if len(inventory_pairs) > 0 else None),
+            ("inventory_middle", "Inventar", inventory_pairs[1] if len(inventory_pairs) > 1 else None),
+            ("books", "Bücher", books_pairs[0] if books_pairs else None),
+        ]
+        for section_id, title, pair in expected:
+            if not pair or pair.get("name_col") is None:
+                print(f"[INVENTORY MAP] block not found: {section_id}")
+                sections.append({"id": section_id, "title": title, "header": "-", "range": "-", "rows": []})
+                continue
+            section = self._build_inventory_section_from_columns(
+                sheet_cache,
+                section_id,
+                title,
+                pair["row"],
+                pair["name_col"],
+                pair["pl_col"],
+                pair["count_col"],
+            )
+            sections.append(section)
+            print(
+                f"[INVENTORY MAP] section {section_id} "
+                f"header={section['header']} rows={len(section['rows'])}"
+            )
+        return {"money": money, "sections": sections}
+
+    def render_inventory_screen(self):
+        if self.content_layer is None:
+            return
+
+        layout_config = self.load_inventory_layout_config()
+        screen_cfg = layout_config.get("inventory_screen", {})
+        inventory_data = self.get_inventory_display_data()
+
+        screen = QFrame(self.content_layer)
+        screen.setGeometry(
+            self._safe_int(screen_cfg.get("x", 20), 20),
+            self._safe_int(screen_cfg.get("y", 20), 20),
+            self._safe_int(screen_cfg.get("w", 1420), 1420),
+            self._safe_int(screen_cfg.get("h", 820), 820),
+        )
+        screen.setStyleSheet("background: transparent;")
+        screen.show()
+
+        title_cfg = screen_cfg.get("title", {})
+        self.create_panel_text(
+            screen,
+            title_cfg,
+            str(title_cfg.get("text", "Inventar")),
+            self._safe_int(title_cfg.get("font_size", 24), 24),
+            str(title_cfg.get("color", "#f2d28b")),
+            bold=True,
+            align=str(title_cfg.get("align", "center")),
+        )
+
+        self.render_inventory_money_panel(screen, screen_cfg.get("money", {}), inventory_data["money"])
+        self.render_inventory_tables(screen, screen_cfg.get("tables", {}), inventory_data["sections"])
+
+    def render_inventory_money_panel(self, parent, money_cfg, money):
+        panel = QFrame(parent)
+        panel.setGeometry(
+            self._safe_int(money_cfg.get("x", 20), 20),
+            self._safe_int(money_cfg.get("y", 60), 60),
+            self._safe_int(money_cfg.get("w", 420), 420),
+            self._safe_int(money_cfg.get("h", 110), 110),
+        )
+        panel.setStyleSheet(
+            "background: rgba(5, 5, 5, 95);"
+            "border: 1px solid rgba(242, 210, 139, 70);"
+            "border-radius: 4px;"
+        )
+        panel.show()
+
+        title_color = str(money_cfg.get("title_color", "#f2d28b"))
+        label_color = str(money_cfg.get("label_color", "#f2d28b"))
+        value_color = str(money_cfg.get("value_color", "#ffffff"))
+        title_font = self._safe_int(money_cfg.get("font_size", 18), 18)
+        label_font = self._safe_int(money_cfg.get("label_font_size", 14), 14)
+        value_font = self._safe_int(money_cfg.get("value_font_size", 20), 20)
+
+        self.create_panel_text(
+            panel,
+            {"x": 12, "y": 8, "w": max(1, panel.width() - 24), "h": 26},
+            str(money_cfg.get("title", "Geldbeutel")),
+            title_font,
+            title_color,
+            bold=True,
+            align="left",
+        )
+
+        columns = money_cfg.get("columns", [])
+        if not isinstance(columns, list) or not columns:
+            columns = self.get_default_inventory_layout_config()["inventory_screen"]["money"]["columns"]
+        column_w = max(1, (panel.width() - 24) // max(1, len(columns)))
+        for index, column in enumerate(columns):
+            if not isinstance(column, dict):
+                continue
+            x = 12 + index * column_w
+            value_id = str(column.get("id", ""))
+            self.create_panel_text(
+                panel,
+                {"x": x, "y": 44, "w": column_w - 8, "h": 22},
+                str(column.get("label", value_id)),
+                label_font,
+                label_color,
+                bold=True,
+                align="center",
+            )
+            self.create_panel_text(
+                panel,
+                {"x": x, "y": 68, "w": column_w - 8, "h": 30},
+                str(money.get(value_id, "-")),
+                value_font,
+                value_color,
+                bold=True,
+                align="center",
+            )
+
+    def get_inventory_wrapped_text_height(self, text, width, font_size, max_lines=0):
+        font = QFont()
+        font.setPixelSize(max(1, int(font_size)))
+        document = QTextDocument()
+        document.setDocumentMargin(0)
+        document.setDefaultFont(font)
+        document.setTextWidth(max(1, int(width)))
+        document.setPlainText(str(text or " "))
+        height = int(math.ceil(document.size().height()))
+        if max_lines and max_lines > 0:
+            line_height = QFontMetrics(font).lineSpacing()
+            height = min(height, max(1, line_height * int(max_lines)))
+        return max(1, height)
+
+    def build_inventory_text_block_html(self, rows, text_cfg):
+        font_size = self._safe_int(text_cfg.get("font_size", 14), 14)
+        meta_font_size = self._safe_int(text_cfg.get("meta_font_size", 12), 12)
+        line_spacing = self._safe_int(text_cfg.get("line_spacing", 4), 4)
+        item_spacing = self._safe_int(text_cfg.get("item_spacing", 10), 10)
+        text_color = str(text_cfg.get("text_color", "#ffffff"))
+        meta_text_color = str(text_cfg.get("meta_text_color", "#7fd0ff"))
+        muted_text_color = str(text_cfg.get("muted_text_color", "#c8c0aa"))
+
+        item_html = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("name", "")).strip() or "(ohne Name)"
+            pl = str(row.get("pl", "")).strip() or "-"
+            count = str(row.get("count", "")).strip() or "-"
+            item_html.append(
+                "<div class=\"item\">"
+                f"<div class=\"name\">{html.escape(name)}</div>"
+                f"<div class=\"meta\">PL: {html.escape(pl)}&nbsp;&nbsp;&nbsp;&nbsp;Anzahl: {html.escape(count)}</div>"
+                "</div>"
+            )
+        if not item_html:
+            item_html.append('<div class="empty">(keine Einträge)</div>')
+
+        return (
+            "<html><head><style>"
+            "body { margin: 0; padding: 0; }"
+            f".item {{ margin: 0 0 {item_spacing}px 0; }}"
+            f".name {{ color: {text_color}; font-size: {font_size}px; line-height: {font_size + line_spacing}px; }}"
+            f".meta {{ color: {meta_text_color}; font-size: {meta_font_size}px; line-height: {meta_font_size + line_spacing}px; }}"
+            f".empty {{ color: {muted_text_color}; font-size: {font_size}px; }}"
+            "</style></head><body>"
+            + "".join(item_html)
+            + "</body></html>"
+        )
+
+    def render_inventory_text_block_tables(self, parent, tables_cfg, sections):
+        section_by_id = {
+            str(section.get("id", "")): section
+            for section in sections
+            if isinstance(section, dict)
+        }
+        table_y = self._safe_int(tables_cfg.get("y", 200), 200)
+        default_h = max(1, parent.height() - table_y - 20)
+        table_h = self._safe_int(tables_cfg.get("h", default_h), default_h)
+        header_h = self._safe_int(tables_cfg.get("header_h", 38), 38)
+        header_font_size = self._safe_int(tables_cfg.get("header_font_size", 16), 16)
+        header_color = str(tables_cfg.get("header_color", "#f2d28b"))
+        text_cfg = tables_cfg.get("text_block", {})
+        if not isinstance(text_cfg, dict):
+            text_cfg = {}
+        background = str(text_cfg.get("background", "rgba(0, 0, 0, 35)"))
+        border_color = str(
+            text_cfg.get("border_color", tables_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        )
+        text_color = str(text_cfg.get("text_color", "#ffffff"))
+
+        sections_cfg = tables_cfg.get("sections", [])
+        if not isinstance(sections_cfg, list):
+            sections_cfg = []
+        for section_cfg in sections_cfg:
+            if not isinstance(section_cfg, dict):
+                continue
+            section_id = str(section_cfg.get("id", ""))
+            section_data = section_by_id.get(section_id, {"rows": [], "title": section_id})
+            table_w = self._safe_int(section_cfg.get("w", 430), 430)
+
+            table = QFrame(parent)
+            table.setGeometry(
+                self._safe_int(section_cfg.get("x", 20), 20),
+                table_y,
+                table_w,
+                table_h,
+            )
+            table.setStyleSheet(
+                f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+            )
+            table.show()
+
+            columns = section_cfg.get("columns", {})
+            if not isinstance(columns, dict):
+                columns = {}
+            name_col = columns.get("name", {})
+            if not isinstance(name_col, dict):
+                name_col = {}
+            self.create_panel_text(
+                table,
+                {"x": 8, "y": 0, "w": max(1, table_w - 16), "h": header_h},
+                str(name_col.get("title", section_cfg.get("title", section_data.get("title", "Inventar")))),
+                header_font_size,
+                header_color,
+                bold=True,
+                align="left",
+            )
+
+            text_edit = QTextEdit(table)
+            text_edit.setGeometry(6, header_h, max(1, table_w - 12), max(1, table_h - header_h - 6))
+            text_edit.setReadOnly(True)
+            text_edit.setLineWrapMode(QTextEdit.WidgetWidth)
+            text_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            text_edit.setStyleSheet(
+                "QTextEdit {"
+                "background: transparent;"
+                "border: none;"
+                f"color: {text_color};"
+                "padding: 4px;"
+                "}"
+            )
+            rows = section_data.get("rows", [])
+            if not isinstance(rows, list):
+                rows = []
+            text_edit.setHtml(self.build_inventory_text_block_html(rows, text_cfg))
+            text_edit.show()
+
+    def render_inventory_table_widget_tables(self, parent, tables_cfg, sections):
+        section_by_id = {
+            str(section.get("id", "")): section
+            for section in sections
+            if isinstance(section, dict)
+        }
+        table_y = self._safe_int(tables_cfg.get("y", 200), 200)
+        default_h = max(1, parent.height() - table_y - 20)
+        table_h = self._safe_int(tables_cfg.get("h", default_h), default_h)
+        title_h = self._safe_int(tables_cfg.get("header_h", 38), 38)
+        font_size = self._safe_int(tables_cfg.get("font_size", 14), 14)
+        header_font_size = self._safe_int(tables_cfg.get("header_font_size", 16), 16)
+        min_row_h = self._safe_int(tables_cfg.get("min_row_h", 28), 28)
+        max_row_h = self._safe_int(tables_cfg.get("max_row_h", 72), 72)
+        header_color = str(tables_cfg.get("header_color", "#f2d28b"))
+        text_color = str(tables_cfg.get("text_color", "#ffffff"))
+        value_color = str(tables_cfg.get("value_color", "#7fd0ff"))
+        border_color = str(tables_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        row_background = str(tables_cfg.get("row_background", "rgba(0, 0, 0, 18)"))
+        background = str(tables_cfg.get("background", "rgba(5, 5, 5, 95)"))
+
+        sections_cfg = tables_cfg.get("sections", [])
+        if not isinstance(sections_cfg, list):
+            sections_cfg = []
+        for section_cfg in sections_cfg:
+            if not isinstance(section_cfg, dict):
+                continue
+            section_id = str(section_cfg.get("id", ""))
+            section_data = section_by_id.get(section_id, {"rows": [], "title": section_id})
+            table_w = self._safe_int(section_cfg.get("w", 430), 430)
+
+            container = QFrame(parent)
+            container.setGeometry(
+                self._safe_int(section_cfg.get("x", 20), 20),
+                table_y,
+                table_w,
+                table_h,
+            )
+            container.setStyleSheet(
+                f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+            )
+            container.show()
+
+            columns = section_cfg.get("columns", {})
+            if not isinstance(columns, dict):
+                columns = {}
+            name_col = columns.get("name", {})
+            pl_col = columns.get("pl", {})
+            count_col = columns.get("count", {})
+            if not isinstance(name_col, dict):
+                name_col = {}
+            if not isinstance(pl_col, dict):
+                pl_col = {}
+            if not isinstance(count_col, dict):
+                count_col = {}
+
+            section_title = str(
+                name_col.get("title", section_cfg.get("title", section_data.get("title", "Inventar")))
+            )
+            self.create_panel_text(
+                container,
+                {"x": 8, "y": 0, "w": max(1, table_w - 16), "h": title_h},
+                section_title,
+                header_font_size,
+                header_color,
+                bold=True,
+                align="left",
+            )
+
+            table = QTableWidget(container)
+            table.setGeometry(6, title_h, max(1, table_w - 12), max(1, table_h - title_h - 6))
+            table.setColumnCount(3)
+            table.setHorizontalHeaderLabels(
+                [
+                    str(name_col.get("title", section_title)),
+                    str(pl_col.get("title", "PL")),
+                    str(count_col.get("title", "Anzahl")),
+                ]
+            )
+            table.setEditTriggers(QTableWidget.NoEditTriggers)
+            table.setWordWrap(True)
+            table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            table.verticalHeader().setVisible(False)
+            table.setAlternatingRowColors(False)
+            table.setShowGrid(True)
+            table.setStyleSheet(
+                "QTableWidget {"
+                f"background: {background};"
+                f"color: {text_color};"
+                f"gridline-color: {border_color};"
+                f"font-size: {font_size}px;"
+                "border: none;"
+                "selection-background-color: rgba(242, 210, 139, 45);"
+                "}"
+                "QHeaderView::section {"
+                "background: rgba(24, 16, 8, 175);"
+                f"color: {header_color};"
+                f"font-size: {header_font_size}px;"
+                "font-weight: 700;"
+                f"border: 1px solid {border_color};"
+                "padding: 3px;"
+                "}"
+            )
+
+            rows = section_data.get("rows", [])
+            if not isinstance(rows, list):
+                rows = []
+            table.setRowCount(len(rows))
+            for row_index, row in enumerate(rows):
+                if not isinstance(row, dict):
+                    row = {}
+                values = [
+                    str(row.get("name", "")).strip() or "(ohne Name)",
+                    str(row.get("pl", "")).strip() or "-",
+                    str(row.get("count", "")).strip() or "-",
+                ]
+                for column_index, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                    item.setBackground(QColor(0, 0, 0, 0))
+                    item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
+                    item.setTextAlignment(
+                        Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
+                    )
+                    table.setItem(row_index, column_index, item)
+
+            column_widths = [
+                self._safe_int(name_col.get("w", 320), 320),
+                self._safe_int(pl_col.get("w", 45), 45),
+                self._safe_int(count_col.get("w", 60), 60),
+            ]
+            available_width = max(1, table.width() - 4)
+            configured_width = sum(column_widths)
+            if configured_width > available_width:
+                overflow = configured_width - available_width
+                column_widths[0] = max(80, column_widths[0] - overflow)
+            for column_index, width in enumerate(column_widths):
+                table.setColumnWidth(column_index, max(1, width))
+
+            table.resizeRowsToContents()
+            for row_index in range(table.rowCount()):
+                height = table.rowHeight(row_index)
+                height = max(min_row_h, height)
+                if max_row_h > 0:
+                    height = min(max_row_h, height)
+                table.setRowHeight(row_index, height)
+
+            table.show()
+
+    def render_inventory_tables(self, parent, tables_cfg, sections):
+        section_by_id = {
+            str(section.get("id", "")): section
+            for section in sections
+            if isinstance(section, dict)
+        }
+        table_y = self._safe_int(tables_cfg.get("y", 200), 200)
+        row_mode = str(tables_cfg.get("row_mode", "")).strip().lower()
+        if row_mode == "table_widget":
+            self.render_inventory_table_widget_tables(parent, tables_cfg, sections)
+            return
+        if row_mode == "text_block":
+            self.render_inventory_text_block_tables(parent, tables_cfg, sections)
+            return
+        stacked_mode = row_mode in ("stacked", "stacked_compact", "stacked_dynamic")
+        compact_mode = row_mode == "stacked_compact"
+        dynamic_mode = row_mode == "stacked_dynamic"
+        row_h = self._safe_int(tables_cfg.get("row_h", 34), 34)
+        min_row_h = self._safe_int(tables_cfg.get("min_row_h", row_h), row_h)
+        name_line_h = self._safe_int(tables_cfg.get("name_line_h", max(20, row_h - 22)), max(20, row_h - 22))
+        name_max_lines = self._safe_int(tables_cfg.get("name_max_lines", 0), 0)
+        meta_line_h = self._safe_int(tables_cfg.get("meta_line_h", 18), 18)
+        row_gap = self._safe_int(tables_cfg.get("row_gap", 0), 0) if stacked_mode else 0
+        item_padding_x = self._safe_int(tables_cfg.get("item_padding_x", 8), 8)
+        item_padding_y = self._safe_int(tables_cfg.get("item_padding_y", 3), 3)
+        header_h = self._safe_int(tables_cfg.get("header_h", 38), 38)
+        font_size = self._safe_int(tables_cfg.get("font_size", 14), 14)
+        meta_font_size = self._safe_int(tables_cfg.get("meta_font_size", 12), 12)
+        header_font_size = self._safe_int(tables_cfg.get("header_font_size", 16), 16)
+        max_rows = self._safe_int(tables_cfg.get("max_visible_rows", 16), 16)
+        wrap_text = bool(tables_cfg.get("wrap_text", False))
+        meta_format = str(tables_cfg.get("meta_format", "PL: {pl}    Anzahl: {count}"))
+        header_color = str(tables_cfg.get("header_color", "#f2d28b"))
+        text_color = str(tables_cfg.get("text_color", "#ffffff"))
+        muted_text_color = str(tables_cfg.get("muted_text_color", "#c8c0aa"))
+        value_color = str(tables_cfg.get("value_color", "#7fd0ff"))
+        meta_text_color = str(tables_cfg.get("meta_text_color", value_color))
+        border_color = str(tables_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        row_background = str(tables_cfg.get("row_background", "rgba(0, 0, 0, 45)"))
+        separator_color = str(tables_cfg.get("separator_color", "rgba(255, 255, 255, 22)"))
+        item_border_enabled = bool(tables_cfg.get("item_border_enabled", not compact_mode))
+        separator_enabled = bool(tables_cfg.get("separator_enabled", True))
+
+        sections_cfg = tables_cfg.get("sections", [])
+        if not isinstance(sections_cfg, list):
+            sections_cfg = []
+        for section_cfg in sections_cfg:
+            if not isinstance(section_cfg, dict):
+                continue
+            section_id = str(section_cfg.get("id", ""))
+            section_data = section_by_id.get(section_id, {"rows": [], "title": section_id})
+            table_w = self._safe_int(section_cfg.get("w", 430), 430)
+            base_row_h = min_row_h if dynamic_mode else row_h
+            table_h = header_h + base_row_h * max_rows + max(0, max_rows - 1) * row_gap
+            table = QFrame(parent)
+            table.setGeometry(
+                self._safe_int(section_cfg.get("x", 20), 20),
+                table_y,
+                table_w,
+                table_h,
+            )
+            table.setStyleSheet(
+                f"background: rgba(5, 5, 5, 95); border: 1px solid {border_color}; border-radius: 4px;"
+            )
+            table.show()
+
+            header_bg = QFrame(table)
+            header_bg.setGeometry(0, 0, table_w, header_h)
+            header_bg.setStyleSheet(
+                "background: rgba(24, 16, 8, 175);"
+                f"border-bottom: 1px solid {border_color};"
+            )
+            header_bg.show()
+
+            columns = section_cfg.get("columns", {})
+            if not isinstance(columns, dict):
+                columns = {}
+            if stacked_mode:
+                name_col = columns.get("name", {})
+                if not isinstance(name_col, dict):
+                    name_col = {}
+                self.create_panel_text(
+                    table,
+                    {
+                        "x": 8,
+                        "y": 0,
+                        "w": max(1, table_w - 16),
+                        "h": header_h,
+                    },
+                    str(name_col.get("title", section_cfg.get("title", section_data.get("title", "Inventar")))),
+                    header_font_size,
+                    header_color,
+                    bold=True,
+                    align="left",
+                )
+            else:
+                for column_id, default_title, align in (
+                    ("name", str(section_cfg.get("title", section_data.get("title", "Inventar"))), "left"),
+                    ("pl", "PL", "center"),
+                    ("count", "Anzahl", "center"),
+                ):
+                    col_cfg = columns.get(column_id, {})
+                    if not isinstance(col_cfg, dict):
+                        col_cfg = {}
+                    self.create_panel_text(
+                        table,
+                        {
+                            "x": self._safe_int(col_cfg.get("x", 0), 0) + (8 if align == "left" else 0),
+                            "y": 0,
+                            "w": max(1, self._safe_int(col_cfg.get("w", 80), 80) - (12 if align == "left" else 0)),
+                            "h": header_h,
+                        },
+                        str(col_cfg.get("title", default_title)),
+                        header_font_size,
+                        header_color,
+                        bold=True,
+                        align=align,
+                    )
+
+            rows = section_data.get("rows", [])
+            if not isinstance(rows, list):
+                rows = []
+            current_y = header_h
+            rendered_rows = 0
+            content_bottom = table_h
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                if rendered_rows >= max_rows:
+                    break
+                y = current_y
+                item_h = row_h
+                name_text = str(row.get("name", ""))
+                name_h = name_line_h
+                if stacked_mode and dynamic_mode:
+                    text_w = max(1, table_w - item_padding_x * 2)
+                    name_h = self.get_inventory_wrapped_text_height(
+                        name_text,
+                        text_w,
+                        font_size,
+                        name_max_lines,
+                    )
+                    item_h = max(
+                        min_row_h,
+                        name_h + meta_line_h + item_padding_y * 2,
+                    )
+                if y + item_h > content_bottom:
+                    remaining_count = len(rows) - rendered_rows
+                    if remaining_count > 0 and y + 24 <= content_bottom:
+                        self.create_panel_text(
+                            table,
+                            {"x": 8, "y": y, "w": max(1, table_w - 16), "h": 22},
+                            "... weitere Einträge",
+                            meta_font_size,
+                            muted_text_color,
+                            bold=False,
+                            align="left",
+                        )
+                    break
+                row_bg = QFrame(table)
+                row_bg.setGeometry(0, y, table_w, item_h)
+                row_border = f"border-bottom: 1px solid {separator_color};" if item_border_enabled else "border: none;"
+                row_bg.setStyleSheet(f"background: {row_background}; {row_border}")
+                row_bg.lower()
+                row_bg.show()
+
+                if stacked_mode:
+                    name_label = self.create_panel_text(
+                        table,
+                        {
+                            "x": item_padding_x,
+                            "y": y + item_padding_y,
+                            "w": max(1, table_w - item_padding_x * 2),
+                            "h": max(1, name_h),
+                        },
+                        name_text,
+                        font_size,
+                        text_color if name_text.strip() else muted_text_color,
+                        bold=False,
+                        align="left",
+                    )
+                    name_label.setWordWrap(wrap_text)
+                    name_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+                    pl_text = str(row.get("pl", ""))
+                    count_text = str(row.get("count", ""))
+                    meta_text = meta_format.format(pl=pl_text, count=count_text)
+                    meta_label = self.create_panel_text(
+                        table,
+                        {
+                            "x": item_padding_x,
+                            "y": y + item_padding_y + name_h,
+                            "w": max(1, table_w - item_padding_x * 2),
+                            "h": meta_line_h,
+                        },
+                        meta_text,
+                        meta_font_size,
+                        meta_text_color,
+                        bold=False,
+                        align="left",
+                    )
+                    meta_label.setWordWrap(False)
+                    if separator_enabled:
+                        separator = QFrame(table)
+                        separator.setGeometry(0, y + item_h - 1, table_w, 1)
+                        separator.setStyleSheet(f"background: {separator_color}; border: none;")
+                        separator.show()
+                    current_y += item_h + row_gap
+                    rendered_rows += 1
+                    continue
+
+                for column_id, key, color, align in (
+                    ("name", "name", text_color, "left"),
+                    ("pl", "pl", value_color, "center"),
+                    ("count", "count", value_color, "center"),
+                ):
+                    col_cfg = columns.get(column_id, {})
+                    if not isinstance(col_cfg, dict):
+                        col_cfg = {}
+                    left_pad = 8 if align == "left" else 0
+                    label = self.create_panel_text(
+                        table,
+                        {
+                            "x": self._safe_int(col_cfg.get("x", 0), 0) + left_pad,
+                            "y": y,
+                            "w": max(1, self._safe_int(col_cfg.get("w", 80), 80) - left_pad - 4),
+                            "h": item_h,
+                        },
+                        str(row.get(key, "")),
+                        font_size,
+                        color if str(row.get(key, "")).strip() else muted_text_color,
+                        bold=False,
+                        align=align,
+                    )
+                    label.setWordWrap(False)
+                current_y += item_h + row_gap
+                rendered_rows += 1
+
     def render_skills_screen(self):
         if self.content_layer is None:
             return
@@ -5088,6 +5997,8 @@ class MainWindow(QMainWindow):
             self.show_main_section("character")
         elif self.current_main_section in ("skills", "fertigkeiten"):
             self.show_main_section("skills")
+        elif self.current_main_section == "inventory":
+            self.show_main_section("inventory")
         print("[CHARACTER CACHE] loaded:", cache_path)
 
     def on_settings_refresh_character_list_clicked(self):
