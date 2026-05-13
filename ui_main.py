@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog,
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
-from PySide6.QtCore import Qt, QEvent
+from PySide6.QtCore import Qt, QEvent, QRect
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics
 import re
 import os
@@ -55,6 +55,27 @@ class ReferenceBorderDelegate(QStyledItemDelegate):
             painter.restore()
 
 
+class InlineTextEdit(QTextEdit):
+    def __init__(self, on_commit=None, parent=None):
+        super().__init__(parent)
+        self._on_commit = on_commit
+        self._initial_text = ""
+
+    def set_initial_text(self, text):
+        value = str(text or "")
+        self._initial_text = value
+        self.setPlainText(value)
+
+    def focusOutEvent(self, event):
+        if callable(self._on_commit):
+            try:
+                self._on_commit(self.toPlainText(), self._initial_text)
+            except Exception:
+                pass
+        super().focusOutEvent(event)
+        self._initial_text = self.toPlainText()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -92,6 +113,7 @@ class MainWindow(QMainWindow):
         self.current_indirect_references = []
         self.current_main_section = "character"
         self.current_skill_category = "allgemein"
+        self.current_inventory_category = "inventory_01"
         self.skill_source_infos = {}
         self.skills_debug_sources = True
         self.skill_sheet_mapping_config = None
@@ -108,6 +130,10 @@ class MainWindow(QMainWindow):
         self._settings_checkbox_asset_false = "icons/checkmark_false.png"
         self.settings_character_active_label = None
         self.settings_character_combo = None
+        self._inventory_loading = False
+        self._inventory_table_bindings = {}
+        self._inventory_money_fields = {}
+        self._inventory_money_delta_fields = {}
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -2353,6 +2379,59 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             print("[SKILLS EDIT ERROR]", str(exc))
 
+    def is_skill_note_editable(self, source_info):
+        if not isinstance(source_info, dict):
+            return False
+        if source_info.get("row") is None:
+            return False
+        if str(source_info.get("sheet_name", "")) != "Fertigkeiten":
+            return False
+        cell_ref = str(source_info.get("note_cell", "") or "").strip().upper()
+        return bool(re.fullmatch(r"BE[0-9]+", cell_ref))
+
+    def save_skill_text_cell_value(self, source_key, field_type, new_text, initial_text):
+        source_info = self.skill_source_infos.get(source_key)
+        if not isinstance(source_info, dict):
+            return
+        if field_type == "specialization":
+            if not self.is_skill_specialization_editable(source_info):
+                return
+            cell_ref = str(source_info.get("specialization_cell", "") or "").strip().upper()
+        elif field_type == "note":
+            if not self.is_skill_note_editable(source_info):
+                return
+            cell_ref = str(source_info.get("note_cell", "") or "").strip().upper()
+        else:
+            return
+
+        sheet_name = str(source_info.get("sheet_name", "Fertigkeiten"))
+        old_value = str(initial_text if initial_text is not None else self.get_cache_cell_value(sheet_name, cell_ref, "") or "")
+        normalized_new_value = str(new_text if new_text is not None else "").strip()
+        if normalized_new_value == old_value:
+            return
+        try:
+            tag = "SPEC" if field_type == "specialization" else "NOTE"
+            print(f'[SKILLS EDIT {tag}] {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
+            self.loader.set_cell_value(sheet_name, cell_ref, normalized_new_value)
+            self.loader.save_active_character_json()
+            print("[SKILLS EDIT SAVE] active character saved")
+            self.create_tabs_from_cache()
+            self.show_main_section("skills")
+        except Exception as exc:
+            print("[SKILLS EDIT ERROR]", str(exc))
+
+    def _estimate_skill_text_height(self, text, width, font_size, min_row_h, max_row_h=0):
+        safe_width = max(20, int(width) - 8)
+        font = self.font()
+        font.setPointSize(max(8, int(font_size)))
+        metrics = font.metrics()
+        rect = metrics.boundingRect(QRect(0, 0, safe_width, 5000), int(Qt.TextWordWrap), str(text or ""))
+        text_height = max(metrics.lineSpacing() + 6, rect.height() + 10)
+        row_height = max(int(min_row_h), text_height)
+        if int(max_row_h) > 0:
+            row_height = min(row_height, int(max_row_h))
+        return row_height
+
     def build_roll20_command(self, dice_count, keep_mode, skill_bonus, manual_bonus, extra_bonuses=None):
         try:
             dice_count = int(dice_count)
@@ -3423,24 +3502,40 @@ class MainWindow(QMainWindow):
     def _build_inventory_section_from_columns(
         self, sheet_cache, section_id, title, header_row, name_col, pl_col, count_col
     ):
-        max_row = header_row
+        max_row = header_row + 20
+        data_cols = {name_col, pl_col, count_col}
         for cell_ref in sheet_cache.keys():
-            row, _col = self._inventory_cell_sort_key(cell_ref)
-            if row > max_row:
+            row, col = self._inventory_cell_sort_key(cell_ref)
+            if col not in data_cols:
+                continue
+            value = self._inventory_cache_text(sheet_cache, cell_ref)
+            if row > header_row and value and row > max_row:
                 max_row = row
 
         rows = []
         for row_index in range(header_row + 1, max_row + 1):
+            name_cell_ref = self._inventory_cell_ref(name_col, row_index)
+            pl_cell_ref = self._inventory_cell_ref(pl_col, row_index)
+            count_cell_ref = self._inventory_cell_ref(count_col, row_index)
             name = self._inventory_cache_text(
-                sheet_cache, self._inventory_cell_ref(name_col, row_index)
+                sheet_cache, name_cell_ref
             )
-            pl = self._inventory_cache_text(sheet_cache, self._inventory_cell_ref(pl_col, row_index))
+            pl = self._inventory_cache_text(sheet_cache, pl_cell_ref)
             count = self._inventory_cache_text(
-                sheet_cache, self._inventory_cell_ref(count_col, row_index)
+                sheet_cache, count_cell_ref
             )
-            if not name and not pl and not count:
-                continue
-            rows.append({"name": name, "pl": pl, "count": count})
+            rows.append(
+                {
+                    "name": name,
+                    "pl": pl,
+                    "count": count,
+                    "name_cell": name_cell_ref,
+                    "pl_cell": pl_cell_ref,
+                    "count_cell": count_cell_ref,
+                    "is_empty_slot": not bool(name or pl or count),
+                    "storage": "sheet",
+                }
+            )
 
         header = (
             f"{self._inventory_cell_ref(name_col, header_row)}:"
@@ -3548,39 +3643,584 @@ class MainWindow(QMainWindow):
             )
         return {"money": money, "sections": sections}
 
+    def _sanitize_inventory_category_id(self, text):
+        normalized = re.sub(r"[^a-z0-9]+", "_", str(text or "").strip().lower())
+        normalized = re.sub(r"_+", "_", normalized).strip("_")
+        return normalized or "inventory_extra"
+
+    def _is_inventory_subsection_header_row(self, row):
+        if not isinstance(row, dict):
+            return False
+        name = str(row.get("name", "") or "").strip()
+        pl = str(row.get("pl", "") or "").strip().lower()
+        count = str(row.get("count", "") or "").strip().lower()
+        if not name:
+            return False
+        return pl == "pl" and count == "anzahl"
+
+    def build_inventory_categories(self, sections):
+        ordered_categories = []
+        by_id = {}
+
+        def ensure_category(cat_id, title, header_title, always_show=False):
+            existing = by_id.get(cat_id)
+            if existing is not None:
+                return existing
+            category = {
+                "id": cat_id,
+                "title": title,
+                "header_title": header_title,
+                "rows": [],
+                "always_show": bool(always_show),
+            }
+            by_id[cat_id] = category
+            ordered_categories.append(category)
+            return category
+
+        section_title_map = {
+            "inventory_left": ("Inventar 01", "Inventar", True),
+            "inventory_middle": ("Inventar 02", "Inventar", True),
+            "books": ("Bücher", "Bücher", False),
+        }
+
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            section_id = str(section.get("id", "") or "")
+            default = section_title_map.get(
+                section_id,
+                (str(section.get("title", "Inventar")), str(section.get("title", "Inventar")), False),
+            )
+            category = ensure_category(section_id, default[0], default[1], always_show=default[2])
+            rows = section.get("rows", [])
+            if not isinstance(rows, list):
+                rows = []
+
+            dynamic_category = None
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                if self._is_inventory_subsection_header_row(row):
+                    subsection_title = str(row.get("name", "") or "").strip()
+                    dynamic_id = f"sub_{self._sanitize_inventory_category_id(subsection_title)}"
+                    dynamic_category = ensure_category(
+                        dynamic_id,
+                        subsection_title.title(),
+                        subsection_title.title(),
+                        always_show=False,
+                    )
+                    continue
+                if dynamic_category is not None:
+                    dynamic_category["rows"].append(row)
+                else:
+                    category["rows"].append(row)
+
+        visible_categories = []
+        for category in ordered_categories:
+            if category.get("always_show"):
+                visible_categories.append(category)
+                continue
+            rows = category.get("rows", [])
+            if isinstance(rows, list) and rows:
+                visible_categories.append(category)
+        return visible_categories
+
+    def get_inventory_tab_label(self, slot_id, default_label):
+        try:
+            labels = self.loader.get_inventory_tab_labels()
+            if isinstance(labels, dict):
+                value = labels.get(str(slot_id))
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        except Exception:
+            pass
+        return str(default_label)
+
+    def get_inventory_custom_rows(self, slot_id):
+        try:
+            rows = self.loader.get_inventory_custom_rows(slot_id)
+        except Exception:
+            rows = []
+        if not isinstance(rows, list):
+            return []
+        result = []
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                row = {}
+            result.append(
+                {
+                    "name": str(row.get("name", "") or ""),
+                    "pl": str(row.get("pl", "") or ""),
+                    "count": str(row.get("count", "") or ""),
+                    "storage": "custom",
+                    "custom_slot_id": str(slot_id),
+                    "custom_row_index": index,
+                    "is_empty_slot": not bool(
+                        str(row.get("name", "") or "")
+                        or str(row.get("pl", "") or "")
+                        or str(row.get("count", "") or "")
+                    ),
+                }
+            )
+        return result
+
+    def _has_inventory_sheet_mapping(self, row):
+        if not isinstance(row, dict):
+            return False
+        return bool(
+            str(row.get("name_cell", "") or "").strip()
+            or str(row.get("pl_cell", "") or "").strip()
+            or str(row.get("count_cell", "") or "").strip()
+        )
+
+    def build_inventory_table_rows(self, category, min_rows):
+        slot_id = str(category.get("id", "") if isinstance(category, dict) else "")
+        rows = list(category.get("rows", []) if isinstance(category, dict) else [])
+        normalized_rows = []
+        has_sheet_mapping = False
+        for row in rows:
+            if not isinstance(row, dict):
+                row = {}
+            row = dict(row)
+            if self._has_inventory_sheet_mapping(row):
+                row["storage"] = "sheet"
+                has_sheet_mapping = True
+            else:
+                row.setdefault("storage", "custom")
+                row.setdefault("custom_slot_id", slot_id)
+            row["is_empty_slot"] = not bool(
+                str(row.get("name", "") or "")
+                or str(row.get("pl", "") or "")
+                or str(row.get("count", "") or "")
+            )
+            normalized_rows.append(row)
+
+        custom_rows = self.get_inventory_custom_rows(slot_id)
+        if not has_sheet_mapping:
+            normalized_rows = custom_rows
+        else:
+            for row in custom_rows:
+                if not isinstance(row, dict):
+                    continue
+                if str(row.get("name", "") or "") or str(row.get("pl", "") or "") or str(row.get("count", "") or ""):
+                    normalized_rows.append(row)
+
+        min_rows = max(0, int(min_rows or 0))
+        next_custom_index = 0
+        for row in custom_rows:
+            if not isinstance(row, dict):
+                continue
+            try:
+                next_custom_index = max(next_custom_index, int(row.get("custom_row_index", -1)) + 1)
+            except Exception:
+                continue
+        while len(normalized_rows) < min_rows:
+            normalized_rows.append(
+                {
+                    "name": "",
+                    "pl": "",
+                    "count": "",
+                    "storage": "custom",
+                    "custom_slot_id": slot_id,
+                    "custom_row_index": next_custom_index,
+                    "is_empty_slot": True,
+                }
+            )
+            next_custom_index += 1
+        return normalized_rows
+
+    def build_inventory_slot_categories(self, sections):
+        section_map = {}
+        base_rows_map = {}
+        dynamic_sections = []
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            section_id = str(section.get("id", "") or "")
+            section_map[section_id] = section
+            base_rows_map[section_id] = []
+
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            section_id = str(section.get("id", "") or "")
+            rows = section.get("rows", [])
+            if not isinstance(rows, list):
+                continue
+            current_dynamic = None
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                if self._is_inventory_subsection_header_row(row):
+                    dynamic_title = str(row.get("name", "") or "").strip()
+                    current_dynamic = {"title": dynamic_title.title(), "rows": []}
+                    dynamic_sections.append(current_dynamic)
+                    continue
+                if current_dynamic is not None:
+                    current_dynamic["rows"].append(row)
+                    continue
+                base_rows_map.setdefault(section_id, []).append(row)
+
+        if len(dynamic_sections) > 2:
+            print("[INVENTORY WARNING] more dynamic sections found than slots")
+        dynamic_sections = dynamic_sections[:2]
+
+        slots = [
+            {
+                "id": "inventory_01",
+                "default_label": "Inventar 01",
+                "header_title": "Inventar",
+                "rows": list(base_rows_map.get("inventory_left", [])),
+            },
+            {
+                "id": "inventory_02",
+                "default_label": "Inventar 02",
+                "header_title": "Inventar",
+                "rows": list(base_rows_map.get("inventory_middle", [])),
+            },
+            {
+                "id": "inventory_03",
+                "default_label": "Inventar 03",
+                "header_title": "Bücher",
+                "rows": list(base_rows_map.get("books", [])),
+            },
+            {
+                "id": "inventory_04",
+                "default_label": "Inventar 04",
+                "header_title": dynamic_sections[0]["title"] if len(dynamic_sections) > 0 else "Inventar",
+                "rows": list(dynamic_sections[0]["rows"]) if len(dynamic_sections) > 0 else [],
+            },
+            {
+                "id": "inventory_05",
+                "default_label": "Inventar 05",
+                "header_title": dynamic_sections[1]["title"] if len(dynamic_sections) > 1 else "Inventar",
+                "rows": list(dynamic_sections[1]["rows"]) if len(dynamic_sections) > 1 else [],
+            },
+        ]
+
+        for slot in slots:
+            slot["title"] = self.get_inventory_tab_label(slot["id"], slot["default_label"])
+        return slots
+
     def render_inventory_screen(self):
         if self.content_layer is None:
             return
 
-        layout_config = self.load_inventory_layout_config()
-        screen_cfg = layout_config.get("inventory_screen", {})
-        inventory_data = self.get_inventory_display_data()
+        self._inventory_loading = True
+        self._inventory_table_bindings = {}
+        try:
+            layout_config = self.load_inventory_layout_config()
+            screen_cfg = layout_config.get("inventory_screen", {})
+            inventory_data = self.get_inventory_display_data()
+            inventory_categories = self.build_inventory_slot_categories(inventory_data.get("sections", []))
+            available_ids = [str(cat.get("id", "")) for cat in inventory_categories if isinstance(cat, dict)]
+            if self.current_inventory_category not in available_ids:
+                self.current_inventory_category = "inventory_01"
 
-        screen = QFrame(self.content_layer)
-        screen.setGeometry(
-            self._safe_int(screen_cfg.get("x", 20), 20),
-            self._safe_int(screen_cfg.get("y", 20), 20),
-            self._safe_int(screen_cfg.get("w", 1420), 1420),
-            self._safe_int(screen_cfg.get("h", 820), 820),
+            screen = QFrame(self.content_layer)
+            screen.setGeometry(
+                self._safe_int(screen_cfg.get("x", 20), 20),
+                self._safe_int(screen_cfg.get("y", 20), 20),
+                self._safe_int(screen_cfg.get("w", 1420), 1420),
+                self._safe_int(screen_cfg.get("h", 820), 820),
+            )
+            screen.setStyleSheet("background: transparent;")
+            screen.show()
+
+            title_cfg = screen_cfg.get("title", {})
+            self.create_panel_text(
+                screen,
+                title_cfg,
+                str(title_cfg.get("text", "Inventar")),
+                self._safe_int(title_cfg.get("font_size", 24), 24),
+                str(title_cfg.get("color", "#f2d28b")),
+                bold=True,
+                align=str(title_cfg.get("align", "center")),
+            )
+
+            self.render_inventory_money_panel(screen, screen_cfg.get("money", {}), inventory_data["money"])
+            self.render_inventory_category_tabs(screen, screen_cfg, inventory_categories)
+            self.render_inventory_active_category_table(screen, screen_cfg, inventory_categories)
+        finally:
+            self._inventory_loading = False
+
+    def on_inventory_category_clicked(self, category_id):
+        self.current_inventory_category = str(category_id or "")
+        self.show_main_section("inventory")
+
+    def rename_inventory_category(self, slot_id):
+        slot_id = str(slot_id or "").strip()
+        if not slot_id:
+            return
+        default_labels = {
+            "inventory_01": "Inventar 01",
+            "inventory_02": "Inventar 02",
+            "inventory_03": "Inventar 03",
+            "inventory_04": "Inventar 04",
+            "inventory_05": "Inventar 05",
+        }
+        current_label = self.get_inventory_tab_label(slot_id, default_labels.get(slot_id, slot_id))
+        new_label, ok = QInputDialog.getText(
+            self,
+            "Inventar-Tab umbenennen",
+            "Name:",
+            text=current_label,
         )
-        screen.setStyleSheet("background: transparent;")
-        screen.show()
+        if not ok:
+            return
+        normalized_label = str(new_label).strip()
+        if not normalized_label:
+            normalized_label = default_labels.get(slot_id, current_label)
+        if normalized_label == current_label:
+            return
+        try:
+            self.loader.set_inventory_tab_label(slot_id, normalized_label)
+            self.loader.save_active_character_json()
+            print(f'[INVENTORY TAB RENAME] {slot_id} = "{normalized_label}"')
+            self.show_main_section("inventory")
+        except Exception as exc:
+            print("[INVENTORY TAB RENAME ERROR]", str(exc))
 
-        title_cfg = screen_cfg.get("title", {})
-        self.create_panel_text(
-            screen,
-            title_cfg,
-            str(title_cfg.get("text", "Inventar")),
-            self._safe_int(title_cfg.get("font_size", 24), 24),
-            str(title_cfg.get("color", "#f2d28b")),
-            bold=True,
-            align=str(title_cfg.get("align", "center")),
+    def render_inventory_category_tabs(self, parent, screen_cfg, categories):
+        tabs_cfg = screen_cfg.get("category_tabs", {})
+        if not isinstance(tabs_cfg, dict):
+            tabs_cfg = {}
+        tabs_container = QFrame(parent)
+        tabs_container.setGeometry(
+            self._safe_int(tabs_cfg.get("x", 20), 20),
+            self._safe_int(tabs_cfg.get("y", 175), 175),
+            self._safe_int(tabs_cfg.get("w", 1380), 1380),
+            self._safe_int(tabs_cfg.get("h", 50), 50),
+        )
+        tabs_container.setStyleSheet("background: transparent;")
+        tabs_container.show()
+
+        button_w = self._safe_int(tabs_cfg.get("button_w", 220), 220)
+        button_h = self._safe_int(tabs_cfg.get("button_h", 42), 42)
+        button_gap = self._safe_int(tabs_cfg.get("gap", 18), 18)
+        tab_font_size = self._safe_int(tabs_cfg.get("font_size", 20), 20)
+        active_color = str(tabs_cfg.get("active_color", "#f2d28b"))
+        inactive_color = str(tabs_cfg.get("inactive_color", "#9a8560"))
+        hover_color = str(tabs_cfg.get("hover_color", "#ffffff"))
+        use_asset_buttons = bool(tabs_cfg.get("use_asset_buttons", False))
+        default_asset = str(tabs_cfg.get("asset", "buttons/menu_button_small.png") or "").strip()
+        active_asset = str(tabs_cfg.get("active_asset", default_asset) or "").strip()
+        inactive_asset = str(tabs_cfg.get("inactive_asset", default_asset) or "").strip()
+
+        for index, category in enumerate(categories):
+            if not isinstance(category, dict):
+                continue
+            category_id = str(category.get("id", "") or "")
+            if not category_id:
+                continue
+            title = str(category.get("title", category_id))
+            is_active = category_id == self.current_inventory_category
+            button = QPushButton(tabs_container)
+            button.setGeometry(index * (button_w + button_gap), 0, button_w, button_h)
+            button.setText(title)
+            button.setCursor(Qt.PointingHandCursor)
+            button.setProperty("inventory_category_id", category_id)
+            button.installEventFilter(self)
+            color = active_color if is_active else inactive_color
+            border = "#b88a35" if is_active else "rgba(180, 140, 70, 90)"
+            bg = "rgba(35, 24, 12, 185)" if is_active else "rgba(8, 8, 8, 125)"
+            asset_for_state = active_asset if is_active else inactive_asset
+            asset_path = self.resolve_ui_asset_path(asset_for_state) if asset_for_state else None
+            has_asset = bool(use_asset_buttons and asset_path is not None and asset_path.exists())
+            if has_asset:
+                button.setStyleSheet(
+                    "QPushButton {"
+                    f"color: {color};"
+                    f"font-size: {tab_font_size}px;"
+                    "font-weight: 700;"
+                    "padding: 0px;"
+                    "border: none;"
+                    f"border-image: url({asset_path.as_posix()}) 0 0 0 0 stretch stretch;"
+                    "background: transparent;"
+                    "}"
+                    "QPushButton:hover {"
+                    f"color: {hover_color};"
+                    "}"
+                )
+            else:
+                button.setStyleSheet(
+                    "QPushButton {"
+                    f"background-color: {bg};"
+                    f"color: {color};"
+                    f"border: 1px solid {border};"
+                    "border-radius: 4px;"
+                    f"font-size: {tab_font_size}px;"
+                    "font-weight: 700;"
+                    "padding: 0px;"
+                    "}"
+                    f"QPushButton:hover {{ border: 1px solid #f2d28b; color: {hover_color}; }}"
+                )
+            button.clicked.connect(
+                lambda checked=False, cid=category_id: self.on_inventory_category_clicked(cid)
+            )
+            button.show()
+
+    def render_inventory_active_category_table(self, parent, screen_cfg, categories):
+        table_cfg = screen_cfg.get("table", {})
+        if not isinstance(table_cfg, dict):
+            table_cfg = {}
+        active_category = None
+        for category in categories:
+            if isinstance(category, dict) and str(category.get("id", "")) == self.current_inventory_category:
+                active_category = category
+                break
+        if active_category is None and categories:
+            active_category = categories[0]
+        if active_category is None:
+            active_category = {"id": "inventory_left", "title": "Inventar 01", "header_title": "Inventar", "rows": []}
+        self.render_inventory_single_table_widget(parent, table_cfg, active_category)
+
+    def render_inventory_single_table_widget(self, parent, table_cfg, category):
+        table_frame = QFrame(parent)
+        table_frame.setGeometry(
+            self._safe_int(table_cfg.get("x", 20), 20),
+            self._safe_int(table_cfg.get("y", 235), 235),
+            self._safe_int(table_cfg.get("w", 1380), 1380),
+            self._safe_int(table_cfg.get("h", 560), 560),
+        )
+        border_color = str(table_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        background = str(table_cfg.get("background", "rgba(5, 5, 5, 95)"))
+        table_frame.setStyleSheet(
+            f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+        )
+        table_frame.show()
+
+        columns = table_cfg.get("columns", {})
+        if not isinstance(columns, dict):
+            columns = {}
+        name_col = columns.get("name", {})
+        pl_col = columns.get("pl", {})
+        count_col = columns.get("count", {})
+        if not isinstance(name_col, dict):
+            name_col = {}
+        if not isinstance(pl_col, dict):
+            pl_col = {}
+        if not isinstance(count_col, dict):
+            count_col = {}
+
+        header_title = str(category.get("title", "") or category.get("header_title", "Inventar"))
+        table = QTableWidget(table_frame)
+        table.setGeometry(6, 6, max(1, table_frame.width() - 12), max(1, table_frame.height() - 12))
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(
+            [
+                header_title,
+                str(pl_col.get("title", "PL")),
+                str(count_col.get("title", "Anzahl")),
+            ]
+        )
+        table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.SelectedClicked
+        )
+        table.setSelectionMode(QAbstractItemView.SingleSelection)
+        table.setSelectionBehavior(QAbstractItemView.SelectItems)
+        table.setFocusPolicy(Qt.StrongFocus)
+        table.setWordWrap(True)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.verticalHeader().setVisible(False)
+        table.setAlternatingRowColors(False)
+        table.setShowGrid(True)
+
+        font_size = self._safe_int(table_cfg.get("font_size", 15), 15)
+        header_font_size = self._safe_int(table_cfg.get("header_font_size", 18), 18)
+        header_color = str(table_cfg.get("header_color", "#f2d28b"))
+        text_color = str(table_cfg.get("text_color", "#ffffff"))
+        value_color = str(table_cfg.get("value_color", "#7fd0ff"))
+        table.setStyleSheet(
+            "QTableWidget {"
+            f"background: {background};"
+            f"color: {text_color};"
+            f"gridline-color: {border_color};"
+            f"font-size: {font_size}px;"
+            "border: none;"
+            "selection-background-color: rgba(242, 210, 139, 30);"
+            "selection-color: #ffffff;"
+            "}"
+            "QHeaderView::section {"
+            "background: rgba(24, 16, 8, 175);"
+            f"color: {header_color};"
+            f"font-size: {header_font_size}px;"
+            "font-weight: 700;"
+            f"border: 1px solid {border_color};"
+            "padding: 3px;"
+            "}"
         )
 
-        self.render_inventory_money_panel(screen, screen_cfg.get("money", {}), inventory_data["money"])
-        self.render_inventory_tables(screen, screen_cfg.get("tables", {}), inventory_data["sections"])
+        rows = category.get("rows", [])
+        if not isinstance(rows, list):
+            rows = []
+        min_table_rows = self._safe_int(table_cfg.get("min_rows", 0), 0)
+        rows = self.build_inventory_table_rows(category, min_table_rows)
+        table.blockSignals(True)
+        table.setRowCount(len(rows))
+        for row_index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                row = {}
+            is_empty_slot = bool(row.get("is_empty_slot"))
+            display_values = [
+                "" if is_empty_slot else (str(row.get("name", "")).strip() or "(ohne Name)"),
+                "" if is_empty_slot else (str(row.get("pl", "")).strip() or "-"),
+                "" if is_empty_slot else (str(row.get("count", "")).strip() or "-"),
+            ]
+            raw_values = [
+                str(row.get("name", "") or ""),
+                str(row.get("pl", "") or ""),
+                str(row.get("count", "") or ""),
+            ]
+            for column_index, value in enumerate(display_values):
+                item = QTableWidgetItem(value)
+                item.setData(Qt.UserRole, raw_values[column_index])
+                item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setBackground(QColor(0, 0, 0, 0))
+                item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
+                item.setTextAlignment(
+                    Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
+                )
+                table.setItem(row_index, column_index, item)
+
+        column_widths = [
+            self._safe_int(name_col.get("w", 1140), 1140),
+            self._safe_int(pl_col.get("w", 80), 80),
+            self._safe_int(count_col.get("w", 120), 120),
+        ]
+        available_width = max(1, table.width() - 4)
+        configured_width = sum(column_widths)
+        if configured_width > available_width:
+            overflow = configured_width - available_width
+            column_widths[0] = max(120, column_widths[0] - overflow)
+        for column_index, width in enumerate(column_widths):
+            table.setColumnWidth(column_index, max(1, width))
+
+        table.resizeRowsToContents()
+        min_row_h = self._safe_int(table_cfg.get("min_row_h", 34), 34)
+        max_row_h = self._safe_int(table_cfg.get("max_row_h", 90), 90)
+        self._apply_inventory_row_heights(table, min_row_h, max_row_h)
+        table.blockSignals(False)
+
+        self._inventory_table_bindings[id(table)] = {
+            "section_id": str(category.get("id", "")),
+            "rows": rows,
+            "min_row_h": min_row_h,
+            "max_row_h": max_row_h,
+        }
+        table.cellChanged.connect(
+            lambda row_index, column_index, widget=table: self.on_inventory_table_cell_changed(
+                widget, row_index, column_index
+            )
+        )
+        table.show()
 
     def render_inventory_money_panel(self, parent, money_cfg, money):
+        self._inventory_money_fields = {}
+        self._inventory_money_delta_fields = {}
         panel = QFrame(parent)
         panel.setGeometry(
             self._safe_int(money_cfg.get("x", 20), 20),
@@ -3615,6 +4255,12 @@ class MainWindow(QMainWindow):
         columns = money_cfg.get("columns", [])
         if not isinstance(columns, list) or not columns:
             columns = self.get_default_inventory_layout_config()["inventory_screen"]["money"]["columns"]
+        money_cells = {
+            "gulden": "B9",
+            "schilling": "E9",
+            "heller": "H9",
+            "pfifferling": "K9",
+        }
         column_w = max(1, (panel.width() - 24) // max(1, len(columns)))
         for index, column in enumerate(columns):
             if not isinstance(column, dict):
@@ -3630,15 +4276,248 @@ class MainWindow(QMainWindow):
                 bold=True,
                 align="center",
             )
-            self.create_panel_text(
-                panel,
-                {"x": x, "y": 68, "w": column_w - 8, "h": 30},
-                str(money.get(value_id, "-")),
-                value_font,
-                value_color,
-                bold=True,
-                align="center",
+            money_edit = QLineEdit(panel)
+            money_edit.setGeometry(x, 68, max(1, column_w - 8), 30)
+            money_edit.setAlignment(Qt.AlignCenter)
+            money_edit.setStyleSheet(
+                "QLineEdit {"
+                "background: rgba(8, 8, 8, 165);"
+                "border: 1px solid rgba(242, 210, 139, 70);"
+                f"color: {value_color};"
+                f"font-size: {value_font}px;"
+                "font-weight: 700;"
+                "padding: 0px 4px;"
+                "}"
             )
+            money_edit.setProperty("inventory_money_cell", money_cells.get(value_id, ""))
+            money_edit.blockSignals(True)
+            money_edit.setText(str(money.get(value_id, "")))
+            money_edit.blockSignals(False)
+            money_edit.editingFinished.connect(
+                lambda field=money_edit: self.on_inventory_money_edit_finished(field)
+            )
+            self._inventory_money_fields[value_id] = money_edit
+            money_edit.show()
+
+        delta_row_cfg = money_cfg.get("delta_row", {})
+        if not isinstance(delta_row_cfg, dict):
+            delta_row_cfg = {}
+        delta_buttons_cfg = money_cfg.get("delta_buttons", {})
+        if not isinstance(delta_buttons_cfg, dict):
+            delta_buttons_cfg = {}
+
+        delta_label = str(delta_row_cfg.get("label", "Änderung"))
+        label_x = self._safe_int(delta_row_cfg.get("label_x", 12), 12)
+        label_y = self._safe_int(delta_row_cfg.get("label_y", 101), 101)
+        label_w = self._safe_int(delta_row_cfg.get("label_w", 100), 100)
+        label_h = self._safe_int(delta_row_cfg.get("label_h", 22), 22)
+        field_y = self._safe_int(delta_row_cfg.get("field_y", 124), 124)
+        field_h = self._safe_int(delta_row_cfg.get("field_h", 26), 26)
+        field_gap = self._safe_int(delta_row_cfg.get("field_gap", 10), 10)
+        reserve_button_space = bool(delta_row_cfg.get("reserve_button_space", False))
+
+        self.create_panel_text(
+            panel,
+            {"x": label_x, "y": label_y, "w": label_w, "h": label_h},
+            delta_label,
+            label_font,
+            label_color,
+            bold=True,
+            align="left",
+        )
+
+        button_w = self._safe_int(delta_row_cfg.get("buttons_w", delta_buttons_cfg.get("w", 32)), 32)
+        button_h = self._safe_int(delta_row_cfg.get("buttons_h", delta_buttons_cfg.get("h", 28)), 28)
+        button_gap = self._safe_int(delta_row_cfg.get("buttons_gap", delta_buttons_cfg.get("gap", 6)), 6)
+        button_font_size = self._safe_int(delta_row_cfg.get("font_size", delta_buttons_cfg.get("font_size", 16)), 16)
+        buttons_y = self._safe_int(delta_row_cfg.get("buttons_y", delta_buttons_cfg.get("y", field_y)), field_y)
+        buttons_right_margin = self._safe_int(delta_row_cfg.get("buttons_right_margin", 12), 12)
+
+        fields_left = label_x
+        fields_right = panel.width() - 12
+        if reserve_button_space:
+            button_space = (button_w * 2) + button_gap + buttons_right_margin + 12
+            fields_right = max(fields_left + 40, panel.width() - button_space)
+        available_field_w = max(40, fields_right - fields_left)
+        if len(columns) > 0:
+            delta_column_w = max(20, available_field_w // len(columns))
+        else:
+            delta_column_w = available_field_w
+        delta_field_w_cfg = delta_row_cfg.get("delta_field_w", None)
+        delta_field_w = self._safe_int(delta_field_w_cfg, delta_column_w - field_gap) if delta_field_w_cfg is not None else (delta_column_w - field_gap)
+
+        for index, column in enumerate(columns):
+            if not isinstance(column, dict):
+                continue
+            x = fields_left + index * delta_column_w
+            value_id = str(column.get("id", ""))
+            delta_edit = QLineEdit(panel)
+            delta_edit.setGeometry(x, field_y, max(1, delta_field_w), max(1, field_h))
+            delta_edit.setAlignment(Qt.AlignCenter)
+            delta_edit.setText("0")
+            delta_edit.setStyleSheet(
+                "QLineEdit {"
+                "background: rgba(8, 8, 8, 165);"
+                "border: 1px solid rgba(242, 210, 139, 70);"
+                f"color: {value_color};"
+                f"font-size: {value_font}px;"
+                "font-weight: 700;"
+                "padding: 0px 4px;"
+                "}"
+            )
+            self._inventory_money_delta_fields[value_id] = delta_edit
+            delta_edit.show()
+
+        if "minus_x" in delta_buttons_cfg:
+            minus_x = self._safe_int(delta_buttons_cfg.get("minus_x"), panel.width() - buttons_right_margin - ((button_w * 2) + button_gap))
+        else:
+            minus_x = panel.width() - buttons_right_margin - ((button_w * 2) + button_gap)
+        if "plus_x" in delta_buttons_cfg:
+            plus_x = self._safe_int(delta_buttons_cfg.get("plus_x"), minus_x + button_w + button_gap)
+        else:
+            plus_x = minus_x + button_w + button_gap
+        minus_button = QPushButton("-", panel)
+        plus_button = QPushButton("+", panel)
+        minus_button.setGeometry(max(0, minus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
+        plus_button.setGeometry(max(0, plus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
+        for button in (minus_button, plus_button):
+            button.setCursor(Qt.PointingHandCursor)
+            button.setStyleSheet(
+                "QPushButton {"
+                "background: rgba(35, 24, 12, 185);"
+                f"color: {title_color};"
+                "border: 1px solid rgba(242, 210, 139, 90);"
+                "border-radius: 4px;"
+                f"font-size: {button_font_size}px;"
+                "font-weight: 700;"
+                "padding: 0px;"
+                "}"
+                "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
+            )
+        minus_button.clicked.connect(lambda: self.on_inventory_money_delta_apply("-"))
+        plus_button.clicked.connect(lambda: self.on_inventory_money_delta_apply("+"))
+        minus_button.show()
+        plus_button.show()
+
+    def on_inventory_money_edit_finished(self, field):
+        if self._inventory_loading:
+            return
+        if field is None:
+            return
+        cell_ref = str(field.property("inventory_money_cell") or "").strip().upper()
+        if not cell_ref:
+            return
+        new_value = str(field.text())
+        old_value = str(self.get_cache_cell_value("Inventar", cell_ref, "") or "")
+        if new_value == old_value:
+            return
+        try:
+            self.loader.set_cell_value("Inventar", cell_ref, new_value)
+            self.loader.save_active_character_json()
+            print(f'[INVENTORY MONEY EDIT] Inventar!{cell_ref} = "{new_value}"')
+            print("[INVENTORY SAVE] active character saved")
+        except Exception as exc:
+            print("[INVENTORY EDIT ERROR]", str(exc))
+
+    def _inventory_parse_non_negative_int(self, value):
+        text = str(value or "").strip()
+        if not text:
+            return 0
+        try:
+            number = int(float(text))
+        except Exception:
+            return 0
+        return max(0, number)
+
+    def money_to_pfifferling(self, gulden, schilling, heller, pfifferling):
+        return (
+            int(gulden) * 1000
+            + int(schilling) * 100
+            + int(heller) * 10
+            + int(pfifferling)
+        )
+
+    def pfifferling_to_money(self, total_pfifferling):
+        total = max(0, int(total_pfifferling))
+        gulden = total // 1000
+        rest = total % 1000
+        schilling = rest // 100
+        rest = rest % 100
+        heller = rest // 10
+        pfifferling = rest % 10
+        return {
+            "gulden": gulden,
+            "schilling": schilling,
+            "heller": heller,
+            "pfifferling": pfifferling,
+        }
+
+    def _inventory_get_wallet_money_values(self):
+        values = {}
+        for key in ("gulden", "schilling", "heller", "pfifferling"):
+            field = self._inventory_money_fields.get(key)
+            if field is not None:
+                values[key] = self._inventory_parse_non_negative_int(field.text())
+            else:
+                values[key] = self._inventory_parse_non_negative_int(
+                    self.get_cache_cell_value(
+                        "Inventar",
+                        {"gulden": "B9", "schilling": "E9", "heller": "H9", "pfifferling": "K9"}[key],
+                        0,
+                    )
+                )
+        return values
+
+    def on_inventory_money_delta_apply(self, op):
+        if self._inventory_loading:
+            return
+        op = str(op or "").strip()
+        if op not in {"+", "-"}:
+            return
+        wallet = self._inventory_get_wallet_money_values()
+        delta = {}
+        for key in ("gulden", "schilling", "heller", "pfifferling"):
+            field = self._inventory_money_delta_fields.get(key)
+            delta[key] = self._inventory_parse_non_negative_int(field.text() if field is not None else 0)
+        current_total = self.money_to_pfifferling(
+            wallet["gulden"], wallet["schilling"], wallet["heller"], wallet["pfifferling"]
+        )
+        delta_total = self.money_to_pfifferling(
+            delta["gulden"], delta["schilling"], delta["heller"], delta["pfifferling"]
+        )
+        result_total = current_total + delta_total if op == "+" else current_total - delta_total
+        if result_total < 0:
+            result_total = 0
+        result_money = self.pfifferling_to_money(result_total)
+        save_map = {
+            "gulden": "B9",
+            "schilling": "E9",
+            "heller": "H9",
+            "pfifferling": "K9",
+        }
+        try:
+            for key, cell_ref in save_map.items():
+                value = str(int(result_money.get(key, 0)))
+                self.loader.set_cell_value("Inventar", cell_ref, value)
+                field = self._inventory_money_fields.get(key)
+                if field is not None:
+                    field.blockSignals(True)
+                    field.setText(value)
+                    field.blockSignals(False)
+            self.loader.save_active_character_json()
+            print(
+                "[INVENTORY MONEY DELTA] "
+                f"op={op} input={delta['gulden']}/{delta['schilling']}/{delta['heller']}/{delta['pfifferling']} "
+                f"result={result_money.get('gulden', 0)}/{result_money.get('schilling', 0)}/"
+                f"{result_money.get('heller', 0)}/{result_money.get('pfifferling', 0)}"
+            )
+            print("[INVENTORY SAVE] active character saved")
+            for field in self._inventory_money_delta_fields.values():
+                if field is None:
+                    continue
+                field.setText("0")
+        except Exception as exc:
+            print("[INVENTORY MONEY DELTA ERROR]", str(exc))
 
     def get_inventory_wrapped_text_height(self, text, width, font_size, max_lines=0):
         font = QFont()
@@ -3849,9 +4728,14 @@ class MainWindow(QMainWindow):
                     str(count_col.get("title", "Anzahl")),
                 ]
             )
-            table.setEditTriggers(QTableWidget.NoEditTriggers)
-            table.setSelectionMode(QAbstractItemView.NoSelection)
-            table.setFocusPolicy(Qt.NoFocus)
+            table.setEditTriggers(
+                QAbstractItemView.DoubleClicked
+                | QAbstractItemView.EditKeyPressed
+                | QAbstractItemView.SelectedClicked
+            )
+            table.setSelectionMode(QAbstractItemView.SingleSelection)
+            table.setSelectionBehavior(QAbstractItemView.SelectItems)
+            table.setFocusPolicy(Qt.StrongFocus)
             table.setWordWrap(True)
             table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -3865,8 +4749,8 @@ class MainWindow(QMainWindow):
                 f"gridline-color: {border_color};"
                 f"font-size: {font_size}px;"
                 "border: none;"
-                "selection-background-color: transparent;"
-                "selection-color: inherit;"
+                "selection-background-color: rgba(242, 210, 139, 30);"
+                "selection-color: #ffffff;"
                 "}"
                 "QHeaderView::section {"
                 "background: rgba(24, 16, 8, 175);"
@@ -3881,24 +4765,31 @@ class MainWindow(QMainWindow):
             rows = section_data.get("rows", [])
             if not isinstance(rows, list):
                 rows = []
+            table.blockSignals(True)
             table.setRowCount(len(rows))
             for row_index, row in enumerate(rows):
                 if not isinstance(row, dict):
                     row = {}
-                values = [
+                display_values = [
                     str(row.get("name", "")).strip() or "(ohne Name)",
                     str(row.get("pl", "")).strip() or "-",
                     str(row.get("count", "")).strip() or "-",
                 ]
-                for column_index, value in enumerate(values):
-                    item = QTableWidgetItem(value)
-                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                    item.setBackground(QColor(0, 0, 0, 0))
-                    item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
-                    item.setTextAlignment(
-                        Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
-                    )
-                    table.setItem(row_index, column_index, item)
+                raw_values = [
+                    str(row.get("name", "") or ""),
+                    str(row.get("pl", "") or ""),
+                    str(row.get("count", "") or ""),
+                ]
+            for column_index, value in enumerate(display_values):
+                item = QTableWidgetItem(value)
+                item.setData(Qt.UserRole, raw_values[column_index])
+                item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setBackground(QColor(0, 0, 0, 0))
+                item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
+                item.setTextAlignment(
+                    Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
+                )
+                table.setItem(row_index, column_index, item)
 
             column_widths = [
                 self._safe_int(name_col.get("w", 320), 320),
@@ -3920,8 +4811,190 @@ class MainWindow(QMainWindow):
                 if max_row_h > 0:
                     height = min(max_row_h, height)
                 table.setRowHeight(row_index, height)
+            table.blockSignals(False)
+
+            self._inventory_table_bindings[id(table)] = {
+                "section_id": section_id,
+                "rows": rows,
+            }
+            table.cellChanged.connect(
+                lambda row_index, column_index, widget=table: self.on_inventory_table_cell_changed(
+                    widget, row_index, column_index
+                )
+            )
 
             table.show()
+
+    def _apply_inventory_row_heights(self, table, min_row_h, max_row_h):
+        for row_index in range(table.rowCount()):
+            height = table.rowHeight(row_index)
+            height = max(min_row_h, height)
+            if max_row_h > 0:
+                height = min(max_row_h, height)
+            table.setRowHeight(row_index, height)
+
+    def _is_inventory_row_empty(self, row):
+        if not isinstance(row, dict):
+            return True
+        return not bool(
+            str(row.get("name", "") or "")
+            or str(row.get("pl", "") or "")
+            or str(row.get("count", "") or "")
+        )
+
+    def _next_inventory_custom_row_index(self, rows, slot_id):
+        max_index = -1
+        slot_id = str(slot_id or "").strip()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            row_slot = str(row.get("custom_slot_id", "") or "").strip()
+            if row_slot and slot_id and row_slot != slot_id:
+                continue
+            if str(row.get("storage", "")).strip() != "custom":
+                continue
+            try:
+                max_index = max(max_index, int(row.get("custom_row_index", -1)))
+            except Exception:
+                continue
+        return max_index + 1
+
+    def _append_inventory_visual_empty_rows(self, table, binding, count):
+        if table is None or not isinstance(binding, dict):
+            return
+        rows = binding.get("rows", [])
+        if not isinstance(rows, list):
+            return
+        slot_id = str(binding.get("section_id", "") or "").strip()
+        next_index = self._next_inventory_custom_row_index(rows, slot_id)
+        table.blockSignals(True)
+        try:
+            for _ in range(max(0, int(count))):
+                row_data = {
+                    "name": "",
+                    "pl": "",
+                    "count": "",
+                    "storage": "custom",
+                    "custom_slot_id": slot_id,
+                    "custom_row_index": next_index,
+                    "is_empty_slot": True,
+                }
+                rows.append(row_data)
+                qt_row = table.rowCount()
+                table.insertRow(qt_row)
+                for column_index in range(3):
+                    item = QTableWidgetItem("")
+                    item.setData(Qt.UserRole, "")
+                    item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                    if column_index in (1, 2):
+                        item.setTextAlignment(Qt.AlignCenter)
+                    else:
+                        item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                    table.setItem(qt_row, column_index, item)
+                next_index += 1
+        finally:
+            table.blockSignals(False)
+
+    def on_inventory_table_cell_changed(self, table, row_index, column_index):
+        if self._inventory_loading:
+            return
+        binding = self._inventory_table_bindings.get(id(table))
+        if not isinstance(binding, dict):
+            return
+        rows = binding.get("rows", [])
+        if not isinstance(rows, list) or row_index < 0 or row_index >= len(rows):
+            return
+        row = rows[row_index]
+        if not isinstance(row, dict):
+            return
+
+        column_map = {
+            0: ("name", "name_cell"),
+            1: ("pl", "pl_cell"),
+            2: ("count", "count_cell"),
+        }
+        if column_index not in column_map:
+            return
+        value_key, cell_key = column_map[column_index]
+        cell_ref = str(row.get(cell_key, "") or "").strip().upper()
+
+        item = table.item(row_index, column_index)
+        if item is None:
+            return
+        new_value = str(item.text())
+        old_value = str(item.data(Qt.UserRole) or "")
+        if new_value == old_value:
+            return
+        was_row_empty = self._is_inventory_row_empty(row)
+        row_count_before = table.rowCount()
+
+        try:
+            if cell_ref:
+                self.loader.set_cell_value("Inventar", cell_ref, new_value)
+                self.loader.save_active_character_json()
+                item.setData(Qt.UserRole, new_value)
+                row[value_key] = new_value
+                row["is_empty_slot"] = not bool(
+                    str(row.get("name", "") or "")
+                    or str(row.get("pl", "") or "")
+                    or str(row.get("count", "") or "")
+                )
+                print(f'[INVENTORY EDIT] Inventar!{cell_ref} = "{new_value}"')
+                print("[INVENTORY SAVE] active character saved")
+            else:
+                slot_id = str(row.get("custom_slot_id", binding.get("section_id", "")) or "").strip()
+                custom_index = row.get("custom_row_index", row_index)
+                if not slot_id:
+                    return
+                self.loader.set_inventory_custom_row_value(slot_id, custom_index, value_key, new_value)
+                self.loader.save_active_character_json()
+                item.setData(Qt.UserRole, new_value)
+                row[value_key] = new_value
+                row["storage"] = "custom"
+                row["custom_slot_id"] = slot_id
+                try:
+                    row["custom_row_index"] = int(custom_index)
+                except Exception:
+                    row["custom_row_index"] = row_index
+                row["is_empty_slot"] = not bool(
+                    str(row.get("name", "") or "")
+                    or str(row.get("pl", "") or "")
+                    or str(row.get("count", "") or "")
+                )
+                print(f'[INVENTORY CUSTOM EDIT] {slot_id}[{custom_index}].{value_key} = "{new_value}"')
+                print("[INVENTORY SAVE] active character saved")
+
+            table.blockSignals(True)
+            try:
+                table.resizeRowToContents(row_index)
+                min_row_h = self._safe_int(binding.get("min_row_h", 34), 34)
+                max_row_h = self._safe_int(binding.get("max_row_h", 90), 90)
+                height = max(min_row_h, table.rowHeight(row_index))
+                if max_row_h > 0:
+                    height = min(max_row_h, height)
+                table.setRowHeight(row_index, height)
+            finally:
+                table.blockSignals(False)
+
+            is_row_empty_now = self._is_inventory_row_empty(row)
+            row_is_near_end = row_index >= max(0, row_count_before - 3)
+            if was_row_empty and not is_row_empty_now and row_is_near_end:
+                self._append_inventory_visual_empty_rows(table, binding, 3)
+                table.blockSignals(True)
+                try:
+                    table.resizeRowsToContents()
+                    self._apply_inventory_row_heights(
+                        table,
+                        self._safe_int(binding.get("min_row_h", 34), 34),
+                        self._safe_int(binding.get("max_row_h", 90), 90),
+                    )
+                finally:
+                    table.blockSignals(False)
+        except Exception as exc:
+            print("[INVENTORY EDIT ERROR]", str(exc))
+            table.blockSignals(True)
+            item.setText(old_value)
+            table.blockSignals(False)
 
     def render_inventory_tables(self, parent, tables_cfg, sections):
         section_by_id = {
@@ -4288,6 +5361,9 @@ class MainWindow(QMainWindow):
 
         header_h = self._safe_int(table_cfg.get("header_h", 42), 42)
         row_h = self._safe_int(table_cfg.get("row_h", 42), 42)
+        min_row_h = self._safe_int(table_cfg.get("min_row_h", row_h), row_h)
+        max_row_h = self._safe_int(table_cfg.get("max_row_h", 120), 120)
+        wrap_text = bool(table_cfg.get("wrap_text", True))
         max_rows = self._safe_int(table_cfg.get("max_visible_rows", 15), 15)
         font_size = self._safe_int(table_cfg.get("font_size", 17), 17)
         header_font_size = self._safe_int(table_cfg.get("header_font_size", 19), 19)
@@ -4354,10 +5430,11 @@ class MainWindow(QMainWindow):
             print("[SKILLS] rows truncated:", category_id)
 
         row_colors = ("rgba(8, 8, 8, 125)", "rgba(20, 20, 20, 105)")
+        current_y = header_h
         for index, skill in enumerate(visible_skills):
             if not isinstance(skill, dict):
                 continue
-            y = header_h + index * row_h
+            y = current_y
             row_bg = QFrame(table)
             row_bg.setGeometry(0, y, table.width(), row_h)
             row_bg.setStyleSheet(
@@ -4431,11 +5508,30 @@ class MainWindow(QMainWindow):
             value_col = columns.get("value", {})
             spec_col = columns.get("specialization", {})
             note_col = columns.get("note", {})
+            spec_x = self._safe_int(spec_col.get("x", 690), 690) + 8
+            spec_w = max(1, self._safe_int(spec_col.get("w", 470), 470) - 12)
+            note_x = self._safe_int(note_col.get("x", 1170), 1170) + 8
+            note_w = max(1, self._safe_int(note_col.get("w", 210), 210) - 12)
+            row_height = row_h
+            if wrap_text:
+                row_height = max(
+                    min_row_h,
+                    self._estimate_skill_text_height(
+                        display_specialization, spec_w, font_size, min_row_h, max_row_h
+                    ),
+                    self._estimate_skill_text_height(
+                        display_note, note_w, font_size, min_row_h, max_row_h
+                    ),
+                )
+            if max_row_h > 0:
+                row_height = min(row_height, max_row_h)
+            row_height = max(min_row_h, row_height)
+            row_bg.setGeometry(0, y, table.width(), row_height)
 
             skill_x = self._safe_int(skill_col.get("x", 0), 0) + 8
             skill_w = max(1, self._safe_int(skill_col.get("w", 360), 360) - 12)
             skill_button = QPushButton(table)
-            skill_button.setGeometry(skill_x, y, skill_w, row_h)
+            skill_button.setGeometry(skill_x, y, skill_w, row_height)
             skill_button.setText(display_name)
             skill_button.setFlat(True)
             skill_button.setCursor(Qt.PointingHandCursor)
@@ -4465,7 +5561,7 @@ class MainWindow(QMainWindow):
             for slot_index in range(4):
                 letter = str(slot_values[slot_index] or "")
                 slot_x = attr_x + slot_index * (slot_w + slot_gap)
-                slot_h = max(1, row_h - 10)
+                slot_h = max(1, row_height - 10)
                 slot_y = y + 5
                 slot = QPushButton(table)
                 slot.setGeometry(
@@ -4510,7 +5606,7 @@ class MainWindow(QMainWindow):
             value_x = self._safe_int(value_col.get("x", 600), 600)
             value_w = self._safe_int(value_col.get("w", 80), 80)
             value_button = QPushButton(table)
-            value_button.setGeometry(value_x, y, value_w, row_h)
+            value_button.setGeometry(value_x, y, value_w, row_height)
             value_button.setText(display_value)
             value_button.setFlat(True)
             value_button.setCursor(Qt.PointingHandCursor)
@@ -4530,32 +5626,31 @@ class MainWindow(QMainWindow):
                 lambda checked=False, sk=source_key: self.on_skill_row_roll_clicked(sk)
             )
             value_button.show()
-            spec_x = self._safe_int(spec_col.get("x", 690), 690) + 8
-            spec_w = max(1, self._safe_int(spec_col.get("w", 470), 470) - 12)
             spec_text = str(display_specialization)
             if self.is_skill_specialization_editable(source_info):
-                spec_button = QPushButton(table)
-                spec_button.setGeometry(spec_x, y, spec_w, row_h)
-                spec_button.setText(spec_text)
-                spec_button.setFlat(True)
-                spec_button.setCursor(Qt.PointingHandCursor)
-                spec_button.setToolTip("Spezialisierung bearbeiten")
-                spec_button.setStyleSheet(
-                    "QPushButton {"
+                spec_editor = InlineTextEdit(
+                    on_commit=lambda new_text, old_text, sk=source_key: self.save_skill_text_cell_value(
+                        sk, "specialization", new_text, old_text
+                    ),
+                    parent=table,
+                )
+                spec_editor.setGeometry(spec_x, y + 2, spec_w, max(24, row_height - 4))
+                spec_editor.set_initial_text(spec_text)
+                spec_editor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+                spec_editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+                spec_editor.setStyleSheet(
+                    "QTextEdit {"
                     "background: transparent;"
-                    "border: none;"
+                    "border: 1px solid rgba(242, 210, 139, 40);"
                     f"color: {str(table_cfg.get('specialization_color', '#ffffff'))};"
                     f"font-size: {font_size}px;"
                     "font-weight: 500;"
-                    "text-align: left;"
                     "padding: 0px;"
                     "}"
-                    "QPushButton:hover { color: #ffffff; border: 1px solid rgba(242, 210, 139, 70); }"
+                    "QTextEdit:focus { border: 1px solid rgba(242, 210, 139, 120); }"
                 )
-                spec_button.clicked.connect(
-                    lambda checked=False, sk=source_key: self.on_skill_specialization_clicked(sk)
-                )
-                spec_button.show()
+                spec_editor.setToolTip("Spezialisierung bearbeiten")
+                spec_editor.show()
             else:
                 self.create_panel_text(
                     table,
@@ -4563,24 +5658,51 @@ class MainWindow(QMainWindow):
                         "x": spec_x,
                         "y": y,
                         "w": spec_w,
-                        "h": row_h,
+                        "h": row_height,
                     },
                     spec_text,
                     font_size,
                     str(table_cfg.get("specialization_color", "#ffffff")),
                 )
-            self.create_panel_text(
-                table,
-                {
-                    "x": self._safe_int(note_col.get("x", 1170), 1170) + 8,
-                    "y": y,
-                    "w": max(1, self._safe_int(note_col.get("w", 210), 210) - 12),
-                    "h": row_h,
-                },
-                str(display_note),
-                font_size,
-                str(table_cfg.get("note_color", "#d8d0b0")),
-            )
+            note_text = str(display_note)
+            if self.is_skill_note_editable(source_info):
+                note_editor = InlineTextEdit(
+                    on_commit=lambda new_text, old_text, sk=source_key: self.save_skill_text_cell_value(
+                        sk, "note", new_text, old_text
+                    ),
+                    parent=table,
+                )
+                note_editor.setGeometry(note_x, y + 2, note_w, max(24, row_height - 4))
+                note_editor.set_initial_text(note_text)
+                note_editor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+                note_editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+                note_editor.setStyleSheet(
+                    "QTextEdit {"
+                    "background: transparent;"
+                    "border: 1px solid rgba(216, 208, 176, 35);"
+                    f"color: {str(table_cfg.get('note_color', '#d8d0b0'))};"
+                    f"font-size: {font_size}px;"
+                    "font-weight: 400;"
+                    "padding: 0px;"
+                    "}"
+                    "QTextEdit:focus { border: 1px solid rgba(216, 208, 176, 100); }"
+                )
+                note_editor.setToolTip("Notiz bearbeiten")
+                note_editor.show()
+            else:
+                self.create_panel_text(
+                    table,
+                    {
+                        "x": note_x,
+                        "y": y,
+                        "w": note_w,
+                        "h": row_height,
+                    },
+                    note_text,
+                    font_size,
+                    str(table_cfg.get("note_color", "#d8d0b0")),
+                )
+            current_y += row_height
 
     def _read_data_map_cell(self, mapping_entry, default_sheet, fallback="-"):
         sheet_name = default_sheet
@@ -6064,6 +7186,11 @@ class MainWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QPushButton):
+            inventory_category_id = obj.property("inventory_category_id")
+            if isinstance(inventory_category_id, str) and inventory_category_id.startswith("inventory_"):
+                if event.type() == QEvent.MouseButtonDblClick:
+                    self.rename_inventory_category(inventory_category_id)
+                    return True
             section_id = obj.property("section_id")
             if isinstance(section_id, str) and section_id in self.nav_buttons:
                 nav_style = self.theme_style.get("nav_button", {})

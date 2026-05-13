@@ -54,6 +54,7 @@ class DataLoader:
     def __init__(self):
         self.workbook = None
         self.cell_cache: dict[str, dict[str, dict[str, Any]]] = {}
+        self.app_meta: dict[str, Any] = {}
         self.active_cache_path = ""
         self.current_character_name = "unknown_character"
         self.source_file_path = ""
@@ -150,7 +151,12 @@ class DataLoader:
         directory = os.path.dirname(path)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        payload = self._to_serializable(self.cell_cache)
+        payload = self._to_serializable(
+            {
+                "cell_cache": self.cell_cache,
+                "app_meta": self.app_meta,
+            }
+        )
         tmp_path = f"{path}.tmp"
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
@@ -187,6 +193,7 @@ class DataLoader:
 
         if path is None:
             self.cell_cache = {}
+            self.app_meta = {}
             self.active_cache_path = ""
             self.current_character_name = "unknown_character"
             self.source_file_path = ""
@@ -195,6 +202,7 @@ class DataLoader:
             return False
         if not os.path.exists(path):
             self.cell_cache = {}
+            self.app_meta = {}
             self.active_cache_path = ""
             self.current_character_name = "unknown_character"
             self.source_file_path = ""
@@ -204,7 +212,7 @@ class DataLoader:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
-            self.cell_cache = loaded if isinstance(loaded, dict) else {}
+            self._load_cache_payload(loaded)
             self.active_cache_path = path
             detected_name = self._get_character_name_from_cache()
             self.current_character_name = (
@@ -219,6 +227,7 @@ class DataLoader:
             return True
         except Exception:
             self.cell_cache = {}
+            self.app_meta = {}
             self.active_cache_path = ""
             self.current_character_name = "unknown_character"
             self._remember_clean_snapshot()
@@ -276,7 +285,7 @@ class DataLoader:
                 loaded = json.load(f)
             if not isinstance(loaded, dict):
                 return False
-            self.cell_cache = loaded
+            self._load_cache_payload(loaded)
             self.active_cache_path = cache_path
             self.current_character_name = self._get_character_name_from_cache()
             self._write_current_character_metadata(cache_path, self.current_character_name)
@@ -526,7 +535,9 @@ class DataLoader:
         return str(value)
 
     def _snapshot_hash(self, payload=None):
-        serializable = self._to_serializable(self.cell_cache if payload is None else payload)
+        if payload is None:
+            payload = {"cell_cache": self.cell_cache, "app_meta": self.app_meta}
+        serializable = self._to_serializable(payload)
         encoded = json.dumps(
             serializable,
             ensure_ascii=False,
@@ -548,6 +559,8 @@ class DataLoader:
     def _get_character_name_from_payload(self, payload) -> str:
         if not isinstance(payload, dict):
             return "unknown_character"
+        if isinstance(payload.get("cell_cache"), dict):
+            payload = payload.get("cell_cache", {})
 
         sheet_candidates = ["Charakterbogen", "CharacterSheet", "Sheet1"]
         for sheet_name in sheet_candidates:
@@ -597,6 +610,105 @@ class DataLoader:
         if not text:
             return False
         return text.lower() not in {"name", "unknown_character", "attribute"}
+
+    def _load_cache_payload(self, payload):
+        if not isinstance(payload, dict):
+            self.cell_cache = {}
+            self.app_meta = {}
+            return
+        if isinstance(payload.get("cell_cache"), dict):
+            self.cell_cache = payload.get("cell_cache", {})
+            app_meta = payload.get("app_meta", {})
+            self.app_meta = app_meta if isinstance(app_meta, dict) else {}
+            return
+        self.cell_cache = payload
+        self.app_meta = {}
+
+    def get_inventory_tab_labels(self) -> dict[str, str]:
+        inventory_meta = self.app_meta.get("inventory", {})
+        if not isinstance(inventory_meta, dict):
+            return {}
+        labels = inventory_meta.get("tab_labels", {})
+        if not isinstance(labels, dict):
+            return {}
+        result = {}
+        for key, value in labels.items():
+            if not isinstance(key, str):
+                continue
+            result[key] = str(value)
+        return result
+
+    def set_inventory_tab_label(self, slot_id: str, label: str):
+        slot_key = str(slot_id or "").strip()
+        if not slot_key:
+            return False
+        inventory_meta = self.app_meta.setdefault("inventory", {})
+        if not isinstance(inventory_meta, dict):
+            inventory_meta = {}
+            self.app_meta["inventory"] = inventory_meta
+        tab_labels = inventory_meta.setdefault("tab_labels", {})
+        if not isinstance(tab_labels, dict):
+            tab_labels = {}
+            inventory_meta["tab_labels"] = tab_labels
+        tab_labels[slot_key] = str(label)
+        return True
+
+    def get_inventory_custom_rows(self, slot_id: str) -> list[dict[str, str]]:
+        inventory_meta = self.app_meta.get("inventory", {})
+        if not isinstance(inventory_meta, dict):
+            return []
+        custom_rows = inventory_meta.get("custom_rows", {})
+        if not isinstance(custom_rows, dict):
+            return []
+        rows = custom_rows.get(str(slot_id or "").strip(), [])
+        if not isinstance(rows, list):
+            return []
+        result = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            result.append(
+                {
+                    "name": str(row.get("name", "") or ""),
+                    "pl": str(row.get("pl", "") or ""),
+                    "count": str(row.get("count", "") or ""),
+                }
+            )
+        return result
+
+    def set_inventory_custom_row_value(self, slot_id: str, row_index: int, field: str, value: str):
+        slot_key = str(slot_id or "").strip()
+        if not slot_key:
+            return False
+        field_key = str(field or "").strip()
+        if field_key not in {"name", "pl", "count"}:
+            return False
+        try:
+            index = int(row_index)
+        except Exception:
+            return False
+        if index < 0:
+            return False
+        inventory_meta = self.app_meta.setdefault("inventory", {})
+        if not isinstance(inventory_meta, dict):
+            inventory_meta = {}
+            self.app_meta["inventory"] = inventory_meta
+        custom_rows = inventory_meta.setdefault("custom_rows", {})
+        if not isinstance(custom_rows, dict):
+            custom_rows = {}
+            inventory_meta["custom_rows"] = custom_rows
+        rows = custom_rows.setdefault(slot_key, [])
+        if not isinstance(rows, list):
+            rows = []
+            custom_rows[slot_key] = rows
+        while len(rows) <= index:
+            rows.append({"name": "", "pl": "", "count": ""})
+        if not isinstance(rows[index], dict):
+            rows[index] = {"name": "", "pl": "", "count": ""}
+        for key in ("name", "pl", "count"):
+            rows[index].setdefault(key, "")
+        rows[index][field_key] = str(value)
+        return True
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = os.path.join("data", "current_character.json")
