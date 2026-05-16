@@ -1194,6 +1194,12 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "AA39": {
+        "value": "x",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "BeastForm": {
@@ -3811,7 +3817,7 @@
         "error": null
       },
       "E9": {
-        "value": "8",
+        "value": "5",
         "formula": null,
         "references": [],
         "error": null

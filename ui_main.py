@@ -1104,7 +1104,7 @@ class MainWindow(QMainWindow):
                     "label": label_text,
                 }
             )
-            print(f'[WELLBEING] row={row} active={active} label="{label_text}"')
+            self._character_debug(f'[WELLBEING] row={row} active={active} label="{label_text}"')
         return entries
 
     def load_skill_definitions(self):
@@ -8000,10 +8000,10 @@ class MainWindow(QMainWindow):
             if isinstance(mind_header_cell, str)
             else str(mind_header_cell.get("cell", "-")) if isinstance(mind_header_cell, dict) else "-"
         )
-        print("[ATTR]", "body.header", body_header_cell_txt, "->", body_header_value)
-        print("[ATTR]", "mind.header", mind_header_cell_txt, "->", mind_header_value)
-        print("[DISPLAY ATTR]", "body.header", body_header_raw_value, "->", body_header_value)
-        print("[DISPLAY ATTR]", "mind.header", mind_header_raw_value, "->", mind_header_value)
+        self._character_debug(f"[ATTR] body.header {body_header_cell_txt} -> {body_header_value}")
+        self._character_debug(f"[ATTR] mind.header {mind_header_cell_txt} -> {mind_header_value}")
+        self._character_debug(f"[DISPLAY ATTR] body.header {body_header_raw_value} -> {body_header_value}")
+        self._character_debug(f"[DISPLAY ATTR] mind.header {mind_header_raw_value} -> {mind_header_value}")
 
         self.create_panel_text(
             attribute_panel,
@@ -8132,7 +8132,7 @@ class MainWindow(QMainWindow):
                     continue
                 row_cfg = rows_layout.get(item_id)
                 if not isinstance(row_cfg, dict):
-                    print(f"[ATTR] missing layout for {group_name}: {item_id}")
+                    self._character_debug(f"[ATTR] missing layout for {group_name}: {item_id}")
                     continue
                 label_text = str(item.get("label", item_id))
                 cell_ref = item.get("value")
@@ -8143,8 +8143,8 @@ class MainWindow(QMainWindow):
                     if isinstance(cell_ref, str)
                     else str(cell_ref.get("cell", "-")) if isinstance(cell_ref, dict) else "-"
                 )
-                print("[ATTR]", group_name, item_id, cell_txt, "->", value_text)
-                print("[DISPLAY ATTR]", item_id, raw_value_text, "->", value_text)
+                self._character_debug(f"[ATTR] {group_name} {item_id} {cell_txt} -> {value_text}")
+                self._character_debug(f"[DISPLAY ATTR] {item_id} {raw_value_text} -> {value_text}")
 
                 self.create_panel_text(
                     attribute_panel,
@@ -8585,8 +8585,8 @@ class MainWindow(QMainWindow):
                 disadv_map if isinstance(disadv_map, dict) else {},
                 self.current_disadvantages,
             )
-            print("[PERKS]", self.current_perks)
-            print("[DISADVANTAGES]", self.current_disadvantages)
+            self._character_debug(f"[PERKS] {self.current_perks}")
+            self._character_debug(f"[DISADVANTAGES] {self.current_disadvantages}")
             self._character_rendering = False
             return
 
