@@ -135,6 +135,10 @@ class MainWindow(QMainWindow):
         self._inventory_money_fields = {}
         self._inventory_money_delta_fields = {}
         self.equipment_analysis = {}
+        self.equipment_layout_config = {}
+        self._equipment_table_bindings = {}
+        self._equipment_rendering = False
+        self._character_rendering = False
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -4082,18 +4086,19 @@ class MainWindow(QMainWindow):
         if not isinstance(columns, dict):
             columns = {}
         rows = []
-        empty_streak = 0
         for offset in range(max_rows):
             row_index = data_start_row + offset
-            row_data = {"row": row_index}
+            row_data = {"row": row_index, "row_index": row_index, "cells": {}}
             non_empty = False
             for key, col_letters in columns.items():
                 if not isinstance(col_letters, str) or not col_letters:
                     row_data[key] = ""
+                    row_data["cells"][key] = ""
                     continue
                 cell_ref = f"{col_letters}{row_index}"
                 value = self._equipment_cache_text(sheet_cache, cell_ref)
                 row_data[key] = value
+                row_data["cells"][key] = cell_ref
                 if value:
                     non_empty = True
 
@@ -4111,14 +4116,9 @@ class MainWindow(QMainWindow):
                     row_data.get("physical_dice", ""),
                     row_data.get("attributes", ""),
                 )
-
-            if is_data:
-                rows.append(row_data)
-                empty_streak = 0
-            else:
-                empty_streak = empty_streak + 1 if not non_empty else 0
-                if empty_streak >= 6:
-                    break
+            row_data["is_data_row"] = bool(is_data)
+            row_data["is_empty_row"] = not non_empty
+            rows.append(row_data)
         return rows
 
     def _find_equipment_first_data_row(self, sheet_cache, start_row, key_columns):
@@ -4488,8 +4488,8 @@ class MainWindow(QMainWindow):
                 if col_letters:
                     print(f"[EQUIPMENT WEAPON COLUMN] {key}={col_letters}")
 
-        armor_rows = self._extract_equipment_rows(sheet_cache, armor_mapping, "armor")
-        weapon_rows = self._extract_equipment_rows(sheet_cache, weapon_mapping, "weapon")
+        armor_rows = self._extract_equipment_rows(sheet_cache, armor_mapping, "armor", max_rows=12)
+        weapon_rows = self._extract_equipment_rows(sheet_cache, weapon_mapping, "weapon", max_rows=10)
 
         if print_mapping and armor_mapping:
             data_start_row = int(armor_mapping.get("data_start_row", 0) or 0)
@@ -4527,14 +4527,19 @@ class MainWindow(QMainWindow):
         elif print_mapping and not armor_rows:
             print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
 
+        has_weapon_data_rows = any(bool(row.get("is_data_row")) for row in weapon_rows if isinstance(row, dict))
         if print_rows:
             for row_data in armor_rows:
+                if not row_data.get("is_data_row"):
+                    continue
                 print(
                     f'[EQUIPMENT ARMOR ROW] row={row_data["row"]} '
                     f'slot="{row_data.get("slot", "")}" name="{row_data.get("name", "")}" '
                     f'pl="{row_data.get("pl", "")}"'
                 )
             for row_data in weapon_rows:
+                if not row_data.get("is_data_row"):
+                    continue
                 durability_summary = ""
                 current_value = str(row_data.get("durability_current", "") or "").strip()
                 max_value = str(row_data.get("durability_max", "") or "").strip()
@@ -4546,7 +4551,7 @@ class MainWindow(QMainWindow):
                     f'pl="{row_data.get("pl", "")}" phys_dice="{row_data.get("physical_dice", "")}" '
                     f'phys_bonus="{row_data.get("physical_bonus", "")}" durability="{durability_summary}"'
                 )
-        if print_rows and not weapon_rows:
+        if print_rows and not has_weapon_data_rows:
             print("[EQUIPMENT WEAPON] no rows found")
 
         self.equipment_analysis = {
@@ -4609,6 +4614,110 @@ class MainWindow(QMainWindow):
             )
         return summary_row
 
+    def _get_equipment_table_edit_settings(self, table_cfg):
+        if not isinstance(table_cfg, dict):
+            table_cfg = {}
+        edit_cfg = table_cfg.get("edit", {})
+        if not isinstance(edit_cfg, dict):
+            edit_cfg = {}
+        editable = bool(table_cfg.get("editable", False)) and bool(edit_cfg.get("enabled", True))
+        save_on_cell_change = bool(edit_cfg.get("save_on_cell_change", True))
+        debug_enabled = bool(edit_cfg.get("debug", True)) and self._equipment_debug_enabled()
+        return editable, save_on_cell_change, debug_enabled
+
+    def _apply_equipment_item_editability(self, item, editable):
+        if item is None:
+            return
+        if editable:
+            item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        else:
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
+    def _refresh_armor_summary_table_row(self, table):
+        binding = self._equipment_table_bindings.get(id(table), {})
+        if not isinstance(binding, dict):
+            return
+        rows = binding.get("rows", [])
+        summary_row_index = int(binding.get("summary_row_index", -1))
+        if summary_row_index < 0 or summary_row_index >= table.rowCount():
+            return
+        summary_row = self._build_armor_summary_row(rows)
+        summary_row["name"] = str(binding.get("summary_label", "Summe"))
+        binding["summary_row"] = summary_row
+        self._equipment_table_bindings[id(table)] = binding
+        table.blockSignals(True)
+        try:
+            for col_index, (field_key, _) in enumerate(binding.get("column_order", [])):
+                item = table.item(summary_row_index, col_index)
+                if item is None:
+                    continue
+                value = str(summary_row.get(field_key, "") or "").strip()
+                item.setText(value)
+                item.setToolTip(value if value else "")
+                item.setData(Qt.UserRole, value)
+        finally:
+            table.blockSignals(False)
+
+    def on_equipment_table_item_changed(self, table, row_index, column_index):
+        if self._equipment_rendering:
+            return
+        binding = self._equipment_table_bindings.get(id(table), {})
+        if not isinstance(binding, dict):
+            return
+        if not bool(binding.get("save_on_cell_change", True)):
+            return
+        rows = binding.get("rows", [])
+        if not isinstance(rows, list) or row_index < 0 or row_index >= len(rows):
+            return
+        row_data = rows[row_index]
+        if not isinstance(row_data, dict):
+            return
+        if row_data.get("is_summary_row"):
+            return
+        column_order = binding.get("column_order", [])
+        if column_index < 0 or column_index >= len(column_order):
+            return
+        field_key = str(column_order[column_index][0])
+        item = table.item(row_index, column_index)
+        if item is None:
+            return
+        cells = row_data.get("cells", {})
+        if not isinstance(cells, dict):
+            cells = {}
+        cell_ref = str(cells.get(field_key, "") or "").strip()
+        if not cell_ref:
+            if binding.get("debug"):
+                print(
+                    f"[EQUIPMENT EDIT SKIP] no cell_ref table={binding.get('table_type')} "
+                    f"row={row_index} column={field_key}"
+                )
+            return
+
+        new_value = str(item.text() or "")
+        old_value = str(item.data(Qt.UserRole) or "")
+        if new_value == old_value:
+            return
+
+        sheet_name = str(self.equipment_analysis.get("sheet", "") or "Ausrüstung")
+        table_type = str(binding.get("table_type", ""))
+        source_row = row_data.get("row_index", row_data.get("row", row_index))
+        if binding.get("debug"):
+            print(
+                f"[EQUIPMENT EDIT] table={table_type} ui_row={row_index} source_row={source_row} "
+                f"column={field_key} cell={cell_ref} old={old_value!r} new={new_value!r}"
+            )
+
+        self.loader.set_cell_value(sheet_name, cell_ref, new_value)
+        self.loader.save_active_character_json()
+        row_data[field_key] = new_value
+        item.setData(Qt.UserRole, new_value)
+        if binding.get("debug"):
+            print("[EQUIPMENT SAVE] active character saved")
+
+        if table_type == "armor":
+            self._refresh_armor_summary_table_row(table)
+
     def render_equipment_armor_table(self, parent, armor_cfg, armor_rows):
         if not isinstance(armor_cfg, dict) or not armor_cfg.get("enabled", True):
             return
@@ -4648,6 +4757,7 @@ class MainWindow(QMainWindow):
             summary_cfg.get("durability_background", "rgba(170, 170, 185, 120)")
         )
         summary_label = str(summary_cfg.get("label", "Summe"))
+        editable, save_on_cell_change, edit_debug = self._get_equipment_table_edit_settings(armor_cfg)
 
         panel = QFrame(parent)
         panel.setGeometry(table_x, table_y, table_w, table_h)
@@ -4696,10 +4806,19 @@ class MainWindow(QMainWindow):
         table.setGeometry(10, 42, table_w - 20, table_h - 52)
         table.setColumnCount(len(column_order))
         summary_row = self._build_armor_summary_row(armor_rows) if summary_enabled else {}
+        if summary_enabled:
+            summary_row["name"] = summary_label
         summary_row_index = max(len(armor_rows), min_rows) if summary_enabled else -1
         table_row_count = max(len(armor_rows), min_rows) + (1 if summary_enabled else 0)
         table.setRowCount(table_row_count)
-        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        if editable:
+            table.setEditTriggers(
+                QAbstractItemView.DoubleClicked
+                | QAbstractItemView.EditKeyPressed
+                | QAbstractItemView.SelectedClicked
+            )
+        else:
+            table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         table.setWordWrap(True)
         table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
@@ -4858,6 +4977,8 @@ class MainWindow(QMainWindow):
             if element_color.isValid():
                 header_item.setForeground(QBrush(element_color))
 
+        table.blockSignals(True)
+        self._equipment_rendering = True
         for row_index in range(table_row_count):
             is_summary_row = summary_enabled and row_index == summary_row_index
             if is_summary_row:
@@ -4869,6 +4990,7 @@ class MainWindow(QMainWindow):
                 raw_value = str(row_data.get(field_key, "") or "").strip()
                 display_value = raw_value if raw_value else ""
                 item = QTableWidgetItem(display_value)
+                item.setData(Qt.UserRole, raw_value)
                 if field_key in center_fields:
                     item.setTextAlignment(Qt.AlignCenter)
                 else:
@@ -4910,8 +5032,19 @@ class MainWindow(QMainWindow):
                     item.setToolTip(raw_value)
                 elif not row_has_data:
                     item.setToolTip("")
+                can_edit = (
+                    editable
+                    and not is_summary_row
+                    and row_index < len(armor_rows)
+                    and bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+                )
+                self._apply_equipment_item_editability(item, can_edit)
                 table.setItem(row_index, col_index, item)
             table.setRowHeight(row_index, summary_row_h if is_summary_row else min_row_h)
+            if edit_debug and row_index < len(armor_rows):
+                cell_ref = str(row_data.get("cells", {}).get("name", "") or "").strip()
+                if cell_ref:
+                    print(f"[EQUIPMENT EDIT MAP] armor row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
 
         table.resizeRowsToContents()
         for row_index in range(table_row_count):
@@ -4924,6 +5057,23 @@ class MainWindow(QMainWindow):
             elif current_h > max_row_h:
                 table.setRowHeight(row_index, max_row_h)
 
+        table.blockSignals(False)
+        self._equipment_rendering = False
+        self._equipment_table_bindings[id(table)] = {
+            "table_type": "armor",
+            "rows": armor_rows,
+            "column_order": column_order,
+            "summary_row_index": summary_row_index,
+            "summary_row": summary_row,
+            "summary_label": summary_label,
+            "save_on_cell_change": save_on_cell_change,
+            "debug": edit_debug,
+        }
+        table.itemChanged.connect(
+            lambda item, widget=table: self.on_equipment_table_item_changed(
+                widget, item.row(), item.column()
+            )
+        )
         table.show()
 
     def render_equipment_weapons_table(self, parent, weapons_cfg, weapon_rows):
@@ -4947,6 +5097,7 @@ class MainWindow(QMainWindow):
         min_row_h = self._safe_int(weapons_cfg.get("min_row_h", 32), 32)
         max_row_h = self._safe_int(weapons_cfg.get("max_row_h", 72), 72)
         min_rows = self._safe_int(weapons_cfg.get("min_rows", 8), 8)
+        editable, save_on_cell_change, edit_debug = self._get_equipment_table_edit_settings(weapons_cfg)
 
         panel = QFrame(parent)
         panel.setGeometry(table_x, table_y, table_w, table_h)
@@ -4991,7 +5142,14 @@ class MainWindow(QMainWindow):
         table.setColumnCount(len(column_order))
         table_row_count = max(len(weapon_rows), min_rows)
         table.setRowCount(table_row_count)
-        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        if editable:
+            table.setEditTriggers(
+                QAbstractItemView.DoubleClicked
+                | QAbstractItemView.EditKeyPressed
+                | QAbstractItemView.SelectedClicked
+            )
+        else:
+            table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         table.setWordWrap(True)
         table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
@@ -5080,6 +5238,8 @@ class MainWindow(QMainWindow):
             header_item.setBackground(header_background_brushes.get(field_key, QBrush()))
             header_item.setForeground(QBrush(QColor("#f2d28b")))
 
+        table.blockSignals(True)
+        self._equipment_rendering = True
         for row_index in range(table_row_count):
             row_data = (
                 weapon_rows[row_index]
@@ -5089,6 +5249,7 @@ class MainWindow(QMainWindow):
             for col_index, (field_key, _) in enumerate(column_order):
                 raw_value = str(row_data.get(field_key, "") or "").strip()
                 item = QTableWidgetItem(raw_value)
+                item.setData(Qt.UserRole, raw_value)
                 if field_key in center_fields:
                     item.setTextAlignment(Qt.AlignCenter)
                 else:
@@ -5103,8 +5264,18 @@ class MainWindow(QMainWindow):
                 item.setBackground(column_background_brushes.get(field_key, QBrush()))
                 if raw_value:
                     item.setToolTip(raw_value)
+                can_edit = (
+                    editable
+                    and row_index < len(weapon_rows)
+                    and bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+                )
+                self._apply_equipment_item_editability(item, can_edit)
                 table.setItem(row_index, col_index, item)
             table.setRowHeight(row_index, min_row_h)
+            if edit_debug and row_index < len(weapon_rows):
+                cell_ref = str(row_data.get("cells", {}).get("name", "") or "").strip()
+                if cell_ref:
+                    print(f"[EQUIPMENT EDIT MAP] weapons row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
 
         table.resizeRowsToContents()
         for row_index in range(table_row_count):
@@ -5114,12 +5285,28 @@ class MainWindow(QMainWindow):
             elif current_h > max_row_h:
                 table.setRowHeight(row_index, max_row_h)
 
+        table.blockSignals(False)
+        self._equipment_rendering = False
+        self._equipment_table_bindings[id(table)] = {
+            "table_type": "weapons",
+            "rows": weapon_rows,
+            "column_order": column_order,
+            "summary_row_index": -1,
+            "save_on_cell_change": save_on_cell_change,
+            "debug": edit_debug,
+        }
+        table.itemChanged.connect(
+            lambda item, widget=table: self.on_equipment_table_item_changed(
+                widget, item.row(), item.column()
+            )
+        )
         table.show()
 
     def render_equipment_screen(self):
         if self.content_layer is None:
             return
 
+        self._equipment_table_bindings = {}
         layout_config = self.load_equipment_layout_config()
         screen_cfg = layout_config.get("equipment_screen", {})
         screen = QFrame(self.content_layer)
@@ -7021,6 +7208,88 @@ class MainWindow(QMainWindow):
             return fallback
         return self.get_cache_display_value(sheet_name, cell_ref, fallback)
 
+    def _resolve_data_map_cell_ref(self, mapping_entry, default_sheet):
+        sheet_name = str(default_sheet or "Charakterbogen")
+        cell_ref = None
+        if isinstance(mapping_entry, str):
+            cell_ref = mapping_entry.strip()
+        elif isinstance(mapping_entry, dict):
+            sheet_name = str(mapping_entry.get("sheet", sheet_name))
+            raw_cell = mapping_entry.get("cell")
+            if isinstance(raw_cell, str):
+                cell_ref = raw_cell.strip()
+        if not cell_ref:
+            return None, None
+        return sheet_name, cell_ref
+
+    def _on_character_field_edited(self, field_key, sheet_name, cell_ref, value):
+        if self._character_rendering:
+            return
+        if not sheet_name or not cell_ref:
+            print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
+            return
+        new_value = "" if value is None else str(value)
+        print(f"[CHARACTER EDIT] field={field_key} cell={cell_ref} value={new_value}")
+        self.loader.set_cell_value(sheet_name, cell_ref, new_value)
+        self.loader.save_active_character_json()
+        print("[CHARACTER SAVE] active character saved")
+
+    def _create_character_value_editor(
+        self,
+        parent,
+        rect_cfg,
+        field_key,
+        mapping_entry,
+        default_sheet,
+        value_text,
+        font_size,
+        color,
+        bold=True,
+        align="left",
+    ):
+        x = self._safe_int(rect_cfg.get("x", 0), 0)
+        y = self._safe_int(rect_cfg.get("y", 0), 0)
+        w = self._safe_int(rect_cfg.get("w", 160), 160)
+        h = self._safe_int(rect_cfg.get("h", 28), 28)
+        sheet_name, cell_ref = self._resolve_data_map_cell_ref(mapping_entry, default_sheet)
+        if not sheet_name or not cell_ref:
+            print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
+            return self.create_panel_text(
+                parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
+            )
+
+        editor = QLineEdit(parent)
+        editor.setGeometry(x, y, w, h)
+        editor.setText("" if value_text is None else str(value_text))
+        qt_align = Qt.AlignVCenter
+        if align == "center":
+            qt_align |= Qt.AlignHCenter
+        elif align == "right":
+            qt_align |= Qt.AlignRight
+        else:
+            qt_align |= Qt.AlignLeft
+        editor.setAlignment(qt_align)
+        weight = 700 if bold else 500
+        editor.setStyleSheet(
+            "QLineEdit {"
+            "background: transparent;"
+            "border: 1px solid rgba(216, 208, 176, 38);"
+            f"color: {color};"
+            f"font-size: {int(font_size)}px;"
+            f"font-weight: {weight};"
+            "padding: 0px 2px;"
+            "}"
+            "QLineEdit:focus { border: 1px solid rgba(216, 208, 176, 120); }"
+        )
+        editor.editingFinished.connect(
+            lambda fk=field_key, sn=sheet_name, cr=cell_ref, e=editor: self._on_character_field_edited(
+                fk, sn, cr, e.text()
+            )
+        )
+        editor.raise_()
+        editor.show()
+        return editor
+
     def _create_content_panel(self, parent, cfg):
         x = int(cfg.get("x", 0))
         y = int(cfg.get("y", 0))
@@ -7206,9 +7475,12 @@ class MainWindow(QMainWindow):
 
         info_layout = text_layout.get("character_info_panel", text_layout.get("info", {}))
         title_cfg = info_layout.get("title", {})
-        self.create_panel_text(
+        self._create_character_value_editor(
             character_panel,
             title_cfg if isinstance(title_cfg, dict) else {},
+            "name",
+            basic_map.get("name", "G1"),
+            default_sheet,
             name_value if name_value != "-" else "Unbekannter Charakter",
             self.get_text_font_size(title_cfg, 30),
             self.get_text_color(title_cfg, default_color),
@@ -7301,15 +7573,64 @@ class MainWindow(QMainWindow):
                     bold=bool(row.get("label_bold", False)),
                     align=str(row.get("label_align", "left")),
                 )
-                self.create_panel_text(
-                    character_panel,
-                    row.get("value_rect", {}),
-                    value_text,
-                    self._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15),
-                    str(row.get("value_color", row.get("color", value_color_default))),
-                    bold=bool(row.get("bold_value", bold_values_default)),
-                    align=str(row.get("value_align", "left")),
-                )
+                if row_id in field_pair_sources:
+                    current_src, max_src = field_pair_sources[row_id]
+                    value_rect = row.get("value_rect", {})
+                    vx = self._safe_int(value_rect.get("x", 0), 0)
+                    vy = self._safe_int(value_rect.get("y", 0), 0)
+                    vw = self._safe_int(value_rect.get("w", 160), 160)
+                    vh = self._safe_int(value_rect.get("h", 30), 30)
+                    half = max(40, (vw - 20) // 2)
+                    value_font = self._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15)
+                    value_color = str(row.get("value_color", row.get("color", value_color_default)))
+                    value_bold = bool(row.get("bold_value", bold_values_default))
+                    value_align = str(row.get("value_align", "left"))
+                    self._create_character_value_editor(
+                        character_panel,
+                        {"x": vx, "y": vy, "w": half, "h": vh},
+                        f"{row_id}_current",
+                        current_src,
+                        default_sheet,
+                        current,
+                        value_font,
+                        value_color,
+                        bold=value_bold,
+                        align=value_align,
+                    )
+                    self.create_panel_text(
+                        character_panel,
+                        {"x": vx + half, "y": vy, "w": 20, "h": vh},
+                        "/",
+                        value_font,
+                        value_color,
+                        bold=value_bold,
+                        align="center",
+                    )
+                    self._create_character_value_editor(
+                        character_panel,
+                        {"x": vx + half + 20, "y": vy, "w": max(20, vw - half - 20), "h": vh},
+                        f"{row_id}_max",
+                        max_src,
+                        default_sheet,
+                        maximum,
+                        value_font,
+                        value_color,
+                        bold=value_bold,
+                        align=value_align,
+                    )
+                else:
+                    self._create_character_value_editor(
+                        character_panel,
+                        row.get("value_rect", {}),
+                        row_id,
+                        field_single_sources.get(row_id),
+                        default_sheet,
+                        value_text,
+                        self._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15),
+                        str(row.get("value_color", row.get("color", value_color_default))),
+                        bold=bool(row.get("bold_value", bold_values_default)),
+                        align=str(row.get("value_align", "left")),
+                    )
         else:
             basic_rows_cfg = info_layout.get("basic_rows", {})
             basic_rows = basic_rows_cfg.get("rows", [])

@@ -233,7 +233,14 @@
         "background": "rgba(230, 210, 120, 120)",
         "physical_background": "rgba(210, 210, 210, 150)",
         "elemental_background": "rgba(245, 210, 90, 150)",
-        "durability_background": "rgba(170, 170, 185, 120)"
+        "durability_background": "rgba(170, 170, 185, 120)",
+        "editable": false
+      },
+      "editable": true,
+      "edit": {
+        "enabled": true,
+        "save_on_cell_change": true,
+        "debug": true
       }
     },
     "weapons": {
@@ -349,6 +356,12 @@
         "elemental_bonus": "#000000",
         "durability_current": "#000000",
         "durability_max": "#000000"
+      },
+      "editable": true,
+      "edit": {
+        "enabled": true,
+        "save_on_cell_change": true,
+        "debug": true
       }
     },
     "show_title": false,
