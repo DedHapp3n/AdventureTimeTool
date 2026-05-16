@@ -64,6 +64,83 @@
           "w": 210
         }
       }
+    },
+    "se_tab": {
+      "enabled": true,
+      "button_text": "SE",
+      "xp_info": {
+        "enabled": true,
+        "x": 410,
+        "y": 110,
+        "w": 260,
+        "h": 150,
+        "title": "XP Info",
+        "font_size": 16,
+        "title_font_size": 18,
+        "label_color": "#f2d28b",
+        "text_color": "#ffffff",
+        "value_color": "#7fd0ff",
+        "border_color": "rgba(242, 210, 139, 90)",
+        "background": "rgba(5, 5, 5, 95)",
+        "readonly": true,
+        "labels": {
+          "current": "Current",
+          "max": "Max"
+        }
+      },
+      "table": {
+        "x": 40,
+        "y": 110,
+        "w": 320,
+        "h": 520,
+        "min_rows": 16,
+        "add_rows_when_last_filled": 3,
+        "columns": {
+          "text": {
+            "title": "Fertigkeit",
+            "w": 240
+          },
+          "value": {
+            "title": "SE",
+            "w": 80
+          }
+        }
+      },
+      "upgrade_info": {
+        "enabled": true,
+        "x": 410,
+        "y": 272,
+        "w": 260,
+        "h": 90,
+        "title": "Skill Upgrade",
+        "text": "Theoretisch möglich",
+        "font_size": 15,
+        "title_font_size": 18,
+        "label_color": "#f2d28b",
+        "text_color": "#ffffff",
+        "border_color": "rgba(242, 210, 139, 90)",
+        "background": "rgba(5, 5, 5, 95)",
+        "readonly": true
+      },
+      "skill_upgrade_info": {
+        "enabled": true,
+        "x": 420,
+        "y": 285,
+        "w": 680,
+        "h": 360,
+        "title": "Skill Upgrade",
+        "max_items": 999,
+        "font_size": 15,
+        "title_font_size": 18,
+        "label_color": "#f2d28b",
+        "text_color": "#ffffff",
+        "muted_color": "#d8d0b0",
+        "border_color": "rgba(242, 210, 139, 90)",
+        "background": "rgba(5, 5, 5, 95)",
+        "readonly": true,
+        "word_wrap": true,
+        "scrollable": true
+      }
     }
   }
 }

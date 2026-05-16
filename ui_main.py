@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
         self.current_indirect_references = []
         self.current_main_section = "character"
         self.current_skill_category = "allgemein"
+        self._skills_se_loading = False
         self.current_inventory_category = "inventory_01"
         self.skill_source_infos = {}
         self.skills_debug_sources = True
@@ -6737,13 +6738,21 @@ class MainWindow(QMainWindow):
         categories = skill_definitions.get("categories", [])
         if not isinstance(categories, list):
             categories = []
+        se_cfg = screen_cfg.get("se_tab", {})
+        if not isinstance(se_cfg, dict):
+            se_cfg = {}
+        se_enabled = bool(se_cfg.get("enabled", True))
+        se_button_text = str(se_cfg.get("button_text", "SE") or "SE")
+        categories_for_tabs = list(categories)
+        if se_enabled:
+            categories_for_tabs.append({"id": "se", "title": se_button_text, "skills": []})
         attribute_map = skill_definitions.get("attribute_map", {})
         if not isinstance(attribute_map, dict):
             attribute_map = {}
 
         category_ids = [
             str(category.get("id", ""))
-            for category in categories
+            for category in categories_for_tabs
             if isinstance(category, dict) and str(category.get("id", "")).strip()
         ]
         print("[SKILLS] render category:", self.current_skill_category)
@@ -6789,7 +6798,7 @@ class MainWindow(QMainWindow):
         active_color = str(tabs_cfg.get("active_color", "#f2d28b"))
         inactive_color = str(tabs_cfg.get("inactive_color", "#9a8560"))
 
-        for index, category in enumerate(categories):
+        for index, category in enumerate(categories_for_tabs):
             if not isinstance(category, dict):
                 continue
             category_id = str(category.get("id", "")).strip()
@@ -6822,14 +6831,901 @@ class MainWindow(QMainWindow):
             button.show()
 
         active_category = None
-        for category in categories:
+        for category in categories_for_tabs:
             if isinstance(category, dict) and category.get("id") == self.current_skill_category:
                 active_category = category
                 break
         if active_category is None:
             active_category = {"id": self.current_skill_category, "skills": []}
 
+        if str(self.current_skill_category).strip().lower() == "se":
+            self.render_skills_se_table(screen, screen_cfg, se_cfg)
+            return
         self.render_skills_table(screen, screen_cfg.get("table", {}), active_category, attribute_map)
+
+    def _get_skills_se_rows_from_meta(self):
+        app_meta = getattr(self.loader, "app_meta", {})
+        if not isinstance(app_meta, dict):
+            return []
+        custom_sections = app_meta.get("custom_sections", {})
+        if not isinstance(custom_sections, dict):
+            return []
+        se_data = custom_sections.get("skills_se", {})
+        if not isinstance(se_data, dict):
+            return []
+        rows = se_data.get("rows", [])
+        if not isinstance(rows, list):
+            return []
+        sanitized = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            sanitized.append(
+                {
+                    "text": str(row.get("text", "") or ""),
+                    "skill_key": str(row.get("skill_key", "") or ""),
+                    "skill_name": str(row.get("skill_name", "") or ""),
+                    "value": str(row.get("value", "") or ""),
+                }
+            )
+        return sanitized
+
+    def _save_skills_se_rows_to_meta(self, rows):
+        try:
+            if not isinstance(self.loader.app_meta, dict):
+                self.loader.app_meta = {}
+            custom_sections = self.loader.app_meta.setdefault("custom_sections", {})
+            if not isinstance(custom_sections, dict):
+                custom_sections = {}
+                self.loader.app_meta["custom_sections"] = custom_sections
+            clean_rows = []
+            if isinstance(rows, list):
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    clean_rows.append(
+                        {
+                            "text": str(row.get("text", "") or ""),
+                            "skill_key": str(row.get("skill_key", "") or ""),
+                            "skill_name": str(row.get("skill_name", "") or ""),
+                            "value": str(row.get("value", "") or ""),
+                        }
+                    )
+            custom_sections["skills_se"] = {"rows": clean_rows}
+            self.loader.save_active_character_json()
+            print("[SKILLS SE SAVE] saved")
+            return True
+        except Exception as exc:
+            print("[SKILLS SE SAVE ERROR]", str(exc))
+            return False
+
+    def on_skills_se_table_cell_changed(self, table, min_rows, add_rows_when_last_filled):
+        if self._skills_se_loading:
+            return
+        if table is None:
+            return
+        rows = []
+        for row_index in range(table.rowCount()):
+            text_item = table.item(row_index, 0)
+            value_item = table.item(row_index, 1)
+            text_value = str(text_item.text() if text_item is not None else "")
+            skill_key = ""
+            skill_name = text_value
+            if text_item is not None:
+                skill_key = str(text_item.data(Qt.UserRole) or "").strip()
+                if skill_key:
+                    skill_name = str(text_item.data(Qt.UserRole + 1) or text_value).strip() or text_value
+            cell_value = str(value_item.text() if value_item is not None else "")
+            rows.append(
+                {
+                    "text": text_value,
+                    "skill_key": skill_key,
+                    "skill_name": skill_name,
+                    "value": cell_value,
+                }
+            )
+
+        last_index = table.rowCount() - 1
+        if last_index >= 0:
+            last = rows[last_index]
+            if str(last.get("text", "")).strip() or str(last.get("value", "")).strip():
+                self._skills_se_loading = True
+                try:
+                    for _ in range(max(0, int(add_rows_when_last_filled))):
+                        new_row = table.rowCount()
+                        table.insertRow(new_row)
+                        skill_item = QTableWidgetItem("")
+                        skill_item.setFlags(
+                            (skill_item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled) & ~Qt.ItemIsEditable
+                        )
+                        value_item = QTableWidgetItem("")
+                        value_item.setFlags(value_item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                        table.setItem(new_row, 0, skill_item)
+                        table.setItem(new_row, 1, value_item)
+                        rows.append({"text": "", "skill_key": "", "skill_name": "", "value": ""})
+                finally:
+                    self._skills_se_loading = False
+
+        while len(rows) < max(0, int(min_rows)):
+            rows.append({"text": "", "skill_key": "", "skill_name": "", "value": ""})
+
+        table.blockSignals(True)
+        try:
+            for r in range(table.rowCount()):
+                for c in (0, 1):
+                    item = table.item(r, c)
+                    if item is None:
+                        item = QTableWidgetItem("")
+                        if c == 0:
+                            item.setFlags((item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled) & ~Qt.ItemIsEditable)
+                        else:
+                            item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                        table.setItem(r, c, item)
+                    value = rows[r]["text"] if c == 0 else rows[r]["value"]
+                    item.setToolTip(value if value else "")
+        finally:
+            table.blockSignals(False)
+
+        self._save_skills_se_rows_to_meta(rows)
+        if str(self.current_skill_category).strip().lower() == "se" and str(self.current_main_section) in ("skills", "fertigkeiten"):
+            self.show_main_section("skills")
+
+    def get_se_skill_choices(self):
+        choices = []
+        if not isinstance(self.skill_source_infos, dict):
+            return choices
+        category_titles = {}
+        try:
+            defs = self.load_skill_definitions()
+            categories = defs.get("categories", []) if isinstance(defs, dict) else []
+            if isinstance(categories, list):
+                for cat in categories:
+                    if not isinstance(cat, dict):
+                        continue
+                    cid = str(cat.get("id", "") or "")
+                    title = str(cat.get("title", cid) or cid)
+                    if cid:
+                        category_titles[cid] = title
+        except Exception:
+            pass
+
+        for source_key, info in self.skill_source_infos.items():
+            if not isinstance(info, dict):
+                continue
+            if info.get("row") is None:
+                continue
+            name = str(info.get("display_name", "") or "").strip()
+            if not name:
+                continue
+            category_id = str(info.get("category_id", "") or "")
+            cat_title = category_titles.get(category_id, category_id or "-")
+            display = f"{name} [{cat_title}]"
+            choices.append(
+                {
+                    "skill_key": str(source_key),
+                    "skill_name": name,
+                    "display": display,
+                }
+            )
+        choices.sort(key=lambda it: str(it.get("skill_name", "")).lower())
+        return choices
+
+    def open_skills_se_skill_picker(self, table, row):
+        if table is None or row < 0:
+            return
+        skill_choices = self.get_se_skill_choices()
+        if not skill_choices:
+            return
+        display_items = [str(it.get("display", "")) for it in skill_choices]
+        current_item = table.item(row, 0)
+        current_key = str(current_item.data(Qt.UserRole) or "").strip() if current_item is not None else ""
+        current_index = 0
+        for idx, it in enumerate(skill_choices):
+            if str(it.get("skill_key", "")) == current_key:
+                current_index = idx
+                break
+        selected_display, ok = QInputDialog.getItem(
+            self,
+            "Fertigkeit wählen",
+            "Fertigkeit:",
+            display_items,
+            current_index,
+            False,
+        )
+        if not ok:
+            return
+        selected = None
+        for it in skill_choices:
+            if str(it.get("display", "")) == str(selected_display):
+                selected = it
+                break
+        if not isinstance(selected, dict):
+            return
+
+        self._skills_se_loading = True
+        table.blockSignals(True)
+        try:
+            item = table.item(row, 0)
+            if item is None:
+                item = QTableWidgetItem("")
+                table.setItem(row, 0, item)
+            skill_name = str(selected.get("skill_name", "") or "")
+            skill_key = str(selected.get("skill_key", "") or "")
+            item.setText(skill_name)
+            item.setToolTip(skill_name)
+            item.setData(Qt.UserRole, skill_key)
+            item.setData(Qt.UserRole + 1, skill_name)
+        finally:
+            table.blockSignals(False)
+            self._skills_se_loading = False
+
+        self.on_skills_se_table_cell_changed(table, table.rowCount(), 0)
+
+    def _normalize_se_upgrade_text(self, value):
+        text = str(value or "").strip().lower()
+        text = (
+            text.replace("ä", "ae")
+            .replace("ö", "oe")
+            .replace("ü", "ue")
+            .replace("ß", "ss")
+        )
+        text = re.sub(r"[^a-z0-9]+", " ", text)
+        return re.sub(r"\s+", " ", text).strip()
+
+    def _parse_int_for_se_upgrade(self, value):
+        text = str(value or "").strip()
+        if not text:
+            return 0
+        text = text.replace(",", ".")
+        try:
+            return int(float(text))
+        except Exception:
+            return 0
+
+    def _extract_threshold_numbers_from_row(self, sheet_name, row, start_col_idx, max_col_idx):
+        values = []
+        blanks_after_values = 0
+        for col_idx in range(start_col_idx, max_col_idx + 1):
+            col_name = self._excel_col_name(col_idx)
+            number = self.get_numeric_cache_value(sheet_name, f"{col_name}{row}")
+            if number is None:
+                if values:
+                    blanks_after_values += 1
+                    if blanks_after_values >= 3:
+                        break
+                continue
+            values.append(int(number))
+            blanks_after_values = 0
+            if len(values) >= 4:
+                break
+        return values
+
+    def _excel_col_name(self, idx):
+        idx = int(idx)
+        if idx < 1:
+            return "A"
+        name = []
+        while idx > 0:
+            idx, rem = divmod(idx - 1, 26)
+            name.append(chr(65 + rem))
+        return "".join(reversed(name))
+
+    def _get_category_upgrade_costs(self, category_id, sheet_name):
+        default_se = [1, 5, 25, 125]
+        default_xp = [4, 20, 100, 375]
+        block = self.get_skill_block_config_for_category(category_id)
+        if not isinstance(block, dict):
+            return default_se, default_xp, True
+
+        row_min = self._safe_int(block.get("row_min", 0), 0)
+        if row_min <= 0:
+            return default_se, default_xp, True
+
+        label_col = str(block.get("value_formula_col", "AD") or "AD")
+        search_start = max(1, row_min - 14)
+        search_end = max(search_start, row_min + 2)
+        se_row = None
+        xp_row = None
+        for row in range(search_start, search_end + 1):
+            label_text = self.get_clean_skill_cache_text(sheet_name, f"{label_col}{row}").lower()
+            if not label_text:
+                continue
+            if "se benoetigt" in self._normalize_se_upgrade_text(label_text):
+                se_row = row
+            elif "exp benoetigt" in self._normalize_se_upgrade_text(label_text):
+                xp_row = row
+
+        if se_row is None or xp_row is None:
+            return default_se, default_xp, True
+
+        start_idx = self._excel_col_index(label_col) + 1
+        end_idx = self._excel_col_index("BZ")
+        se_values = self._extract_threshold_numbers_from_row(sheet_name, se_row, start_idx, end_idx)
+        xp_values = self._extract_threshold_numbers_from_row(sheet_name, xp_row, start_idx, end_idx)
+        if not se_values or not xp_values:
+            return default_se, default_xp, True
+        return se_values, xp_values, False
+
+    def _excel_col_index(self, col_name):
+        col_name = str(col_name or "").strip().upper()
+        if not col_name:
+            return 1
+        value = 0
+        for ch in col_name:
+            if not ("A" <= ch <= "Z"):
+                continue
+            value = value * 26 + (ord(ch) - ord("A") + 1)
+        return value or 1
+
+    def build_se_upgrade_candidates(self, se_rows, available_xp):
+        suggestions = []
+        if not isinstance(se_rows, list):
+            return {"status": "no_se_entries", "items": [], "groups": {}}
+        bound_entries = {}
+        for idx, row in enumerate(se_rows):
+            if not isinstance(row, dict):
+                continue
+            skill_key = str(row.get("skill_key", "") or "").strip()
+            skill_name = str(row.get("skill_name", "") or row.get("text", "")).strip()
+            se_value = max(0, self._parse_int_for_se_upgrade(row.get("value", "")))
+            if not skill_key:
+                legacy_text = str(row.get("text", "") or "").strip()
+                if legacy_text:
+                    print(f'[SKILLS SE LEGACY] row={idx} text="{legacy_text}" ignored_for_upgrade=no_skill_key')
+                continue
+            entry = bound_entries.setdefault(
+                skill_key,
+                {
+                    "row_indices": [],
+                    "skill_key": skill_key,
+                    "skill_name": skill_name,
+                    "value": 0,
+                },
+            )
+            entry["row_indices"].append(idx)
+            if skill_name:
+                entry["skill_name"] = skill_name
+            entry["value"] += int(se_value)
+        if not bound_entries:
+            return {"status": "no_bound_entries", "items": [], "groups": {}}
+
+        if not isinstance(self.skill_source_infos, dict) or not self.skill_source_infos:
+            return {"status": "no_upgrade_data", "items": [], "groups": {}}
+        print(
+            "[SKILLS UPGRADE ROWS]",
+            f"bound_rows={sum(len(v.get('row_indices', [])) for v in bound_entries.values())}",
+            f"merged_skills={len(bound_entries)}",
+        )
+        for skill_key, merged in bound_entries.items():
+            if len(merged.get("row_indices", [])) > 1:
+                print(
+                    "[SKILLS UPGRADE MERGE]",
+                    f"skill_key={skill_key}",
+                    f"total_se={merged.get('value', 0)}",
+                    f"rows={merged.get('row_indices', [])}",
+                )
+
+        mapping = self.get_skill_sheet_mapping_config()
+        sheet_name = str(mapping.get("sheet", "Fertigkeiten"))
+        costs_cache = {}
+        missing_costs = False
+        for entry in bound_entries.values():
+            source_key = str(entry.get("skill_key", "") or "")
+            info = self.skill_source_infos.get(source_key)
+            if not isinstance(info, dict):
+                suggestions.append(
+                    {
+                        "skill_name": str(entry.get("skill_name", "") or source_key),
+                        "category_id": "",
+                        "needed_se": 0,
+                        "available_se": int(entry.get("value", 0)),
+                        "needed_xp": 0,
+                        "available_xp": int(available_xp),
+                        "status": "broken_link",
+                    }
+                )
+                print(
+                    "[SKILLS UPGRADE SE BROKEN_LINK]",
+                    f'rows={entry.get("row_indices")}',
+                    f"skill_key={source_key}",
+                )
+                continue
+            if not isinstance(info, dict):
+                continue
+            row = info.get("row")
+            if row is None:
+                continue
+            category_id = str(info.get("category_id", "") or "")
+            skill_name = str(info.get("display_name", "") or entry.get("skill_name", "")).strip()
+            if not category_id or not skill_name:
+                continue
+
+            if category_id not in costs_cache:
+                se_costs, xp_costs, used_fallback = self._get_category_upgrade_costs(category_id, sheet_name)
+                costs_cache[category_id] = (se_costs, xp_costs)
+                if self.skills_debug_sources:
+                    print(
+                        "[SKILLS UPGRADE COSTS]",
+                        f"category={category_id}",
+                        f"se={se_costs}",
+                        f"exp={xp_costs}",
+                        "fallback" if used_fallback else "sheet",
+                    )
+            se_costs, xp_costs = costs_cache[category_id]
+            if not se_costs or not xp_costs:
+                missing_costs = True
+                continue
+
+            try:
+                display_value = int(str(info.get("display_value", "") or "0"))
+            except Exception:
+                display_value = 0
+            next_index = 1 if display_value > 0 else 0
+            if next_index >= len(se_costs) or next_index >= len(xp_costs):
+                suggestions.append(
+                    {
+                        "skill_name": skill_name,
+                        "category_id": category_id,
+                        "needed_se": 0,
+                        "available_se": int(entry.get("value", 0)),
+                        "needed_xp": 0,
+                        "available_xp": int(available_xp),
+                        "status": "unknown",
+                        "skill_key": source_key,
+                    }
+                )
+                continue
+
+            needed_se = int(se_costs[next_index])
+            needed_xp = int(xp_costs[next_index])
+            available_se = int(entry.get("value", 0))
+            print(
+                "[SKILLS UPGRADE SE LINK]",
+                f'rows={entry.get("row_indices")}',
+                f'skill_key="{source_key}"',
+                f'skill="{skill_name}"',
+                f"se={available_se}",
+            )
+
+            xp_ok = int(available_xp) >= needed_xp
+            se_ok = int(available_se) >= needed_se
+            if se_ok and xp_ok:
+                status = "possible"
+            elif xp_ok and not se_ok:
+                status = "missing_se"
+            elif se_ok and not xp_ok:
+                status = "missing_xp"
+            else:
+                status = "missing_both"
+
+            if self.skills_debug_sources:
+                print(
+                    "[SKILLS UPGRADE RESULT]",
+                    f'skill="{skill_name}"',
+                    f"needed_se={needed_se}",
+                    f"available_se={available_se}",
+                    f"needed_xp={needed_xp}",
+                    f"available_xp={available_xp}",
+                    f"status={status}",
+                )
+
+            suggestions.append(
+                {
+                    "skill_name": skill_name,
+                    "category_id": category_id,
+                    "needed_se": needed_se,
+                    "available_se": available_se,
+                    "needed_xp": needed_xp,
+                    "available_xp": int(available_xp),
+                    "status": status,
+                    "skill_key": source_key,
+                }
+            )
+
+        if not suggestions:
+            if missing_costs:
+                return {"status": "no_costs", "items": [], "groups": {}}
+            return {"status": "no_upgrade_data", "items": [], "groups": {}}
+
+        groups = {
+            "possible": [],
+            "missing_xp": [],
+            "missing_se": [],
+            "missing_both": [],
+            "unknown": [],
+            "broken_link": [],
+        }
+        for item in suggestions:
+            groups.setdefault(item["status"], []).append(item)
+        for key in groups:
+            groups[key] = sorted(
+                groups[key],
+                key=lambda it: (it["skill_name"].lower(), it["needed_se"], it["needed_xp"]),
+            )
+        if self.skills_debug_sources:
+            print(
+                "[SKILLS UPGRADE GROUPS]",
+                f'possible={len(groups.get("possible", []))}',
+                f'missing_xp={len(groups.get("missing_xp", []))}',
+                f'missing_se={len(groups.get("missing_se", []))}',
+                f'missing_both={len(groups.get("missing_both", []))}',
+                f'unknown={len(groups.get("unknown", []))}',
+            )
+        return {"status": "ok", "items": suggestions, "groups": groups}
+
+    def render_skills_se_table(self, parent, screen_cfg, se_cfg):
+        table_area_cfg = screen_cfg.get("table", {})
+        if not isinstance(table_area_cfg, dict):
+            table_area_cfg = {}
+        se_table_cfg = se_cfg.get("table", {}) if isinstance(se_cfg, dict) else {}
+        if not isinstance(se_table_cfg, dict):
+            se_table_cfg = {}
+        x = self._safe_int(se_table_cfg.get("x", self._safe_int(table_area_cfg.get("x", 20), 20) + 20), 40)
+        y = self._safe_int(se_table_cfg.get("y", self._safe_int(table_area_cfg.get("y", 80), 80) + 20), 110)
+        w = self._safe_int(se_table_cfg.get("w", 340), 340)
+        h = self._safe_int(se_table_cfg.get("h", 520), 520)
+        min_rows = self._safe_int(se_table_cfg.get("min_rows", 16), 16)
+        add_rows = self._safe_int(se_table_cfg.get("add_rows_when_last_filled", 3), 3)
+        columns_cfg = se_table_cfg.get("columns", {})
+        if not isinstance(columns_cfg, dict):
+            columns_cfg = {}
+        text_col_cfg = columns_cfg.get("text", {})
+        value_col_cfg = columns_cfg.get("value", {})
+        if not isinstance(text_col_cfg, dict):
+            text_col_cfg = {}
+        if not isinstance(value_col_cfg, dict):
+            value_col_cfg = {}
+
+        frame = QFrame(parent)
+        frame.setGeometry(x, y, w, h)
+        frame.setStyleSheet(
+            "background: rgba(5, 5, 5, 95);"
+            "border: 1px solid rgba(242, 210, 139, 70);"
+            "border-radius: 4px;"
+        )
+        frame.show()
+
+        se_table = QTableWidget(frame)
+        se_table.setGeometry(8, 8, max(1, w - 16), max(1, h - 16))
+        se_table.setColumnCount(2)
+        se_table.setHorizontalHeaderLabels(
+            [
+                str(text_col_cfg.get("title", "Fertigkeit")),
+                str(value_col_cfg.get("title", "SE")),
+            ]
+        )
+        se_table.verticalHeader().setVisible(False)
+        se_table.setWordWrap(False)
+        se_table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.SelectedClicked
+        )
+        se_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        se_table.setSelectionBehavior(QAbstractItemView.SelectItems)
+        se_table.setStyleSheet(
+            "QTableWidget {"
+            "background: rgba(5, 5, 5, 95);"
+            "color: #f2f2f2;"
+            "gridline-color: rgba(242, 210, 139, 70);"
+            "font-size: 14px;"
+            "border: none;"
+            "selection-background-color: rgba(242, 210, 139, 30);"
+            "selection-color: #ffffff;"
+            "}"
+            "QHeaderView::section {"
+            "background: rgba(24, 16, 8, 175);"
+            "color: #f2d28b;"
+            "font-size: 14px;"
+            "font-weight: 700;"
+            "border: 1px solid rgba(242, 210, 139, 70);"
+            "padding: 3px;"
+            "}"
+        )
+
+        rows = self._get_skills_se_rows_from_meta()
+        while len(rows) < max(0, int(min_rows)):
+            rows.append({"text": "", "skill_key": "", "skill_name": "", "value": ""})
+
+        self._skills_se_loading = True
+        se_table.blockSignals(True)
+        try:
+            se_table.setRowCount(len(rows))
+            for row_index, row in enumerate(rows):
+                bound_skill_name = str(row.get("skill_name", "") or "").strip()
+                text_value = bound_skill_name or str(row.get("text", "") or "")
+                value_value = str(row.get("value", "") or "")
+                text_item = QTableWidgetItem(text_value)
+                value_item = QTableWidgetItem(value_value)
+                text_item.setFlags((text_item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled) & ~Qt.ItemIsEditable)
+                skill_key = str(row.get("skill_key", "") or "").strip()
+                if skill_key:
+                    text_item.setData(Qt.UserRole, skill_key)
+                    text_item.setData(Qt.UserRole + 1, text_value)
+                text_item.setToolTip(text_value if text_value else "")
+                value_item.setToolTip(value_value if value_value else "")
+                se_table.setItem(row_index, 0, text_item)
+                se_table.setItem(row_index, 1, value_item)
+            text_w = self._safe_int(text_col_cfg.get("w", 240), 240)
+            value_w = self._safe_int(value_col_cfg.get("w", 80), 80)
+            available = max(1, se_table.width() - 4)
+            configured = text_w + value_w
+            if configured > available:
+                text_w = max(120, text_w - (configured - available))
+            se_table.setColumnWidth(0, max(1, text_w))
+            se_table.setColumnWidth(1, max(1, value_w))
+            for r in range(se_table.rowCount()):
+                se_table.setRowHeight(r, 28)
+        finally:
+            se_table.blockSignals(False)
+            self._skills_se_loading = False
+
+        se_table.cellChanged.connect(
+            lambda row, col, widget=se_table, mr=min_rows, ar=add_rows: self.on_skills_se_table_cell_changed(
+                widget, mr, ar
+            )
+        )
+        se_table.cellDoubleClicked.connect(
+            lambda row, col, widget=se_table: self.open_skills_se_skill_picker(widget, row) if col == 0 else None
+        )
+        se_table.show()
+
+        xp_cfg = se_cfg.get("xp_info", {}) if isinstance(se_cfg, dict) else {}
+        if not isinstance(xp_cfg, dict):
+            xp_cfg = {}
+        if not bool(xp_cfg.get("enabled", True)):
+            return
+
+        character_screen = self.main_ui_layout_config.get("character_screen", {})
+        data_map = character_screen.get("data_map", {}) if isinstance(character_screen, dict) else {}
+        basic_map = data_map.get("basic", {}) if isinstance(data_map, dict) else {}
+        if not isinstance(basic_map, dict):
+            basic_map = {}
+
+        default_sheet = "Charakterbogen"
+        if isinstance(data_map, dict):
+            default_sheet = str(data_map.get("sheet", default_sheet))
+
+        def resolve_mapping_cell(entry, fallback_cell):
+            sheet_name = default_sheet
+            cell_ref = fallback_cell
+            if isinstance(entry, str) and entry.strip():
+                cell_ref = entry.strip()
+            elif isinstance(entry, dict):
+                sheet_name = str(entry.get("sheet", default_sheet))
+                mapped_cell = entry.get("cell")
+                if isinstance(mapped_cell, str) and mapped_cell.strip():
+                    cell_ref = mapped_cell.strip()
+            return sheet_name, cell_ref
+
+        exp_current_sheet, exp_current_cell = resolve_mapping_cell(basic_map.get("exp_current", "B16"), "B16")
+        exp_max_sheet, exp_max_cell = resolve_mapping_cell(basic_map.get("exp_max", "F16"), "F16")
+
+        def parse_int_value(value):
+            text = str(value or "").strip()
+            if not text:
+                return 0
+            text = text.replace(",", ".")
+            try:
+                return int(float(text))
+            except Exception:
+                return 0
+
+        exp_current_raw = self.get_cache_cell_value(exp_current_sheet, exp_current_cell, 0)
+        exp_max_raw = self.get_cache_cell_value(exp_max_sheet, exp_max_cell, 0)
+        exp_current = parse_int_value(exp_current_raw)
+        exp_max = parse_int_value(exp_max_raw)
+        if self.skills_debug_sources:
+            print(f"[SKILLS UPGRADE XP] current={exp_current} max={exp_max}")
+
+        xp_x = self._safe_int(xp_cfg.get("x", x + w + 40), x + w + 40)
+        xp_y = self._safe_int(xp_cfg.get("y", y), y)
+        xp_w = self._safe_int(xp_cfg.get("w", 260), 260)
+        xp_h = self._safe_int(xp_cfg.get("h", 150), 150)
+        xp_title = str(xp_cfg.get("title", "XP Info"))
+        xp_font_size = self._safe_int(xp_cfg.get("font_size", 16), 16)
+        xp_title_font_size = self._safe_int(xp_cfg.get("title_font_size", 18), 18)
+        xp_label_color = str(xp_cfg.get("label_color", "#f2d28b"))
+        xp_text_color = str(xp_cfg.get("text_color", "#ffffff"))
+        xp_value_color = str(xp_cfg.get("value_color", "#7fd0ff"))
+        xp_border_color = str(xp_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        xp_bg = str(xp_cfg.get("background", "rgba(5, 5, 5, 95)"))
+        labels_cfg = xp_cfg.get("labels", {})
+        if not isinstance(labels_cfg, dict):
+            labels_cfg = {}
+        label_current = str(labels_cfg.get("current", "Current"))
+        label_max = str(labels_cfg.get("max", "Max"))
+
+        xp_frame = QFrame(parent)
+        xp_frame.setGeometry(xp_x, xp_y, xp_w, xp_h)
+        xp_frame.setStyleSheet(
+            f"background: {xp_bg};"
+            f"border: 1px solid {xp_border_color};"
+            "border-radius: 4px;"
+        )
+        xp_frame.show()
+
+        self.create_panel_text(
+            xp_frame,
+            {"x": 10, "y": 8, "w": max(1, xp_w - 20), "h": 28},
+            xp_title,
+            xp_title_font_size,
+            xp_label_color,
+            bold=True,
+            align="left",
+        )
+
+        line_y = 44
+        line_h = 28
+        self.create_panel_text(
+            xp_frame,
+            {"x": 10, "y": line_y, "w": 110, "h": line_h},
+            f"{label_current}:",
+            xp_font_size,
+            xp_text_color,
+            bold=False,
+            align="left",
+        )
+        self.create_panel_text(
+            xp_frame,
+            {"x": 125, "y": line_y, "w": max(1, xp_w - 135), "h": line_h},
+            str(exp_current),
+            xp_font_size,
+            xp_value_color,
+            bold=True,
+            align="right",
+        )
+
+        line_y += line_h
+        self.create_panel_text(
+            xp_frame,
+            {"x": 10, "y": line_y, "w": 110, "h": line_h},
+            f"{label_max}:",
+            xp_font_size,
+            xp_text_color,
+            bold=False,
+            align="left",
+        )
+        self.create_panel_text(
+            xp_frame,
+            {"x": 125, "y": line_y, "w": max(1, xp_w - 135), "h": line_h},
+            str(exp_max),
+            xp_font_size,
+            xp_value_color,
+            bold=True,
+            align="right",
+        )
+
+        upgrade_cfg = {}
+        if isinstance(se_cfg, dict):
+            upgrade_cfg = se_cfg.get("skill_upgrade_info", se_cfg.get("upgrade_info", {}))
+        if not isinstance(upgrade_cfg, dict):
+            upgrade_cfg = {}
+        if bool(upgrade_cfg.get("enabled", True)):
+            up_x = self._safe_int(upgrade_cfg.get("x", xp_x), xp_x)
+            up_y = self._safe_int(upgrade_cfg.get("y", xp_y + xp_h + 12), xp_y + xp_h + 12)
+            up_w = self._safe_int(upgrade_cfg.get("w", xp_w), xp_w)
+            up_h = self._safe_int(upgrade_cfg.get("h", 300), 300)
+            up_title = str(upgrade_cfg.get("title", "Skill Upgrade"))
+            max_items = self._safe_int(upgrade_cfg.get("max_items", 999), 999)
+            word_wrap = bool(upgrade_cfg.get("word_wrap", True))
+            scrollable = bool(upgrade_cfg.get("scrollable", True))
+            up_title_font_size = self._safe_int(upgrade_cfg.get("title_font_size", xp_title_font_size), xp_title_font_size)
+            up_font_size = self._safe_int(upgrade_cfg.get("font_size", max(12, xp_font_size - 1)), max(12, xp_font_size - 1))
+            up_label_color = str(upgrade_cfg.get("label_color", xp_label_color))
+            up_text_color = str(upgrade_cfg.get("text_color", xp_text_color))
+            up_border_color = str(upgrade_cfg.get("border_color", xp_border_color))
+            up_bg = str(upgrade_cfg.get("background", xp_bg))
+            muted_color = str(upgrade_cfg.get("muted_color", "#d8d0b0"))
+
+            upgrade_frame = QFrame(parent)
+            upgrade_frame.setGeometry(up_x, up_y, up_w, up_h)
+            upgrade_frame.setStyleSheet(
+                f"background: {up_bg};"
+                f"border: 1px solid {up_border_color};"
+                "border-radius: 4px;"
+            )
+            upgrade_frame.show()
+
+            self.create_panel_text(
+                upgrade_frame,
+                {"x": 10, "y": 8, "w": max(1, up_w - 20), "h": 28},
+                up_title,
+                up_title_font_size,
+                up_label_color,
+                bold=True,
+                align="left",
+            )
+
+            upgrade_result = self.build_se_upgrade_candidates(rows, exp_current)
+            status = str(upgrade_result.get("status", "no_upgrade_data"))
+            groups = upgrade_result.get("groups", {}) if isinstance(upgrade_result, dict) else {}
+            if not isinstance(groups, dict):
+                groups = {}
+
+            lines = []
+            if status == "no_se_entries":
+                lines.append(("Keine SE-Einträge", up_text_color, True))
+            elif status == "no_bound_entries":
+                lines.append(("Keine gebundenen SE-Einträge", up_text_color, True))
+            elif status == "no_costs":
+                lines.append(("Keine Upgrade-Kosten gefunden", up_text_color, True))
+            elif status == "no_upgrade_data":
+                lines.append(("Keine Upgrade-Daten gefunden", up_text_color, True))
+            else:
+                def add_group(title, items):
+                    if not items:
+                        return
+                    lines.append((f"{title}:", up_label_color, True))
+                    for item in items:
+                        lines.append(
+                            (
+                                f'- {item["skill_name"]} — SE {item["available_se"]}/{item["needed_se"]} · XP {item["available_xp"]}/{item["needed_xp"]}',
+                                up_text_color,
+                                False,
+                            )
+                        )
+
+                possible_items = list(groups.get("possible", []))
+                missing_xp_items = list(groups.get("missing_xp", []))
+                missing_se_items = list(groups.get("missing_se", []))
+                missing_both_items = list(groups.get("missing_both", []))
+                unknown_items = list(groups.get("unknown", []))
+                broken_link_items = list(groups.get("broken_link", []))
+                add_group("Möglich", possible_items)
+                add_group("Fehlt XP", missing_xp_items)
+                add_group("Fehlt SE", missing_se_items)
+                add_group("Fehlt beides", missing_both_items)
+                add_group("Max / keine Stufe bekannt", unknown_items)
+                add_group("Ungültiger Skill-Link", broken_link_items)
+
+                if not lines:
+                    lines.append(("Keine Upgrade-Daten gefunden", up_text_color, True))
+
+            display_lines = []
+            more_count = 0
+            if max_items > 0:
+                display_lines = lines[:max_items]
+                more_count = max(0, len(lines) - len(display_lines))
+            else:
+                display_lines = lines
+            if more_count > 0:
+                display_lines.append((f"... +{more_count} weitere", muted_color, False))
+
+            html_lines = []
+            for text, color, bold in display_lines:
+                safe_text = (
+                    str(text)
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                )
+                weight = "700" if bold else "400"
+                html_lines.append(
+                    f'<div style="color:{color}; font-size:{up_font_size}px; font-weight:{weight}; margin:2px 0;">{safe_text}</div>'
+                )
+
+            content = QTextEdit(upgrade_frame)
+            content.setGeometry(10, 42, max(1, up_w - 20), max(1, up_h - 52))
+            content.setReadOnly(True)
+            content.setLineWrapMode(QTextEdit.WidgetWidth if word_wrap else QTextEdit.NoWrap)
+            if not scrollable:
+                content.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+                content.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            content.setStyleSheet(
+                "QTextEdit {"
+                f"background: {up_bg};"
+                f"color: {up_text_color};"
+                f"border: 1px solid {up_border_color};"
+                "border-radius: 3px;"
+                "padding: 4px;"
+                "}"
+            )
+            content.setHtml("".join(html_lines))
+            content.show()
+
+        if self.skills_debug_sources:
+            print(f"[SKILLS SE XP] current={exp_current} max={exp_max}")
 
     def on_skill_category_clicked(self, category_id):
         self.current_skill_category = str(category_id)
