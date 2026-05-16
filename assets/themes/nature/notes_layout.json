@@ -1,0 +1,54 @@
+{
+  "notes_screen": {
+    "x": 40,
+    "y": 40,
+    "w": 1380,
+    "h": 790,
+    "title": {
+      "enabled": true,
+      "text": "Notizen",
+      "x": 0,
+      "y": 0,
+      "w": 1380,
+      "h": 42,
+      "font_size": 24,
+      "color": "#f2d28b",
+      "align": "center"
+    },
+    "editor": {
+      "x": 20,
+      "y": 60,
+      "w": 1340,
+      "h": 620,
+      "font_size": 16,
+      "text_color": "#ffffff",
+      "background": "rgba(5, 5, 5, 120)",
+      "border_color": "rgba(242, 210, 139, 100)",
+      "placeholder": "Notizen..."
+    },
+    "save_button": {
+      "enabled": false,
+      "x": 1120,
+      "y": 700,
+      "w": 220,
+      "h": 44,
+      "text": "Speichern"
+    },
+    "status": {
+      "enabled": true,
+      "x": 20,
+      "y": 700,
+      "w": 700,
+      "h": 32,
+      "font_size": 14,
+      "color": "#e8e0c8"
+    },
+    "autosave": {
+      "enabled": true,
+      "delay_ms": 600
+    },
+    "debug": {
+      "enabled": false
+    }
+  }
+}

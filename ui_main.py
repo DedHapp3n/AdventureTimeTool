@@ -5,13 +5,14 @@ from PySide6.QtWidgets import (
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog,
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
-from PySide6.QtCore import Qt, QEvent, QRect
+from PySide6.QtCore import Qt, QEvent, QRect, QTimer
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush
 import re
 import os
 import json
 import math
 import html
+from datetime import datetime, timezone
 from pathlib import Path
 
 from data_loader import DataLoader
@@ -142,6 +143,7 @@ class MainWindow(QMainWindow):
         self._character_rendering = False
         self._character_edit_cfg = {}
         self.character_paradigm_analysis = {}
+        self._notes_loading_text = False
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -658,6 +660,8 @@ class MainWindow(QMainWindow):
                     self.show_main_section("inventory")
                 elif self.current_main_section in ("equipment", "ausruestung", "ausrüstung"):
                     self.show_main_section("equipment")
+                elif self.current_main_section == "notes":
+                    self.show_main_section("notes")
             print("[SETTINGS] Cache reload clicked")
             return
         print("[SETTINGS] Cache reload clicked")
@@ -693,6 +697,8 @@ class MainWindow(QMainWindow):
             self.render_inventory_screen()
         elif section_id in ("equipment", "ausruestung", "ausrüstung"):
             self.render_equipment_screen()
+        elif section_id == "notes":
+            self.render_notes_screen()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -1399,6 +1405,121 @@ class MainWindow(QMainWindow):
         print("[EQUIPMENT LAYOUT] fallback: internal default")
         self.equipment_layout_config = self.get_default_equipment_layout_config()
         return self.equipment_layout_config
+
+    def get_default_notes_layout_config(self):
+        return {
+            "notes_screen": {
+                "x": 40,
+                "y": 40,
+                "w": 1380,
+                "h": 790,
+                "title": {
+                    "enabled": True,
+                    "text": "Notizen",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1380,
+                    "h": 42,
+                    "font_size": 24,
+                    "color": "#f2d28b",
+                    "align": "center",
+                },
+                "editor": {
+                    "x": 20,
+                    "y": 60,
+                    "w": 1340,
+                    "h": 620,
+                    "font_size": 16,
+                    "text_color": "#ffffff",
+                    "background": "rgba(5, 5, 5, 120)",
+                    "border_color": "rgba(242, 210, 139, 100)",
+                    "placeholder": "Notizen...",
+                },
+                "save_button": {
+                    "enabled": False,
+                    "x": 1120,
+                    "y": 700,
+                    "w": 220,
+                    "h": 44,
+                    "text": "Speichern",
+                },
+                "status": {
+                    "enabled": True,
+                    "x": 20,
+                    "y": 700,
+                    "w": 700,
+                    "h": 32,
+                    "font_size": 14,
+                    "color": "#e8e0c8",
+                },
+                "autosave": {"enabled": True, "delay_ms": 600},
+                "debug": {"enabled": False},
+            }
+        }
+
+    def load_notes_layout_config(self):
+        active_theme = self.get_active_theme()
+        layout_file = ""
+        screen_cfg = self.main_ui_layout_config.get("notes_screen", {})
+        if isinstance(screen_cfg, dict):
+            layout_file = str(screen_cfg.get("layout_file", "")).strip()
+        if not layout_file:
+            layout_file = "notes_layout.json"
+
+        candidates = [
+            self.base_dir / "assets" / "themes" / active_theme / layout_file,
+            self.base_dir / "assets" / "themes" / "diablo" / "notes_layout.json",
+        ]
+        for layout_path in candidates:
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("notes_screen"), dict):
+                    debug_cfg = data.get("notes_screen", {}).get("debug", {})
+                    if isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False)):
+                        print(f"[NOTES LAYOUT] loaded: {layout_path}")
+                    return data
+            except Exception:
+                continue
+        print("[NOTES LAYOUT] fallback: internal default")
+        return self.get_default_notes_layout_config()
+
+    def _notes_debug_enabled(self, notes_layout):
+        screen_cfg = notes_layout.get("notes_screen", {}) if isinstance(notes_layout, dict) else {}
+        debug_cfg = screen_cfg.get("debug", {}) if isinstance(screen_cfg, dict) else {}
+        return isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False))
+
+    def _get_notes_text_from_meta(self):
+        app_meta = getattr(self.loader, "app_meta", {})
+        if not isinstance(app_meta, dict):
+            return ""
+        custom_sections = app_meta.get("custom_sections", {})
+        if not isinstance(custom_sections, dict):
+            return ""
+        notes_data = custom_sections.get("notes", {})
+        if not isinstance(notes_data, dict):
+            return ""
+        return str(notes_data.get("text", "") or "")
+
+    def _save_notes_text_to_meta(self, text_value):
+        try:
+            if not isinstance(self.loader.app_meta, dict):
+                self.loader.app_meta = {}
+            custom_sections = self.loader.app_meta.setdefault("custom_sections", {})
+            if not isinstance(custom_sections, dict):
+                custom_sections = {}
+                self.loader.app_meta["custom_sections"] = custom_sections
+            custom_sections["notes"] = {
+                "text": str(text_value or ""),
+                "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }
+            self.loader.save_active_character_json()
+            return True
+        except Exception as exc:
+            print("[NOTES SAVE ERROR]", str(exc))
+            return False
 
     def _get_equipment_debug_config(self):
         layout_config = getattr(self, "equipment_layout_config", None)
@@ -5439,6 +5560,197 @@ class MainWindow(QMainWindow):
             self.render_inventory_active_category_table(screen, screen_cfg, inventory_categories)
         finally:
             self._inventory_loading = False
+
+    def render_notes_screen(self):
+        if self.content_layer is None:
+            return
+        layout_config = self.load_notes_layout_config()
+        screen_cfg = layout_config.get("notes_screen", {})
+        if not isinstance(screen_cfg, dict):
+            screen_cfg = self.get_default_notes_layout_config().get("notes_screen", {})
+        notes_debug = self._notes_debug_enabled(layout_config)
+
+        screen = QFrame(self.content_layer)
+        screen.setGeometry(
+            self._safe_int(screen_cfg.get("x", 40), 40),
+            self._safe_int(screen_cfg.get("y", 40), 40),
+            self._safe_int(screen_cfg.get("w", 1380), 1380),
+            self._safe_int(screen_cfg.get("h", 790), 790),
+        )
+        screen.setStyleSheet("background: transparent;")
+        screen.show()
+
+        title_cfg = screen_cfg.get("title", {})
+        if isinstance(title_cfg, dict) and bool(title_cfg.get("enabled", True)):
+            self.create_panel_text(
+                screen,
+                {
+                    "x": self._safe_int(title_cfg.get("x", 0), 0),
+                    "y": self._safe_int(title_cfg.get("y", 0), 0),
+                    "w": self._safe_int(title_cfg.get("w", 1380), 1380),
+                    "h": self._safe_int(title_cfg.get("h", 42), 42),
+                },
+                str(title_cfg.get("text", "Notizen")),
+                self._safe_int(title_cfg.get("font_size", 24), 24),
+                str(title_cfg.get("color", "#f2d28b")),
+                bold=True,
+                align=str(title_cfg.get("align", "center")),
+            )
+
+        editor_cfg = screen_cfg.get("editor", {})
+        editor_x = self._safe_int(editor_cfg.get("x", 20), 20)
+        editor_y = self._safe_int(editor_cfg.get("y", 60), 60)
+        editor_w = self._safe_int(editor_cfg.get("w", 1340), 1340)
+        editor_h = self._safe_int(editor_cfg.get("h", 620), 620)
+        editor_font_size = self._safe_int(editor_cfg.get("font_size", 16), 16)
+        editor_text_color = str(editor_cfg.get("text_color", "#ffffff"))
+        editor_bg = str(editor_cfg.get("background", "rgba(5, 5, 5, 120)"))
+        editor_border = str(editor_cfg.get("border_color", "rgba(242, 210, 139, 100)"))
+
+        editor = QTextEdit(screen)
+        editor.setGeometry(editor_x, editor_y, editor_w, editor_h)
+        editor.setAcceptRichText(False)
+        editor.setLineWrapMode(QTextEdit.WidgetWidth)
+        editor.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        editor.setPlaceholderText(str(editor_cfg.get("placeholder", "Notizen...")))
+        editor.setStyleSheet(
+            "QTextEdit {"
+            f"background: {editor_bg};"
+            f"border: 1px solid {editor_border};"
+            f"color: {editor_text_color};"
+            f"font-size: {editor_font_size}px;"
+            "padding: 8px;"
+            "}"
+        )
+        editor.show()
+
+        status_cfg = screen_cfg.get("status", {})
+        status_label = None
+        if isinstance(status_cfg, dict) and bool(status_cfg.get("enabled", True)):
+            status_label = QLabel(screen)
+            status_label.setGeometry(
+                self._safe_int(status_cfg.get("x", 20), 20),
+                self._safe_int(status_cfg.get("y", 700), 700),
+                self._safe_int(status_cfg.get("w", 700), 700),
+                self._safe_int(status_cfg.get("h", 32), 32),
+            )
+            status_label.setText("")
+            status_label.setStyleSheet(
+                "background: transparent; "
+                f"color: {str(status_cfg.get('color', '#e8e0c8'))}; "
+                f"font-size: {self._safe_int(status_cfg.get('font_size', 14), 14)}px;"
+                "font-weight: 500;"
+            )
+            status_label.show()
+
+        autosave_cfg = screen_cfg.get("autosave", {})
+        if not isinstance(autosave_cfg, dict):
+            autosave_cfg = {}
+        autosave_enabled = bool(autosave_cfg.get("enabled", True))
+        autosave_delay_ms = max(100, self._safe_int(autosave_cfg.get("delay_ms", 600), 600))
+
+        autosave_timer = QTimer(screen)
+        autosave_timer.setSingleShot(True)
+        autosave_timer.setInterval(autosave_delay_ms)
+
+        notes_text = self._get_notes_text_from_meta()
+        self._notes_loading_text = True
+        try:
+            editor.setPlainText(notes_text)
+        finally:
+            self._notes_loading_text = False
+        self._notes_last_saved_text = str(notes_text)
+        if notes_debug:
+            print(f"[NOTES LOAD] chars={len(notes_text)}")
+
+        if status_label is not None:
+            status_label.setText("Automatisch gespeichert")
+
+        def run_autosave():
+            if self._notes_loading_text:
+                return
+            active_cache_path = str(getattr(self.loader, "active_cache_path", "") or "")
+            if not active_cache_path:
+                if status_label is not None:
+                    status_label.setText("Kein Charakter geladen")
+                return
+            text_value = editor.toPlainText()
+            if text_value == str(getattr(self, "_notes_last_saved_text", "")):
+                if status_label is not None:
+                    status_label.setText("Automatisch gespeichert")
+                return
+            if notes_debug:
+                print(f"[NOTES AUTOSAVE] chars={len(text_value)}")
+            ok = self._save_notes_text_to_meta(text_value)
+            if ok:
+                self._notes_last_saved_text = text_value
+                if notes_debug:
+                    print("[NOTES SAVE] active character saved")
+                if status_label is not None:
+                    status_label.setText("Automatisch gespeichert")
+            else:
+                if status_label is not None:
+                    status_label.setText("Autosave fehlgeschlagen — siehe Terminal")
+
+        autosave_timer.timeout.connect(run_autosave)
+
+        def on_text_changed():
+            if self._notes_loading_text:
+                return
+            text_value = editor.toPlainText()
+            if text_value == str(getattr(self, "_notes_last_saved_text", "")):
+                return
+            if status_label is not None:
+                status_label.setText("Speichert...")
+            if notes_debug:
+                print(f"[NOTES AUTOSAVE QUEUED] chars={len(text_value)}")
+            if autosave_enabled:
+                autosave_timer.start()
+
+        editor.textChanged.connect(on_text_changed)
+
+        save_cfg = screen_cfg.get("save_button", {})
+        if isinstance(save_cfg, dict) and bool(save_cfg.get("enabled", True)):
+            save_button = QPushButton(screen)
+            save_button.setGeometry(
+                self._safe_int(save_cfg.get("x", 1120), 1120),
+                self._safe_int(save_cfg.get("y", 700), 700),
+                self._safe_int(save_cfg.get("w", 220), 220),
+                self._safe_int(save_cfg.get("h", 44), 44),
+            )
+            save_button.setText(str(save_cfg.get("text", "Speichern")))
+            save_button.setCursor(Qt.PointingHandCursor)
+            save_button.setStyleSheet(
+                "QPushButton {"
+                "background-color: rgba(35, 24, 12, 185);"
+                "color: #f2d28b;"
+                "border: 1px solid rgba(184, 138, 53, 150);"
+                "border-radius: 4px;"
+                "font-size: 18px;"
+                "font-weight: 700;"
+                "padding: 0px;"
+                "}"
+                "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
+            )
+
+            def on_save_clicked():
+                text_value = editor.toPlainText()
+                if notes_debug:
+                    print(f"[NOTES SAVE] chars={len(text_value)}")
+                ok = self._save_notes_text_to_meta(text_value)
+                if ok:
+                    self._notes_last_saved_text = text_value
+                    if notes_debug:
+                        print("[NOTES SAVE] active character saved")
+                    if status_label is not None:
+                        status_label.setText("Automatisch gespeichert")
+                else:
+                    if status_label is not None:
+                        status_label.setText("Autosave fehlgeschlagen — siehe Terminal")
+
+            save_button.clicked.connect(on_save_clicked)
+            save_button.show()
 
     def on_inventory_category_clicked(self, category_id):
         self.current_inventory_category = str(category_id or "")
@@ -10222,6 +10534,8 @@ class MainWindow(QMainWindow):
             self.show_main_section("skills")
         elif self.current_main_section == "inventory":
             self.show_main_section("inventory")
+        elif self.current_main_section == "notes":
+            self.show_main_section("notes")
         print("[CHARACTER CACHE] loaded:", cache_path)
 
     def on_settings_refresh_character_list_clicked(self):
