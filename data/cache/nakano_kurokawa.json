@@ -1047,7 +1047,7 @@
         "error": null
       },
       "AA37": {
-        "value": "X",
+        "value": "x",
         "formula": null,
         "references": [],
         "error": null
@@ -1197,6 +1197,18 @@
       },
       "AA39": {
         "value": "x",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F24": {
+        "value": "",
         "formula": null,
         "references": [],
         "error": null

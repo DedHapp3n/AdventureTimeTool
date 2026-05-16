@@ -974,6 +974,57 @@
       "edit_on": "double_click",
       "text_editor": "dialog",
       "empty_value": ""
+    },
+    "paradigm_panel": {
+      "enabled": true,
+      "x": 24,
+      "y": 585,
+      "w": 520,
+      "h": 180,
+      "title": "Paradigmen",
+      "title_font_size": 18,
+      "font_size": 13,
+      "label_color": "#f2d28b",
+      "text_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "edit": {
+        "enabled": true,
+        "debug": true
+      },
+      "layout": {
+        "padding": 10,
+        "title_h": 28,
+        "name_h": 34,
+        "label_w": 80,
+        "marker_w": 24,
+        "marker_h": 24,
+        "marker_gap": 5,
+        "row_h": 30,
+        "column_gap": 24
+      },
+      "rows": [
+        {
+          "id": "grad",
+          "label": "Grad"
+        },
+        {
+          "id": "brand",
+          "label": "Brand"
+        },
+        {
+          "id": "daily",
+          "label": "Daily"
+        }
+      ],
+      "marker": {
+        "active_asset": "icons/x.jpg",
+        "inactive_asset": null,
+        "use_icon": true,
+        "fallback_text": "X",
+        "icon_padding": 4
+      }
     }
   }
 }

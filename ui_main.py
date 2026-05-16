@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
         self._equipment_rendering = False
         self._character_rendering = False
         self._character_edit_cfg = {}
+        self.character_paradigm_analysis = {}
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -8173,6 +8174,309 @@ class MainWindow(QMainWindow):
         if cfg.get("debug", False):
             print(message)
 
+    def _character_paradigm_debug(self, message):
+        cfg = self.main_ui_layout_config.get("character_screen", {})
+        panel = cfg.get("paradigm_panel", {}) if isinstance(cfg, dict) else {}
+        edit_cfg = panel.get("edit", {}) if isinstance(panel, dict) else {}
+        if isinstance(edit_cfg, dict) and bool(edit_cfg.get("debug", False)):
+            print(message)
+
+    def _parse_generic_cell_ref(self, cell_ref):
+        match = re.match(r"^([A-Z]+)(\d+)$", str(cell_ref or "").strip().upper())
+        if not match:
+            return None
+        row = int(match.group(2))
+        col = self._col_letters_to_index(match.group(1))
+        return row, col
+
+    def _normalize_sheet_text(self, value):
+        return str(value or "").strip().lower()
+
+    def _analyze_character_paradigm_area(self, default_sheet="Charakterbogen"):
+        sheet_name = str(default_sheet or "Charakterbogen")
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        if not isinstance(sheet_cache, dict) or not sheet_cache:
+            return {
+                "sheet": sheet_name,
+                "label_cell": "",
+                "columns": [],
+                "rows": {},
+                "names_row": 0,
+            }
+
+        normalized_cells = []
+        for cell_ref, cell_data in sheet_cache.items():
+            parsed = self._parse_generic_cell_ref(cell_ref)
+            if not parsed:
+                continue
+            row, col = parsed
+            value = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
+            text = str(value or "").strip()
+            normalized_cells.append((cell_ref, row, col, text, text.lower()))
+
+        label_entry = next((entry for entry in normalized_cells if entry[4] == "paradigmen"), None)
+        if not label_entry:
+            return {
+                "sheet": sheet_name,
+                "label_cell": "",
+                "columns": [],
+                "rows": {},
+                "names_row": 0,
+            }
+        label_cell, label_row, label_col, _, _ = label_entry
+        self._character_paradigm_debug(f"[CHARACTER PARADIGM] label found cell={label_cell}")
+
+        row_by_label = {}
+        for key in ("grad", "brand", "daily"):
+            found = next(
+                (
+                    entry
+                    for entry in normalized_cells
+                    if entry[4] == key and label_row <= entry[1] <= label_row + 12
+                ),
+                None,
+            )
+            row_by_label[key] = int(found[1]) if found else 0
+            self._character_paradigm_debug(
+                f"[CHARACTER PARADIGM] {key} row={row_by_label[key] if row_by_label[key] else '-'}"
+            )
+
+        candidate_rows = []
+        row_min = label_row
+        row_max = row_by_label.get("grad") - 1 if row_by_label.get("grad") else label_row + 4
+        for row in range(row_min, max(row_min, row_max) + 1):
+            entries = [
+                entry
+                for entry in normalized_cells
+                if entry[1] == row
+                and entry[2] > label_col
+                and entry[2] <= label_col + 28
+                and entry[3]
+                and entry[4] not in {"grad", "brand", "daily", "paradigmen"}
+            ]
+            if entries:
+                candidate_rows.append((row, entries))
+        name_row = 0
+        name_columns = []
+        if candidate_rows:
+            candidate_rows.sort(key=lambda item: (-len(item[1]), item[0]))
+            name_row, entries = candidate_rows[0]
+            entries.sort(key=lambda item: item[2])
+            name_columns = entries[:3]
+        self._character_paradigm_debug(f"[CHARACTER PARADIGM] names row={name_row if name_row else '-'}")
+
+        columns = []
+        marker_count = 3
+        row_cells = {"grad": [], "brand": [], "daily": []}
+        for idx, entry in enumerate(name_columns):
+            _, _, base_col, name_text, _ = entry
+            col_data = {
+                "index": idx,
+                "name_cell": f"{self._col_index_to_letters(base_col)}{name_row}" if name_row else "",
+                "name": name_text,
+                "grad_cells": [],
+                "brand_cells": [],
+                "daily_cells": [],
+            }
+            for key in ("grad", "brand", "daily"):
+                target_row = row_by_label.get(key, 0)
+                cells = []
+                if target_row > 0:
+                    for offset in range(marker_count):
+                        cell_ref = f"{self._col_index_to_letters(base_col + offset)}{target_row}"
+                        cells.append(cell_ref)
+                        row_cells[key].append(cell_ref)
+                col_data[f"{key}_cells"] = cells
+            columns.append(col_data)
+
+        return {
+            "sheet": sheet_name,
+            "label_cell": label_cell,
+            "columns": columns,
+            "rows": {
+                "grad": {"row": row_by_label.get("grad", 0), "cells": row_cells.get("grad", [])},
+                "brand": {"row": row_by_label.get("brand", 0), "cells": row_cells.get("brand", [])},
+                "daily": {"row": row_by_label.get("daily", 0), "cells": row_cells.get("daily", [])},
+            },
+            "names_row": name_row,
+        }
+
+    def _paradigm_edit_allowed(self):
+        cfg = self.main_ui_layout_config.get("character_screen", {})
+        panel = cfg.get("paradigm_panel", {}) if isinstance(cfg, dict) else {}
+        edit_cfg = panel.get("edit", {}) if isinstance(panel, dict) else {}
+        panel_edit = bool(edit_cfg.get("enabled", False)) if isinstance(edit_cfg, dict) else False
+        return self._character_edit_allowed("basic_fields") and panel_edit
+
+    def _render_character_paradigm_panel(self, character_screen, attribute_panel, default_color):
+        panel_cfg = character_screen.get("paradigm_panel", {})
+        if not isinstance(panel_cfg, dict) or not bool(panel_cfg.get("enabled", False)):
+            return
+
+        analysis = self._analyze_character_paradigm_area("Charakterbogen")
+        self.character_paradigm_analysis = analysis
+        panel = QFrame(self.content_layer)
+        panel_x = self._safe_int(panel_cfg.get("x", attribute_panel.x()), attribute_panel.x())
+        panel_y = self._safe_int(panel_cfg.get("y", attribute_panel.y() + attribute_panel.height() + 8), attribute_panel.y() + attribute_panel.height() + 8)
+        panel_w = self._safe_int(panel_cfg.get("w", 440), 440)
+        panel_h = self._safe_int(panel_cfg.get("h", 170), 170)
+        layout_cfg = panel_cfg.get("layout", {})
+        fallback_used = not isinstance(layout_cfg, dict)
+        if not isinstance(layout_cfg, dict):
+            layout_cfg = {}
+        padding = self._safe_int(layout_cfg.get("padding", 10), 10)
+        title_h = self._safe_int(layout_cfg.get("title_h", 28), 28)
+        name_h = self._safe_int(layout_cfg.get("name_h", 34), 34)
+        label_w = self._safe_int(layout_cfg.get("label_w", 70), 70)
+        marker_w = self._safe_int(layout_cfg.get("marker_w", 24), 24)
+        marker_h = self._safe_int(layout_cfg.get("marker_h", 24), 24)
+        marker_gap = self._safe_int(layout_cfg.get("marker_gap", 4), 4)
+        row_h = self._safe_int(layout_cfg.get("row_h", 30), 30)
+        column_gap = self._safe_int(layout_cfg.get("column_gap", 10), 10)
+
+        self._character_paradigm_debug(
+            f"[CHARACTER PARADIGM LAYOUT] x={panel_x} y={panel_y} w={panel_w} h={panel_h}"
+        )
+        self._character_paradigm_debug("[CHARACTER PARADIGM CONFIG] source=ui_layout.json")
+        if fallback_used:
+            self._character_paradigm_debug("[CHARACTER PARADIGM LAYOUT] fallback used")
+
+        panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            "border-radius: 6px;"
+            "}"
+        )
+        panel.show()
+
+        title = str(panel_cfg.get("title", "Paradigmen"))
+        self.create_panel_text(
+            panel,
+            {"x": padding, "y": padding, "w": panel_w - padding * 2, "h": title_h},
+            title,
+            self._safe_int(panel_cfg.get("title_font_size", 18), 18),
+            str(panel_cfg.get("label_color", default_color)),
+            bold=True,
+            align="left",
+        )
+
+        if not analysis.get("columns"):
+            self.create_panel_text(
+                panel,
+                {"x": padding, "y": padding + title_h + 6, "w": panel_w - padding * 2, "h": max(24, row_h)},
+                "Keine Paradigmen gefunden",
+                self._safe_int(panel_cfg.get("font_size", 14), 14),
+                str(panel_cfg.get("text_color", "#ffffff")),
+                align="left",
+            )
+            return
+
+        edit_allowed = self._paradigm_edit_allowed()
+        rows_cfg = panel_cfg.get("rows", [])
+        if not isinstance(rows_cfg, list) or not rows_cfg:
+            rows_cfg = [{"id": "grad", "label": "Grad"}, {"id": "brand", "label": "Brand"}, {"id": "daily", "label": "Daily"}]
+        cols_cfg = panel_cfg.get("columns", {})
+        marker_cfg = panel_cfg.get("marker", {})
+        if not isinstance(marker_cfg, dict):
+            marker_cfg = {}
+        col_count = self._safe_int(cols_cfg.get("count", 3), 3)
+        start_x = padding + label_w
+        available_w = panel_w - start_x - padding
+        col_w = max(80, (available_w - (col_count - 1) * column_gap) // max(1, col_count))
+        header_y = padding + title_h + 6
+        row_y_start = header_y + name_h
+        marker_use_icon = bool(marker_cfg.get("use_icon", True))
+        marker_active_asset = str(marker_cfg.get("active_asset", "icons/x.jpg") or "").strip()
+        marker_fallback_text = str(marker_cfg.get("fallback_text", "X"))
+        marker_icon_padding = max(0, self._safe_int(marker_cfg.get("icon_padding", 4), 4))
+
+        for idx, col_info in enumerate(analysis.get("columns", [])[:col_count]):
+            col_x = start_x + idx * (col_w + column_gap)
+            name_cell = str(col_info.get("name_cell", ""))
+            name_text = str(col_info.get("name", ""))
+            name_label = self.create_panel_text(
+                panel,
+                {"x": col_x, "y": header_y, "w": col_w, "h": name_h},
+                name_text,
+                self._safe_int(panel_cfg.get("font_size", 14), 14),
+                str(panel_cfg.get("text_color", "#ffffff")),
+                bold=True,
+                align="center",
+            )
+            if edit_allowed and name_cell:
+                name_label.setProperty("character_paradigm_name_edit", True)
+                name_label.setProperty("character_paradigm_index", idx)
+                name_label.setProperty("character_paradigm_cell_ref", name_cell)
+                name_label.setProperty("character_paradigm_old", name_text)
+                name_label.setProperty("character_paradigm_sheet", str(analysis.get("sheet", "Charakterbogen")))
+                name_label.installEventFilter(self)
+
+            for row_idx, row_cfg in enumerate(rows_cfg):
+                row_id = str(row_cfg.get("id", "")).strip().lower()
+                cells = col_info.get(f"{row_id}_cells", [])
+                if not isinstance(cells, list):
+                    cells = []
+                marker_base_x = col_x + 2
+                for marker_idx, cell_ref in enumerate(cells):
+                    value = self.get_cache_display_value(str(analysis.get("sheet", "Charakterbogen")), cell_ref, "")
+                    active = str(value or "").strip().lower() == "x"
+                    marker = QLabel(panel)
+                    mx = marker_base_x + marker_idx * (marker_w + marker_gap)
+                    my = row_y_start + row_idx * row_h + max(0, (row_h - marker_h) // 2)
+                    marker.setGeometry(mx, my, marker_w, marker_h)
+                    marker.setAlignment(Qt.AlignCenter)
+                    marker.setText("")
+                    if active:
+                        icon_set = False
+                        if marker_use_icon and marker_active_asset:
+                            pixmap = self.load_ui_pixmap(marker_active_asset)
+                            if pixmap is not None and not pixmap.isNull():
+                                target_w = max(1, marker_w - marker_icon_padding * 2)
+                                target_h = max(1, marker_h - marker_icon_padding * 2)
+                                marker.setPixmap(
+                                    pixmap.scaled(
+                                        target_w,
+                                        target_h,
+                                        Qt.KeepAspectRatio,
+                                        Qt.SmoothTransformation,
+                                    )
+                                )
+                                icon_set = True
+                        if not icon_set:
+                            marker.setText(marker_fallback_text)
+                    marker.setStyleSheet(
+                        "QLabel {"
+                        "background: rgba(0,0,0,80);"
+                        "border: 1px solid rgba(232, 224, 200, 70);"
+                        f"color: {str(panel_cfg.get('value_color', '#7fd0ff'))};"
+                        "font-weight: 700;"
+                        "}"
+                    )
+                    if edit_allowed and cell_ref:
+                        marker.setProperty("character_paradigm_marker_toggle", True)
+                        marker.setProperty("character_paradigm_row", row_id)
+                        marker.setProperty("character_paradigm_index", idx)
+                        marker.setProperty("character_paradigm_marker_index", marker_idx)
+                        marker.setProperty("character_paradigm_cell_ref", cell_ref)
+                        marker.setProperty("character_paradigm_active", active)
+                        marker.setProperty("character_paradigm_sheet", str(analysis.get("sheet", "Charakterbogen")))
+                        marker.installEventFilter(self)
+                    marker.show()
+
+        for row_idx, row_cfg in enumerate(rows_cfg):
+            row_label = str(row_cfg.get("label", row_cfg.get("id", "")))
+            self.create_panel_text(
+                panel,
+                {"x": padding, "y": row_y_start + row_idx * row_h, "w": max(10, label_w - 8), "h": row_h},
+                row_label,
+                self._safe_int(panel_cfg.get("font_size", 14), 14),
+                str(panel_cfg.get("label_color", default_color)),
+                bold=True,
+                align="left",
+            )
+
     def _open_large_text_dialog(self, title, value):
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
@@ -9334,6 +9638,7 @@ class MainWindow(QMainWindow):
             panel.raise_()
 
         render_wellbeing_block()
+        self._render_character_paradigm_panel(character_screen, attribute_panel, default_color)
 
         perks_layout = text_layout.get("perk_panel", text_layout.get("perks", {}))
         disadv_layout = text_layout.get("disadvantages", perks_layout.get("disadvantage_table", {}))
@@ -9948,6 +10253,7 @@ class MainWindow(QMainWindow):
         self.current_indirect_references = []
         self.skill_source_infos = {}
         self.skill_sheet_mapping_config = None
+        self.character_paradigm_analysis = {}
         print("[CHARACTER RESET] runtime state cleared")
 
     def update_main_nav_button_styles(self):
@@ -10037,6 +10343,28 @@ class MainWindow(QMainWindow):
                         self._character_debug("[CHARACTER SAVE] active character saved")
                     self.show_main_section("character")
                     return True
+                if bool(obj.property("character_paradigm_name_edit")):
+                    cell_ref = str(obj.property("character_paradigm_cell_ref") or "")
+                    sheet_name = str(obj.property("character_paradigm_sheet") or "Charakterbogen")
+                    index = int(obj.property("character_paradigm_index") or 0)
+                    old_value = str(obj.property("character_paradigm_old") or "")
+                    if not self._paradigm_edit_allowed():
+                        return True
+                    if not cell_ref:
+                        self._character_paradigm_debug("[CHARACTER PARADIGM EDIT SKIP] reason=no_cell_ref")
+                        return True
+                    new_value, ok = self._open_character_field_dialog("Paradigma bearbeiten", old_value, multiline=False)
+                    if not ok:
+                        return True
+                    self._character_paradigm_debug(
+                        f'[CHARACTER PARADIGM EDIT] field=name index={index} cell={cell_ref} old="{old_value}" new="{new_value}"'
+                    )
+                    self.loader.set_cell_value(sheet_name, cell_ref, str(new_value))
+                    if (self._character_edit_cfg or {}).get("save_on_change", True):
+                        self.loader.save_active_character_json()
+                        self._character_debug("[CHARACTER SAVE] active character saved")
+                    self.show_main_section("character")
+                    return True
             if event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonDblClick):
                 if bool(obj.property("character_wellbeing_toggle")) and self._character_edit_allowed("wellbeing"):
                     row = int(obj.property("character_wellbeing_row") or 0)
@@ -10054,6 +10382,30 @@ class MainWindow(QMainWindow):
                         self._character_debug("[CHARACTER SAVE] active character saved")
                     self._character_debug(
                         f"[CHARACTER WELLBEING EDIT] row={row} marker_cell={marker_cell} active={new_active}"
+                    )
+                    self.show_main_section("character")
+                    return True
+                if (
+                    event.type() == QEvent.MouseButtonPress
+                    and bool(obj.property("character_paradigm_marker_toggle"))
+                    and self._paradigm_edit_allowed()
+                ):
+                    cell_ref = str(obj.property("character_paradigm_cell_ref") or "")
+                    sheet_name = str(obj.property("character_paradigm_sheet") or "Charakterbogen")
+                    row_id = str(obj.property("character_paradigm_row") or "")
+                    index = int(obj.property("character_paradigm_index") or 0)
+                    marker_index = int(obj.property("character_paradigm_marker_index") or 0)
+                    active = bool(obj.property("character_paradigm_active"))
+                    if not cell_ref:
+                        self._character_paradigm_debug("[CHARACTER PARADIGM EDIT SKIP] reason=no_cell_ref")
+                        return True
+                    new_active = not active
+                    self.loader.set_cell_value(sheet_name, cell_ref, "X" if new_active else "")
+                    if (self._character_edit_cfg or {}).get("save_on_change", True):
+                        self.loader.save_active_character_json()
+                        self._character_debug("[CHARACTER SAVE] active character saved")
+                    self._character_paradigm_debug(
+                        f"[CHARACTER PARADIGM TOGGLE] row={row_id} index={index} marker={marker_index} cell={cell_ref} active={new_active}"
                     )
                     self.show_main_section("character")
                     return True
