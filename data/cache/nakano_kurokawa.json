@@ -3799,7 +3799,7 @@
         "error": null
       },
       "E9": {
-        "value": "3",
+        "value": "8",
         "formula": null,
         "references": [],
         "error": null
@@ -4051,7 +4051,7 @@
         "error": null
       },
       "B28": {
-        "value": "Kette Silber mit Geschlossenen Lotus nach aufwertung 6 gukden wert",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4117,7 +4117,7 @@
         "error": null
       },
       "AL13": {
-        "value": "test hallo",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4130,6 +4130,60 @@
       },
       "K9": {
         "value": "0",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH29": {
+        "value": "1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T29": {
+        "value": "Antidode Portion 1d6 poisen weg ",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI29": {
+        "value": "1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B13": {
+        "value": "Arcanium Helmet / Mythic Physical RS: 3 / Magical RS: 3/ HP 50/50\n8 Enchantment-Slots",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P13": {
+        "value": "4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q13": {
+        "value": "1",
         "formula": null,
         "references": [],
         "error": null
@@ -5504,11 +5558,107 @@
   "app_meta": {
     "inventory": {
       "tab_labels": {
-        "inventory_02": "Inventar 02 B",
-        "inventory_03": "ddd"
+        "inventory_02": "Inventar 02",
+        "inventory_03": "ddd",
+        "inventory_04": "Bücher"
       },
       "custom_rows": {
         "inventory_04": [
+          {
+            "name": "Fernando - im Netz der Weaverkönigin 987",
+            "pl": "?",
+            "count": "1"
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "",
+            "pl": "",
+            "count": ""
+          },
           {
             "name": "",
             "pl": "",

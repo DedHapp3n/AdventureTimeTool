@@ -17,14 +17,15 @@
     "debug": {
       "enabled": true,
       "print_mapping": true,
-      "print_rows": true
+      "print_rows": true,
+      "show_label": false
     },
     "armor": {
       "enabled": true,
       "x": 20,
-      "y": 110,
+      "y": 40,
       "w": 1380,
-      "h": 330,
+      "h": 360,
       "title": "Rüstung",
       "font_size": 14,
       "header_font_size": 14,
@@ -220,14 +221,27 @@
         "dark": "#000000",
         "durability_current": "#000000",
         "durability_max": "#000000"
+      },
+      "summary": {
+        "enabled": true,
+        "label": "Summe",
+        "height": 34,
+        "font_size": 16,
+        "label_font_size": 20,
+        "label_color": "#f2d28b",
+        "text_color": "#000000",
+        "background": "rgba(230, 210, 120, 120)",
+        "physical_background": "rgba(210, 210, 210, 150)",
+        "elemental_background": "rgba(245, 210, 90, 150)",
+        "durability_background": "rgba(170, 170, 185, 120)"
       }
     },
     "weapons": {
       "enabled": true,
       "x": 20,
-      "y": 470,
+      "y": 424,
       "w": 1380,
-      "h": 300,
+      "h": 356,
       "title": "Waffen",
       "font_size": 14,
       "header_font_size": 14,
@@ -336,6 +350,8 @@
         "durability_current": "#000000",
         "durability_max": "#000000"
       }
-    }
+    },
+    "show_title": false,
+    "show_debug_label": false
   }
 }

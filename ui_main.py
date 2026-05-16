@@ -1343,6 +1343,8 @@ class MainWindow(QMainWindow):
                 "y": 20,
                 "w": 1420,
                 "h": 820,
+                "show_title": False,
+                "show_debug_label": False,
                 "title": {
                     "text": "Ausrüstung",
                     "x": 0,
@@ -1357,6 +1359,7 @@ class MainWindow(QMainWindow):
                     "enabled": True,
                     "print_mapping": True,
                     "print_rows": True,
+                    "show_label": False,
                 },
             }
         }
@@ -1381,12 +1384,35 @@ class MainWindow(QMainWindow):
                 with open(layout_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, dict) and isinstance(data.get("equipment_screen"), dict):
+                    self.equipment_layout_config = data
                     print(f"[EQUIPMENT LAYOUT] loaded: {layout_path}")
                     return data
             except Exception:
                 continue
         print("[EQUIPMENT LAYOUT] fallback: internal default")
-        return self.get_default_equipment_layout_config()
+        self.equipment_layout_config = self.get_default_equipment_layout_config()
+        return self.equipment_layout_config
+
+    def _get_equipment_debug_config(self):
+        layout_config = getattr(self, "equipment_layout_config", None)
+        if not isinstance(layout_config, dict):
+            layout_config = self.load_equipment_layout_config()
+        screen_cfg = layout_config.get("equipment_screen", {}) if isinstance(layout_config, dict) else {}
+        debug_cfg = screen_cfg.get("debug", {}) if isinstance(screen_cfg, dict) else {}
+        if not isinstance(debug_cfg, dict):
+            debug_cfg = {}
+        return debug_cfg
+
+    def _equipment_debug_enabled(self):
+        return bool(self._get_equipment_debug_config().get("enabled", True))
+
+    def _equipment_print_mapping_enabled(self):
+        debug_cfg = self._get_equipment_debug_config()
+        return bool(debug_cfg.get("enabled", True) and debug_cfg.get("print_mapping", True))
+
+    def _equipment_print_rows_enabled(self):
+        debug_cfg = self._get_equipment_debug_config()
+        return bool(debug_cfg.get("enabled", True) and debug_cfg.get("print_rows", True))
 
     def get_default_roll_dialog_layout_config(self):
         return {
@@ -3996,22 +4022,26 @@ class MainWindow(QMainWindow):
         exact_candidates = {"ausrüstung", "ausruestung"}
         cache = self.loader.cell_cache
         if not isinstance(cache, dict):
-            print("[EQUIPMENT ERROR] sheet not found")
+            if self._equipment_print_mapping_enabled():
+                print("[EQUIPMENT ERROR] sheet not found")
             return "", {}
 
         for sheet_name, sheet_cache in cache.items():
             normalized = self._normalize_equipment_text(sheet_name)
             if normalized in exact_candidates and isinstance(sheet_cache, dict):
-                print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                if self._equipment_print_mapping_enabled():
+                    print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
                 return sheet_name, sheet_cache
 
         for sheet_name, sheet_cache in cache.items():
             normalized = self._normalize_equipment_text(sheet_name)
             if "ausruestung" in normalized and isinstance(sheet_cache, dict):
-                print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                if self._equipment_print_mapping_enabled():
+                    print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
                 return sheet_name, sheet_cache
 
-        print("[EQUIPMENT ERROR] sheet not found")
+        if self._equipment_print_mapping_enabled():
+            print("[EQUIPMENT ERROR] sheet not found")
         return "", {}
 
     def _find_equipment_column(
@@ -4288,10 +4318,11 @@ class MainWindow(QMainWindow):
             sheet_cache,
             f"{self._col_index_to_letters(slash_col)}{data_start_row}",
         )
-        print(
-            f"[EQUIPMENT ARMOR COLUMN CHECK] durability_slash="
-            f"{self._col_index_to_letters(slash_col)}{data_start_row} sample={slash_value}"
-        )
+        if self._equipment_print_mapping_enabled():
+            print(
+                f"[EQUIPMENT ARMOR COLUMN CHECK] durability_slash="
+                f"{self._col_index_to_letters(slash_col)}{data_start_row} sample={slash_value}"
+            )
         return mapping
 
     def _build_weapon_mapping(self, header_entries, anchor_row):
@@ -4354,12 +4385,14 @@ class MainWindow(QMainWindow):
                 "attributes": self._col_index_to_letters(attributes_col),
             },
         }
-        print(
-            f"[EQUIPMENT WEAPON COLUMN CHECK] durability_current="
-            f"{self._col_index_to_letters(durability_current_col)}{data_start_row} "
-            f"slash={self._col_index_to_letters(slash_col)}{data_start_row} "
-            f"durability_max={self._col_index_to_letters(durability_max_col)}{data_start_row}"
-        )
+        if self._equipment_print_mapping_enabled():
+            # The visible "/" separator between current and max is intentionally skipped.
+            print(
+                f"[EQUIPMENT WEAPON COLUMN CHECK] durability_current="
+                f"{self._col_index_to_letters(durability_current_col)}{data_start_row} "
+                f"slash={self._col_index_to_letters(slash_col)}{data_start_row} "
+                f"durability_max={self._col_index_to_letters(durability_max_col)}{data_start_row}"
+            )
         return mapping
 
     def analyze_equipment_sheet(self):
@@ -4387,6 +4420,8 @@ class MainWindow(QMainWindow):
             )
 
         entries.sort(key=lambda item: (item["row"], item["col"]))
+        print_mapping = self._equipment_print_mapping_enabled()
+        print_rows = self._equipment_print_rows_enabled()
         target_headers = {
             "ruestung",
             "waffe",
@@ -4403,7 +4438,7 @@ class MainWindow(QMainWindow):
             "elementar",
         }
         for entry in entries:
-            if entry["norm"] in target_headers:
+            if print_mapping and entry["norm"] in target_headers:
                 print(f'[EQUIPMENT HEADER] text="{entry["text"]}" cell={entry["cell"]}')
 
         armor_anchor = 0
@@ -4413,19 +4448,19 @@ class MainWindow(QMainWindow):
                 armor_anchor = entry["row"]
             if entry["norm"] == "waffe" and weapon_anchor == 0:
                 weapon_anchor = entry["row"]
-        if armor_anchor > 0:
+        if print_mapping and armor_anchor > 0:
             print(f"[EQUIPMENT TABLE] armor start_row={armor_anchor}")
-        else:
+        elif print_mapping:
             print("[EQUIPMENT TABLE] armor not found")
-        if weapon_anchor > 0:
+        if print_mapping and weapon_anchor > 0:
             print(f"[EQUIPMENT TABLE] weapon start_row={weapon_anchor}")
-        else:
+        elif print_mapping:
             print("[EQUIPMENT TABLE] weapon not found")
 
         armor_mapping = self._build_armor_mapping(entries, armor_anchor, sheet_cache)
         weapon_mapping = self._build_weapon_mapping(entries, weapon_anchor)
 
-        if armor_mapping:
+        if print_mapping and armor_mapping:
             print(
                 f"[EQUIPMENT ARMOR MAP] start_row={armor_mapping['start_row']} "
                 f"data_start_row={armor_mapping['data_start_row']}"
@@ -4444,7 +4479,7 @@ class MainWindow(QMainWindow):
                         f"[EQUIPMENT ARMOR COLUMN CHECK] {check_key}="
                         f"{col_letters}{sample_row} sample={sample_value}"
                     )
-        if weapon_mapping:
+        if print_mapping and weapon_mapping:
             print(
                 f"[EQUIPMENT WEAPON MAP] start_row={weapon_mapping['start_row']} "
                 f"data_start_row={weapon_mapping['data_start_row']}"
@@ -4456,7 +4491,7 @@ class MainWindow(QMainWindow):
         armor_rows = self._extract_equipment_rows(sheet_cache, armor_mapping, "armor")
         weapon_rows = self._extract_equipment_rows(sheet_cache, weapon_mapping, "weapon")
 
-        if armor_mapping:
+        if print_mapping and armor_mapping:
             data_start_row = int(armor_mapping.get("data_start_row", 0) or 0)
             debug_fields = [
                 ("slot", "slot"),
@@ -4487,30 +4522,31 @@ class MainWindow(QMainWindow):
             if name_norm == "leder ruestung" and slot_norm == "brust arme beine":
                 expected_found = True
                 break
-        if not expected_found and armor_rows:
+        if print_mapping and not expected_found and armor_rows:
             print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
-        elif not armor_rows:
+        elif print_mapping and not armor_rows:
             print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
 
-        for row_data in armor_rows:
-            print(
-                f'[EQUIPMENT ARMOR ROW] row={row_data["row"]} '
-                f'slot="{row_data.get("slot", "")}" name="{row_data.get("name", "")}" '
-                f'pl="{row_data.get("pl", "")}"'
-            )
-        for row_data in weapon_rows:
-            durability_summary = ""
-            current_value = str(row_data.get("durability_current", "") or "").strip()
-            max_value = str(row_data.get("durability_max", "") or "").strip()
-            if current_value or max_value:
-                durability_summary = f"{current_value}/{max_value}".strip("/")
-            print(
-                f'[EQUIPMENT WEAPON ROW] row={row_data["row"]} '
-                f'name="{row_data.get("name", "")}" type="{row_data.get("weapon_type", "")}" '
-                f'pl="{row_data.get("pl", "")}" phys_dice="{row_data.get("physical_dice", "")}" '
-                f'phys_bonus="{row_data.get("physical_bonus", "")}" durability="{durability_summary}"'
-            )
-        if not weapon_rows:
+        if print_rows:
+            for row_data in armor_rows:
+                print(
+                    f'[EQUIPMENT ARMOR ROW] row={row_data["row"]} '
+                    f'slot="{row_data.get("slot", "")}" name="{row_data.get("name", "")}" '
+                    f'pl="{row_data.get("pl", "")}"'
+                )
+            for row_data in weapon_rows:
+                durability_summary = ""
+                current_value = str(row_data.get("durability_current", "") or "").strip()
+                max_value = str(row_data.get("durability_max", "") or "").strip()
+                if current_value or max_value:
+                    durability_summary = f"{current_value}/{max_value}".strip("/")
+                print(
+                    f'[EQUIPMENT WEAPON ROW] row={row_data["row"]} '
+                    f'name="{row_data.get("name", "")}" type="{row_data.get("weapon_type", "")}" '
+                    f'pl="{row_data.get("pl", "")}" phys_dice="{row_data.get("physical_dice", "")}" '
+                    f'phys_bonus="{row_data.get("physical_bonus", "")}" durability="{durability_summary}"'
+                )
+        if print_rows and not weapon_rows:
             print("[EQUIPMENT WEAPON] no rows found")
 
         self.equipment_analysis = {
@@ -4525,6 +4561,53 @@ class MainWindow(QMainWindow):
             },
         }
         return self.equipment_analysis
+
+    def _equipment_summary_int(self, value):
+        text = str(value or "").strip()
+        if not text or text in {"-", "/"}:
+            return 0
+        try:
+            return int(text)
+        except (TypeError, ValueError):
+            return 0
+
+    def _build_armor_summary_row(self, armor_rows):
+        summary_fields = [
+            "phys_head",
+            "phys_chest",
+            "phys_arms",
+            "phys_legs",
+            "fire",
+            "water",
+            "earth",
+            "wind",
+            "lightning",
+            "ice",
+            "acid",
+            "light",
+            "dark",
+        ]
+        summary_row = {
+            "slot": "",
+            "name": "Summe",
+            "pl": "",
+            "durability_current": "",
+            "durability_max": "",
+            "attributes": "",
+        }
+        # Summary stays runtime-only; no equipment values are written back in phase 5.2.x.
+        for field_key in summary_fields:
+            total = 0
+            for row_data in armor_rows:
+                if isinstance(row_data, dict):
+                    total += self._equipment_summary_int(row_data.get(field_key, ""))
+            summary_row[field_key] = str(total)
+        if self._equipment_print_rows_enabled():
+            print(
+                "[EQUIPMENT ARMOR SUMMARY] "
+                + " ".join(f"{field}={summary_row.get(field, '0')}" for field in summary_fields)
+            )
+        return summary_row
 
     def render_equipment_armor_table(self, parent, armor_cfg, armor_rows):
         if not isinstance(armor_cfg, dict) or not armor_cfg.get("enabled", True):
@@ -4547,6 +4630,24 @@ class MainWindow(QMainWindow):
         min_row_h = self._safe_int(armor_cfg.get("min_row_h", 32), 32)
         max_row_h = self._safe_int(armor_cfg.get("max_row_h", 120), 120)
         min_rows = self._safe_int(armor_cfg.get("min_rows", 10), 10)
+        summary_cfg = armor_cfg.get("summary", {})
+        if not isinstance(summary_cfg, dict):
+            summary_cfg = {}
+        summary_enabled = bool(summary_cfg.get("enabled", True))
+        summary_row_h = self._safe_int(summary_cfg.get("height", 34), 34)
+        summary_text_color = str(summary_cfg.get("text_color", "#000000"))
+        summary_label_color = str(summary_cfg.get("label_color", "#f2d28b"))
+        summary_background_raw = str(summary_cfg.get("background", "rgba(230, 210, 120, 120)"))
+        summary_physical_background_raw = str(
+            summary_cfg.get("physical_background", "rgba(210, 210, 210, 150)")
+        )
+        summary_elemental_background_raw = str(
+            summary_cfg.get("elemental_background", "rgba(245, 210, 90, 150)")
+        )
+        summary_durability_background_raw = str(
+            summary_cfg.get("durability_background", "rgba(170, 170, 185, 120)")
+        )
+        summary_label = str(summary_cfg.get("label", "Summe"))
 
         panel = QFrame(parent)
         panel.setGeometry(table_x, table_y, table_w, table_h)
@@ -4594,7 +4695,9 @@ class MainWindow(QMainWindow):
         table = QTableWidget(panel)
         table.setGeometry(10, 42, table_w - 20, table_h - 52)
         table.setColumnCount(len(column_order))
-        table_row_count = max(len(armor_rows), min_rows)
+        summary_row = self._build_armor_summary_row(armor_rows) if summary_enabled else {}
+        summary_row_index = max(len(armor_rows), min_rows) if summary_enabled else -1
+        table_row_count = max(len(armor_rows), min_rows) + (1 if summary_enabled else 0)
         table.setRowCount(table_row_count)
         table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         table.setWordWrap(True)
@@ -4689,6 +4792,16 @@ class MainWindow(QMainWindow):
 
         column_background_brushes = {}
         header_background_brushes = {}
+        summary_default_color, _ = self.parse_layout_color(summary_background_raw, "rgba(230,210,120,120)")
+        summary_physical_color, _ = self.parse_layout_color(
+            summary_physical_background_raw, "rgba(210,210,210,150)"
+        )
+        summary_elemental_color, _ = self.parse_layout_color(
+            summary_elemental_background_raw, "rgba(245,210,90,150)"
+        )
+        summary_durability_color, _ = self.parse_layout_color(
+            summary_durability_background_raw, "rgba(170,170,185,120)"
+        )
         for field_key, _ in column_order:
             col_bg_raw = column_backgrounds.get(field_key, "")
             if not col_bg_raw:
@@ -4706,21 +4819,22 @@ class MainWindow(QMainWindow):
             header_color_parsed, header_ok = self.parse_layout_color(header_bg_raw, "rgba(0,0,0,0)")
             header_background_brushes[field_key] = QBrush(header_color_parsed)
 
-            print(
-                f"[EQUIPMENT ARMOR STYLE TEST] column={field_key} "
-                f"cell_bg={col_bg_raw} header_bg={header_bg_raw}"
-            )
-            if field_key == "durability_current":
-                title_text_current = header_labels[field_to_col_index[field_key]]
-                print(f"[EQUIPMENT ARMOR STYLE TEST] column=durability_current title={title_text_current}")
-            if not col_ok:
+            if self._equipment_print_mapping_enabled():
                 print(
-                    f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={col_bg_raw} parsed=False"
+                    f"[EQUIPMENT ARMOR STYLE TEST] column={field_key} "
+                    f"cell_bg={col_bg_raw} header_bg={header_bg_raw}"
                 )
-            if not header_ok:
-                print(
-                    f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={header_bg_raw} parsed=False"
-                )
+                if field_key == "durability_current":
+                    title_text_current = header_labels[field_to_col_index[field_key]]
+                    print(f"[EQUIPMENT ARMOR STYLE TEST] column=durability_current title={title_text_current}")
+                if not col_ok:
+                    print(
+                        f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={col_bg_raw} parsed=False"
+                    )
+                if not header_ok:
+                    print(
+                        f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={header_bg_raw} parsed=False"
+                    )
 
         for field_key, _ in column_order:
             col_index = field_to_col_index.get(field_key)
@@ -4745,7 +4859,11 @@ class MainWindow(QMainWindow):
                 header_item.setForeground(QBrush(element_color))
 
         for row_index in range(table_row_count):
-            row_data = armor_rows[row_index] if row_index < len(armor_rows) and isinstance(armor_rows[row_index], dict) else {}
+            is_summary_row = summary_enabled and row_index == summary_row_index
+            if is_summary_row:
+                row_data = summary_row
+            else:
+                row_data = armor_rows[row_index] if row_index < len(armor_rows) and isinstance(armor_rows[row_index], dict) else {}
             row_has_data = any(str(row_data.get(key, "") or "").strip() for key, _ in column_order)
             for col_index, (field_key, _) in enumerate(column_order):
                 raw_value = str(row_data.get(field_key, "") or "").strip()
@@ -4756,22 +4874,50 @@ class MainWindow(QMainWindow):
                 else:
                     item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
                 custom_text_color = str(cell_text_colors.get(field_key, "") or "").strip()
-                if custom_text_color:
+                if is_summary_row:
+                    if field_key == "name":
+                        item.setForeground(QBrush(QColor(summary_label_color)))
+                    else:
+                        item.setForeground(QBrush(QColor(summary_text_color)))
+                elif custom_text_color:
                     item.setForeground(QBrush(QColor(custom_text_color)))
                 elif raw_value and field_key in value_fields:
                     item.setForeground(QColor(value_color))
                 else:
                     item.setForeground(QColor(text_color))
-                item.setBackground(column_background_brushes.get(field_key, QBrush()))
+                if is_summary_row:
+                    if field_key in {"phys_head", "phys_chest", "phys_arms", "phys_legs"}:
+                        item.setBackground(QBrush(summary_physical_color))
+                    elif field_key in {
+                        "fire",
+                        "water",
+                        "earth",
+                        "wind",
+                        "lightning",
+                        "ice",
+                        "acid",
+                        "light",
+                        "dark",
+                    }:
+                        item.setBackground(QBrush(summary_elemental_color))
+                    elif field_key in {"durability_current", "durability_max"}:
+                        item.setBackground(QBrush(summary_durability_color))
+                    else:
+                        item.setBackground(QBrush(summary_default_color))
+                else:
+                    item.setBackground(column_background_brushes.get(field_key, QBrush()))
                 if raw_value:
                     item.setToolTip(raw_value)
                 elif not row_has_data:
                     item.setToolTip("")
                 table.setItem(row_index, col_index, item)
-            table.setRowHeight(row_index, min_row_h)
+            table.setRowHeight(row_index, summary_row_h if is_summary_row else min_row_h)
 
         table.resizeRowsToContents()
         for row_index in range(table_row_count):
+            if summary_enabled and row_index == summary_row_index:
+                table.setRowHeight(row_index, summary_row_h)
+                continue
             current_h = table.rowHeight(row_index)
             if current_h < min_row_h:
                 table.setRowHeight(row_index, min_row_h)
@@ -4987,24 +5133,31 @@ class MainWindow(QMainWindow):
         screen.show()
 
         title_cfg = screen_cfg.get("title", {})
-        self.create_panel_text(
-            screen,
-            title_cfg,
-            str(title_cfg.get("text", "Ausrüstung")),
-            self._safe_int(title_cfg.get("font_size", 24), 24),
-            str(title_cfg.get("color", "#f2d28b")),
-            bold=True,
-            align=str(title_cfg.get("align", "center")),
-        )
-        self.create_panel_text(
-            screen,
-            {"x": 20, "y": 70, "w": 700, "h": 30},
-            "Ausrüstung Analyse - siehe Terminal",
-            16,
-            "#e8e0c8",
-            bold=False,
-            align="left",
-        )
+        if bool(screen_cfg.get("show_title", False)):
+            self.create_panel_text(
+                screen,
+                title_cfg,
+                str(title_cfg.get("text", "Ausrüstung")),
+                self._safe_int(title_cfg.get("font_size", 24), 24),
+                str(title_cfg.get("color", "#f2d28b")),
+                bold=True,
+                align=str(title_cfg.get("align", "center")),
+            )
+        debug_cfg = screen_cfg.get("debug", {})
+        if not isinstance(debug_cfg, dict):
+            debug_cfg = {}
+        if bool(debug_cfg.get("enabled", True)) and (
+            bool(screen_cfg.get("show_debug_label", False)) or bool(debug_cfg.get("show_label", False))
+        ):
+            self.create_panel_text(
+                screen,
+                {"x": 20, "y": 70, "w": 700, "h": 30},
+                "Ausrüstung Analyse - siehe Terminal",
+                16,
+                "#e8e0c8",
+                bold=False,
+                align="left",
+            )
         analysis = self.analyze_equipment_sheet()
         if not isinstance(analysis, dict):
             analysis = {}
