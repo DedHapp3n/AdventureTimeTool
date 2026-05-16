@@ -110,7 +110,7 @@
         "error": null
       },
       "AG4": {
-        "value": 1.75,
+        "value": "2",
         "formula": "=(AG7+AG9+AG11+AG13)/4",
         "references": [
           "AG7",
@@ -127,7 +127,7 @@
         "error": null
       },
       "AR4": {
-        "value": 1.5,
+        "value": "2",
         "formula": "=(AR7+AR9+AR11+AR13)/4",
         "references": [
           "AR7",
@@ -192,7 +192,7 @@
         "error": null
       },
       "AG7": {
-        "value": 0,
+        "value": "0",
         "formula": null,
         "references": [],
         "error": null
@@ -204,7 +204,7 @@
         "error": null
       },
       "AR7": {
-        "value": 4,
+        "value": "4",
         "formula": null,
         "references": [],
         "error": null
@@ -240,7 +240,7 @@
         "error": null
       },
       "AG9": {
-        "value": 3,
+        "value": "3",
         "formula": null,
         "references": [],
         "error": null
@@ -252,7 +252,7 @@
         "error": null
       },
       "AR9": {
-        "value": 0,
+        "value": "0",
         "formula": null,
         "references": [],
         "error": null
@@ -288,7 +288,7 @@
         "error": null
       },
       "B10": {
-        "value": 23,
+        "value": "28",
         "formula": null,
         "references": [],
         "error": null
@@ -334,7 +334,7 @@
         "error": null
       },
       "AG11": {
-        "value": 0,
+        "value": "0",
         "formula": null,
         "references": [],
         "error": null
@@ -346,7 +346,7 @@
         "error": null
       },
       "AR11": {
-        "value": 0,
+        "value": "0",
         "formula": null,
         "references": [],
         "error": null
@@ -440,7 +440,7 @@
         "error": null
       },
       "AG13": {
-        "value": 4,
+        "value": "4",
         "formula": null,
         "references": [],
         "error": null
@@ -452,7 +452,7 @@
         "error": null
       },
       "AR13": {
-        "value": 2,
+        "value": "2",
         "formula": null,
         "references": [],
         "error": null
@@ -500,7 +500,7 @@
         "error": null
       },
       "F16": {
-        "value": 256,
+        "value": "256",
         "formula": null,
         "references": [],
         "error": null
@@ -678,7 +678,7 @@
         "error": null
       },
       "AO23": {
-        "value": 4,
+        "value": "4",
         "formula": "=((1+AU9)+(G5))",
         "references": [
           "AU9",
@@ -861,13 +861,13 @@
         "error": null
       },
       "AM27": {
-        "value": 4,
+        "value": "4",
         "formula": null,
         "references": [],
         "error": null
       },
       "AO27": {
-        "value": 4.0,
+        "value": "4",
         "formula": "=1+AR4+AR4",
         "references": [
           "AR4"
@@ -923,7 +923,7 @@
         "error": null
       },
       "AM31": {
-        "value": 3,
+        "value": "3",
         "formula": null,
         "references": [],
         "error": null
@@ -1071,7 +1071,7 @@
         "error": null
       },
       "AA38": {
-        "value": "X",
+        "value": "x",
         "formula": null,
         "references": [],
         "error": null
@@ -1181,6 +1181,18 @@
           "U29",
           "V45"
         ],
+        "error": null
+      },
+      "AV15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA44": {
+        "value": "",
+        "formula": null,
+        "references": [],
         "error": null
       }
     },
@@ -4187,6 +4199,12 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "B15": {
+        "value": "Tuxedo PL:5 (Galmour:5 = +9 on Social)\nEvil Aura Level +1",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Ausrüstung": {
@@ -4932,7 +4950,7 @@
         "error": null
       },
       "M10": {
-        "value": "",
+        "value": "3",
         "formula": null,
         "references": [],
         "error": null
@@ -4945,6 +4963,42 @@
       },
       "O10": {
         "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C10": {
+        "value": "Kopf",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G10": {
+        "value": "Arcanium Helmet",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K10": {
+        "value": "4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM10": {
+        "value": "50",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP10": {
+        "value": "50",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT10": {
+        "value": "Magical RS: 3 8 Enchantment-Slots",
         "formula": null,
         "references": [],
         "error": null

@@ -139,6 +139,7 @@ class MainWindow(QMainWindow):
         self._equipment_table_bindings = {}
         self._equipment_rendering = False
         self._character_rendering = False
+        self._character_edit_cfg = {}
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -7222,17 +7223,95 @@ class MainWindow(QMainWindow):
             return None, None
         return sheet_name, cell_ref
 
-    def _on_character_field_edited(self, field_key, sheet_name, cell_ref, value):
+    def _on_character_field_edited(self, field_key, sheet_name, cell_ref, value, tag="CHARACTER EDIT"):
         if self._character_rendering:
             return
         if not sheet_name or not cell_ref:
             print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
             return
         new_value = "" if value is None else str(value)
-        print(f"[CHARACTER EDIT] field={field_key} cell={cell_ref} value={new_value}")
+        print(f"[{tag}] field={field_key} cell={cell_ref} value={new_value}")
         self.loader.set_cell_value(sheet_name, cell_ref, new_value)
-        self.loader.save_active_character_json()
-        print("[CHARACTER SAVE] active character saved")
+        if (self._character_edit_cfg or {}).get("save_on_change", True):
+            self.loader.save_active_character_json()
+            print("[CHARACTER SAVE] active character saved")
+
+    def _character_edit_config(self):
+        cfg = self.main_ui_layout_config.get("character_screen", {})
+        edit = cfg.get("edit", {}) if isinstance(cfg, dict) else {}
+        if not isinstance(edit, dict):
+            edit = {}
+        return {
+            "enabled": bool(edit.get("enabled", False)),
+            "save_on_change": bool(edit.get("save_on_change", True)),
+            "debug": bool(edit.get("debug", False)),
+            "basic_fields": bool(edit.get("basic_fields", True)),
+            "attributes": bool(edit.get("attributes", True)),
+            "perks": bool(edit.get("perks", True)),
+            "disadvantages": bool(edit.get("disadvantages", True)),
+            "wellbeing": bool(edit.get("wellbeing", True)),
+            "edit_on": str(edit.get("edit_on", "double_click")).strip().lower() or "double_click",
+            "text_editor": str(edit.get("text_editor", "dialog")).strip().lower() or "dialog",
+            "empty_value": str(edit.get("empty_value", "")),
+        }
+
+    def _character_edit_allowed(self, section_key):
+        cfg = self._character_edit_cfg if isinstance(self._character_edit_cfg, dict) else {}
+        if not cfg.get("enabled", False):
+            return False
+        return bool(cfg.get(section_key, False))
+
+    def _character_debug(self, message):
+        cfg = self._character_edit_cfg if isinstance(self._character_edit_cfg, dict) else {}
+        if cfg.get("debug", False):
+            print(message)
+
+    def _open_large_text_dialog(self, title, value):
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        dialog.resize(640, 420)
+        layout = QVBoxLayout(dialog)
+        editor = QTextEdit(dialog)
+        editor.setPlainText("" if value is None else str(value))
+        layout.addWidget(editor)
+        button_row = QHBoxLayout()
+        ok_button = QPushButton("OK", dialog)
+        cancel_button = QPushButton("Abbrechen", dialog)
+        button_row.addStretch()
+        button_row.addWidget(ok_button)
+        button_row.addWidget(cancel_button)
+        layout.addLayout(button_row)
+        ok_button.clicked.connect(dialog.accept)
+        cancel_button.clicked.connect(dialog.reject)
+        if dialog.exec() == QDialog.Accepted:
+            return editor.toPlainText(), True
+        return value, False
+
+    def _open_character_field_dialog(self, title, initial_value, multiline=False):
+        initial_text = "" if initial_value is None else str(initial_value)
+        if multiline:
+            return self._open_large_text_dialog(title, initial_text)
+        text, ok = QInputDialog.getText(self, title, "Wert:", text=initial_text)
+        return text, bool(ok)
+
+    def _handle_character_widget_double_click(self, widget):
+        field_key = str(widget.property("character_field_key") or "")
+        sheet_name = str(widget.property("character_sheet_name") or "")
+        cell_ref = str(widget.property("character_cell_ref") or "")
+        current_value = str(widget.property("character_value") or "")
+        if not field_key or not sheet_name or not cell_ref:
+            self._character_debug(f"[CHARACTER EDIT SKIP] field={field_key or '-'} reason=no_cell_ref")
+            return True
+        multiline = bool(widget.property("character_multiline"))
+        dialog_title = str(widget.property("character_dialog_title") or "Feld bearbeiten")
+        new_value, ok = self._open_character_field_dialog(dialog_title, current_value, multiline=multiline)
+        if not ok:
+            return True
+        section_key = str(widget.property("character_section_key") or "")
+        tag = "CHARACTER BASIC EDIT" if section_key == "basic_fields" else "CHARACTER EDIT"
+        self._on_character_field_edited(field_key, sheet_name, cell_ref, new_value, tag=tag)
+        self.show_main_section("character")
+        return True
 
     def _create_character_value_editor(
         self,
@@ -7246,6 +7325,8 @@ class MainWindow(QMainWindow):
         color,
         bold=True,
         align="left",
+        editable=True,
+        section_key="basic_fields",
     ):
         x = self._safe_int(rect_cfg.get("x", 0), 0)
         y = self._safe_int(rect_cfg.get("y", 0), 0)
@@ -7253,10 +7334,33 @@ class MainWindow(QMainWindow):
         h = self._safe_int(rect_cfg.get("h", 28), 28)
         sheet_name, cell_ref = self._resolve_data_map_cell_ref(mapping_entry, default_sheet)
         if not sheet_name or not cell_ref:
-            print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
+            if section_key == "basic_fields":
+                print(f"[CHARACTER BASIC EDIT SKIP] field={field_key} reason=no_cell_ref")
+            else:
+                print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
             return self.create_panel_text(
                 parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
             )
+        if not editable or not self._character_edit_allowed(section_key):
+            return self.create_panel_text(
+                parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
+            )
+
+        edit_on = str((self._character_edit_cfg or {}).get("edit_on", "double_click"))
+        if edit_on == "double_click":
+            label = self.create_panel_text(
+                parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
+            )
+            label.setProperty("character_editable", True)
+            label.setProperty("character_field_key", field_key)
+            label.setProperty("character_sheet_name", sheet_name)
+            label.setProperty("character_cell_ref", cell_ref)
+            label.setProperty("character_value", "" if value_text is None else str(value_text))
+            label.setProperty("character_section_key", section_key)
+            label.setProperty("character_multiline", False)
+            label.setProperty("character_dialog_title", f"{field_key} bearbeiten")
+            label.installEventFilter(self)
+            return label
 
         editor = QLineEdit(parent)
         editor.setGeometry(x, y, w, h)
@@ -7282,8 +7386,12 @@ class MainWindow(QMainWindow):
             "QLineEdit:focus { border: 1px solid rgba(216, 208, 176, 120); }"
         )
         editor.editingFinished.connect(
-            lambda fk=field_key, sn=sheet_name, cr=cell_ref, e=editor: self._on_character_field_edited(
-                fk, sn, cr, e.text()
+            lambda fk=field_key, sn=sheet_name, cr=cell_ref, e=editor, sk=section_key: self._on_character_field_edited(
+                fk,
+                sn,
+                cr,
+                e.text(),
+                tag="CHARACTER BASIC EDIT" if sk == "basic_fields" else "CHARACTER EDIT",
             )
         )
         editor.raise_()
@@ -7417,9 +7525,12 @@ class MainWindow(QMainWindow):
     def render_character_screen(self):
         if self.content_layer is None:
             return
+        self._character_edit_cfg = self._character_edit_config()
+        self._character_rendering = True
         character_screen = self.main_ui_layout_config.get("character_screen")
         if not isinstance(character_screen, dict):
             self.render_character_front()
+            self._character_rendering = False
             return
 
         default_text_style = self.theme_style.get("default_text", {})
@@ -7486,6 +7597,7 @@ class MainWindow(QMainWindow):
             self.get_text_color(title_cfg, default_color),
             bold=self.get_text_bold(title_cfg, True),
             align=self.get_text_align(title_cfg, "left"),
+            section_key="basic_fields",
         )
 
         fields_cfg = info_layout.get("fields", {})
@@ -7545,6 +7657,7 @@ class MainWindow(QMainWindow):
                 label_text = str(row.get("label", row_id.capitalize()))
                 if row_id in field_pair_sources:
                     current_src, max_src = field_pair_sources[row_id]
+                    split_enabled = isinstance(row.get("current_rect"), dict) and isinstance(row.get("max_rect"), dict)
                     current = self.format_character_display_value(
                         self._read_data_map_cell(current_src, default_sheet),
                         mode,
@@ -7552,10 +7665,6 @@ class MainWindow(QMainWindow):
                     maximum = self.format_character_display_value(
                         self._read_data_map_cell(max_src, default_sheet),
                         mode,
-                    )
-                    value_text = str(row.get("format", "{current} / {max}")).format(
-                        current=current,
-                        max=maximum,
                     )
                 else:
                     source = field_single_sources.get(row_id)
@@ -7575,19 +7684,37 @@ class MainWindow(QMainWindow):
                 )
                 if row_id in field_pair_sources:
                     current_src, max_src = field_pair_sources[row_id]
-                    value_rect = row.get("value_rect", {})
-                    vx = self._safe_int(value_rect.get("x", 0), 0)
-                    vy = self._safe_int(value_rect.get("y", 0), 0)
-                    vw = self._safe_int(value_rect.get("w", 160), 160)
-                    vh = self._safe_int(value_rect.get("h", 30), 30)
-                    half = max(40, (vw - 20) // 2)
+                    split_enabled = isinstance(row.get("current_rect"), dict) and isinstance(row.get("max_rect"), dict)
+                    current_rect = row.get("current_rect", {})
+                    max_rect = row.get("max_rect", {})
+                    if not split_enabled:
+                        current_rect = row.get("value_rect", {})
+                        max_rect = row.get("value_rect", {})
+                        vx = self._safe_int(current_rect.get("x", 0), 0)
+                        vy = self._safe_int(current_rect.get("y", 0), 0)
+                        vw = self._safe_int(current_rect.get("w", 160), 160)
+                        vh = self._safe_int(current_rect.get("h", 30), 30)
+                        half = max(40, vw // 2)
+                        current_rect = {"x": vx, "y": vy, "w": half, "h": vh}
+                        max_rect = {"x": vx + half, "y": vy, "w": max(20, vw - half), "h": vh}
+                    current_sheet, current_cell = self._resolve_data_map_cell_ref(current_src, default_sheet)
+                    max_sheet, max_cell = self._resolve_data_map_cell_ref(max_src, default_sheet)
+                    self._character_debug(
+                        f"[CHARACTER BASIC SPLIT] id={row_id} current_cell={current_cell or '-'} "
+                        f"max_cell={max_cell or '-'} legacy_value_rect_ignored={bool(split_enabled)}"
+                    )
                     value_font = self._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15)
                     value_color = str(row.get("value_color", row.get("color", value_color_default)))
                     value_bold = bool(row.get("bold_value", bold_values_default))
                     value_align = str(row.get("value_align", "left"))
+                    max_editable = True
+                    if row_id == "faith":
+                        if not current_cell or not max_cell or (current_sheet == max_sheet and current_cell == max_cell):
+                            max_editable = False
+                            self._character_debug("[CHARACTER BASIC EDIT SKIP] field=faith_max reason=same_cell_as_current")
                     self._create_character_value_editor(
                         character_panel,
-                        {"x": vx, "y": vy, "w": half, "h": vh},
+                        current_rect,
                         f"{row_id}_current",
                         current_src,
                         default_sheet,
@@ -7596,19 +7723,11 @@ class MainWindow(QMainWindow):
                         value_color,
                         bold=value_bold,
                         align=value_align,
-                    )
-                    self.create_panel_text(
-                        character_panel,
-                        {"x": vx + half, "y": vy, "w": 20, "h": vh},
-                        "/",
-                        value_font,
-                        value_color,
-                        bold=value_bold,
-                        align="center",
+                        section_key="basic_fields",
                     )
                     self._create_character_value_editor(
                         character_panel,
-                        {"x": vx + half + 20, "y": vy, "w": max(20, vw - half - 20), "h": vh},
+                        max_rect,
                         f"{row_id}_max",
                         max_src,
                         default_sheet,
@@ -7617,8 +7736,11 @@ class MainWindow(QMainWindow):
                         value_color,
                         bold=value_bold,
                         align=value_align,
+                        editable=max_editable,
+                        section_key="basic_fields",
                     )
                 else:
+                    self._character_debug(f"[CHARACTER BASIC LEGACY] id={row_id} value_rect used")
                     self._create_character_value_editor(
                         character_panel,
                         row.get("value_rect", {}),
@@ -7630,6 +7752,7 @@ class MainWindow(QMainWindow):
                         str(row.get("value_color", row.get("color", value_color_default))),
                         bold=bool(row.get("bold_value", bold_values_default)),
                         align=str(row.get("value_align", "left")),
+                        section_key="basic_fields",
                     )
         else:
             basic_rows_cfg = info_layout.get("basic_rows", {})
@@ -7651,14 +7774,18 @@ class MainWindow(QMainWindow):
                         bold=False,
                         align=str(row.get("label_align", "left")),
                     )
-                    self.create_panel_text(
+                    self._create_character_value_editor(
                         character_panel,
                         row.get("value_rect", {}),
+                        row_id,
+                        basic_map.get(row_id, ""),
+                        default_sheet,
                         value_text,
                         self._safe_int(row.get("value_font_size", basic_rows_cfg.get("value_font_size", 18)), 18),
                         str(row.get("value_color", basic_rows_cfg.get("value_color", "#ffffff"))),
                         bold=True,
                         align=str(row.get("value_align", "left")),
+                        section_key="basic_fields",
                     )
             else:
                 rows_cfg = info_layout.get("rows", {})
@@ -7667,8 +7794,8 @@ class MainWindow(QMainWindow):
                 rows_start_y = self._safe_int(rows_cfg.get("start_y", 90), 90)
                 rows_gap = self._safe_int(rows_cfg.get("row_gap", 34), 34)
                 rows_font = self._safe_int(rows_cfg.get("font_size", 18), 18)
-                rows_values = [("Rasse", race_value), ("Größe", size_value), ("Gewicht", weight_value)]
-                for i, (label_text, value_text) in enumerate(rows_values):
+                rows_values = [("Rasse", "race", race_value), ("Größe", "size", size_value), ("Gewicht", "weight", weight_value)]
+                for i, (label_text, field_key, value_text) in enumerate(rows_values):
                     y = rows_start_y + i * rows_gap
                     self.create_panel_text(
                         character_panel,
@@ -7677,13 +7804,17 @@ class MainWindow(QMainWindow):
                         rows_font,
                         str(rows_cfg.get("label_color", default_color)),
                     )
-                    self.create_panel_text(
+                    self._create_character_value_editor(
                         character_panel,
                         {"x": rows_x_value, "y": y, "w": max(120, character_panel.width() - rows_x_value - 20), "h": 30},
+                        field_key,
+                        basic_map.get(field_key, ""),
+                        default_sheet,
                         value_text,
                         rows_font,
                         str(rows_cfg.get("value_color", "#ffffff")),
                         bold=True,
+                        section_key="basic_fields",
                     )
 
             stats_rows_cfg = info_layout.get("stat_rows", {})
@@ -7709,15 +7840,58 @@ class MainWindow(QMainWindow):
                         bold=True,
                         align=str(row.get("label_align", "left")),
                     )
-                    self.create_panel_text(
-                        character_panel,
-                        row.get("value_rect", {}),
-                        value_text,
-                        self._safe_int(row.get("value_font_size", stats_rows_cfg.get("value_font_size", 26)), 26),
-                        str(row.get("value_color", stats_rows_cfg.get("value_color", "#ffffff"))),
-                        bold=True,
-                        align=str(row.get("value_align", "left")),
-                    )
+                    if row_id in ("hp", "mp", "exp"):
+                        current_src = basic_map.get(f"{row_id}_current", "")
+                        max_src = basic_map.get(f"{row_id}_max", "")
+                        current_rect = row.get("current_rect", row.get("value_rect", {}))
+                        max_rect = row.get("max_rect", row.get("value_rect", {}))
+                        vx = self._safe_int(current_rect.get("x", 0), 0)
+                        vy = self._safe_int(current_rect.get("y", 0), 0)
+                        vw = self._safe_int(current_rect.get("w", 160), 160)
+                        vh = self._safe_int(current_rect.get("h", 30), 30)
+                        if "current_rect" not in row or "max_rect" not in row:
+                            half = max(40, vw // 2)
+                            current_rect = {"x": vx, "y": vy, "w": half, "h": vh}
+                            max_rect = {"x": vx + half, "y": vy, "w": max(20, vw - half), "h": vh}
+                        vf = self._safe_int(row.get("value_font_size", stats_rows_cfg.get("value_font_size", 26)), 26)
+                        vc = str(row.get("value_color", stats_rows_cfg.get("value_color", "#ffffff")))
+                        va = str(row.get("value_align", "left"))
+                        self._create_character_value_editor(
+                            character_panel,
+                            current_rect,
+                            f"{row_id}_current",
+                            current_src,
+                            default_sheet,
+                            self.format_character_display_value(self._read_data_map_cell(current_src, default_sheet), "int"),
+                            vf,
+                            vc,
+                            bold=True,
+                            align=va,
+                            section_key="basic_fields",
+                        )
+                        self._create_character_value_editor(
+                            character_panel,
+                            max_rect,
+                            f"{row_id}_max",
+                            max_src,
+                            default_sheet,
+                            self.format_character_display_value(self._read_data_map_cell(max_src, default_sheet), "int"),
+                            vf,
+                            vc,
+                            bold=True,
+                            align=va,
+                            section_key="basic_fields",
+                        )
+                    else:
+                        self.create_panel_text(
+                            character_panel,
+                            row.get("value_rect", {}),
+                            value_text,
+                            self._safe_int(row.get("value_font_size", stats_rows_cfg.get("value_font_size", 26)), 26),
+                            str(row.get("value_color", stats_rows_cfg.get("value_color", "#ffffff"))),
+                            bold=True,
+                            align=str(row.get("value_align", "left")),
+                        )
             else:
                 stats_cfg = info_layout.get("stats", {})
                 stats_x_label = self._safe_int(stats_cfg.get("label_x", 24), 24)
@@ -7857,9 +8031,12 @@ class MainWindow(QMainWindow):
             bold=True,
             align=str(body_header_layout.get("label_align", "center")),
         )
-        self.create_panel_text(
+        self._create_character_value_editor(
             attribute_panel,
             body_header_layout.get("value_rect", {"x": 150, "y": 24, "w": 80, "h": 30}),
+            "body",
+            body_header_cell,
+            default_sheet,
             body_header_value,
             self._safe_int(
                 body_header_layout.get(
@@ -7882,6 +8059,7 @@ class MainWindow(QMainWindow):
             ),
             bold=True,
             align=str(body_header_layout.get("value_align", "center")),
+            section_key="attributes",
         )
         self.create_panel_text(
             attribute_panel,
@@ -7909,9 +8087,12 @@ class MainWindow(QMainWindow):
             bold=True,
             align=str(mind_header_layout.get("label_align", "center")),
         )
-        self.create_panel_text(
+        self._create_character_value_editor(
             attribute_panel,
             mind_header_layout.get("value_rect", {"x": 446, "y": 24, "w": 80, "h": 30}),
+            "mind",
+            mind_header_cell,
+            default_sheet,
             mind_header_value,
             self._safe_int(
                 mind_header_layout.get(
@@ -7934,6 +8115,7 @@ class MainWindow(QMainWindow):
             ),
             bold=True,
             align=str(mind_header_layout.get("value_align", "center")),
+            section_key="attributes",
         )
 
         body_rows_layout = attr_layout.get("body_rows", {})
@@ -7987,9 +8169,12 @@ class MainWindow(QMainWindow):
                     bold=False,
                     align=str(row_cfg.get("label_align", "left")),
                 )
-                self.create_panel_text(
+                self._create_character_value_editor(
                     attribute_panel,
                     row_cfg.get("value_rect", {}),
+                    item_id.lower(),
+                    cell_ref,
+                    default_sheet,
                     value_text,
                     self._safe_int(
                         row_cfg.get(
@@ -8009,6 +8194,7 @@ class MainWindow(QMainWindow):
                     ),
                     bold=True,
                     align=str(row_cfg.get("value_align", "center")),
+                    section_key="attributes",
                 )
 
         render_attr_rows("body", body_map.get("items", []), body_rows_layout)
@@ -8211,6 +8397,13 @@ class MainWindow(QMainWindow):
                         "}"
                     )
                     x_field.setToolTip(tooltip)
+                    if self._character_edit_allowed("wellbeing"):
+                        x_field.setProperty("character_wellbeing_toggle", True)
+                        x_field.setProperty("character_wellbeing_row", int(entry.get("row", 0)))
+                        x_field.setProperty("character_wellbeing_marker_cell", str(entry.get("marker_cell", "")))
+                        x_field.setProperty("character_wellbeing_sheet_name", str(data_cfg.get("sheet", "Charakterbogen")))
+                        x_field.setProperty("character_wellbeing_active", bool(active))
+                        x_field.installEventFilter(self)
                     x_field.show()
 
                     text_label = QLabel(row_frame)
@@ -8304,15 +8497,18 @@ class MainWindow(QMainWindow):
             name_max_chars = self._safe_int(table_cfg.get("name_max_chars", 22), 22)
             effect_max_chars = self._safe_int(table_cfg.get("effect_max_chars", 34), 34)
 
+            editable_table = (
+                (map_cfg is perks_map and self._character_edit_allowed("perks"))
+                or (map_cfg is disadv_map and self._character_edit_allowed("disadvantages"))
+            )
+            table_type = "perk" if map_cfg is perks_map else "disadvantage"
+
             rendered = 0
+            max_rows = max(max_rows, end_row - start_row + 1)
             for row in range(start_row, end_row + 1):
-                if rendered >= max_rows:
-                    break
                 name = self.get_cache_display_value(sheet_name, f"{name_col}{row}", "")
                 raw_bp = self.get_cache_display_value(sheet_name, f"{bp_col}{row}", "")
                 effect = self.get_cache_display_value(sheet_name, f"{effect_col}{row}", "")
-                if not (name or raw_bp or effect):
-                    continue
 
                 bp = self.format_character_display_value(raw_bp, "int") if raw_bp else ""
                 if name and name != "-":
@@ -8320,14 +8516,14 @@ class MainWindow(QMainWindow):
                 y = start_y + rendered * row_h
                 rendered += 1
 
-                self.create_panel_text(
+                name_label = self.create_panel_text(
                     parent,
                     {"x": name_x, "y": y, "w": name_w, "h": row_h},
                     elide_fixed_text(name, name_max_chars) if name else "",
                     row_font_size,
                     name_color,
                 )
-                self.create_panel_text(
+                bp_label = self.create_panel_text(
                     parent,
                     {"x": bp_x, "y": y, "w": bp_w, "h": row_h},
                     bp,
@@ -8335,13 +8531,26 @@ class MainWindow(QMainWindow):
                     bp_color,
                     align="center",
                 )
-                self.create_panel_text(
+                effect_label = self.create_panel_text(
                     parent,
                     {"x": effect_x, "y": y, "w": effect_w, "h": row_h},
                     elide_fixed_text(effect, effect_max_chars) if effect else "",
                     row_font_size,
                     effect_color,
                 )
+                if editable_table:
+                    for widget, field, cell_ref, old_value in (
+                        (name_label, "name", f"{name_col}{row}", name),
+                        (bp_label, "bp", f"{bp_col}{row}", raw_bp),
+                        (effect_label, "effect", f"{effect_col}{row}", effect),
+                    ):
+                        widget.setProperty("character_perk_table_type", table_type)
+                        widget.setProperty("character_perk_row", row)
+                        widget.setProperty("character_perk_field", field)
+                        widget.setProperty("character_perk_cell_ref", cell_ref)
+                        widget.setProperty("character_perk_sheet_name", sheet_name)
+                        widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
+                        widget.installEventFilter(self)
 
         if isinstance(perks_layout, dict) and "perk_table" in perks_layout and "disadvantage_table" in perks_layout:
             left_title = perks_layout.get("left_title", {})
@@ -8378,6 +8587,7 @@ class MainWindow(QMainWindow):
             )
             print("[PERKS]", self.current_perks)
             print("[DISADVANTAGES]", self.current_disadvantages)
+            self._character_rendering = False
             return
 
         def render_table_block(parent, table_cfg, map_cfg, title_cfg, section_title, start_y_default):
@@ -8446,38 +8656,41 @@ class MainWindow(QMainWindow):
             effect_col = str(map_cfg.get("effect_col", "C"))
             row_start_y = self._safe_int(table_cfg.get("start_y", header_y + row_h + 2), header_y + row_h + 2)
 
+            editable_table = (
+                (map_cfg is perks_map and self._character_edit_allowed("perks"))
+                or (map_cfg is disadv_map and self._character_edit_allowed("disadvantages"))
+            )
+            table_type = "perk" if map_cfg is perks_map else "disadvantage"
+
             rendered = 0
+            max_rows = max(max_rows, end_row - start_row + 1)
             for row in range(start_row, end_row + 1):
-                if rendered >= max_rows:
-                    break
                 n = self.get_cache_display_value(sheet_name, f"{name_col}{row}", "")
                 raw_b = self.get_cache_display_value(sheet_name, f"{bp_col}{row}", "")
                 b = self.format_character_display_value(raw_b, "int") if raw_b else ""
                 e = self.get_cache_display_value(sheet_name, f"{effect_col}{row}", "")
-                if not (n or b or e):
-                    continue
                 y = row_start_y + rendered * row_h
                 rendered += 1
-                self.create_panel_text(
+                name_label = self.create_panel_text(
                     parent,
                     {"x": name_x, "y": y, "w": name_w, "h": row_h},
-                    n or "-",
+                    n or "",
                     font_size,
                     row_color,
                     align="left",
                 )
-                self.create_panel_text(
+                bp_label = self.create_panel_text(
                     parent,
                     {"x": bp_x, "y": y, "w": bp_w, "h": row_h},
-                    b or "-",
+                    b or "",
                     font_size,
                     row_color,
                     align="left",
                 )
-                effect_text = (e or "-")
+                effect_text = (e or "")
                 if len(effect_text) > 140:
                     effect_text = effect_text[:137] + "..."
-                self.create_panel_text(
+                effect_label = self.create_panel_text(
                     parent,
                     {"x": effect_x, "y": y, "w": effect_w, "h": row_h},
                     effect_text,
@@ -8485,6 +8698,19 @@ class MainWindow(QMainWindow):
                     row_color,
                     align="left",
                 )
+                if editable_table:
+                    for widget, field, cell_ref, old_value in (
+                        (name_label, "name", f"{name_col}{row}", n),
+                        (bp_label, "bp", f"{bp_col}{row}", raw_b),
+                        (effect_label, "effect", f"{effect_col}{row}", e),
+                    ):
+                        widget.setProperty("character_perk_table_type", table_type)
+                        widget.setProperty("character_perk_row", row)
+                        widget.setProperty("character_perk_field", field)
+                        widget.setProperty("character_perk_cell_ref", cell_ref)
+                        widget.setProperty("character_perk_sheet_name", sheet_name)
+                        widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
+                        widget.installEventFilter(self)
             return row_start_y + rendered * row_h
 
         perks_title_cfg = perks_layout.get("title", {"text": "Perks", "rect": {"x": 24, "y": 22, "w": 200, "h": 30}})
@@ -8499,6 +8725,7 @@ class MainWindow(QMainWindow):
         if isinstance(dis_title_cfg, dict) and isinstance(dis_title_cfg.get("rect"), dict):
             dis_title_cfg["rect"]["y"] = self._safe_int(dis_title_cfg["rect"].get("y", end_y + 20), end_y + 20)
         render_table_block(perk_panel, dis_table_cfg, disadv_map, dis_title_cfg, "Nachteile", end_y + 20)
+        self._character_rendering = False
 
     def render_character_front(self):
         if self.content_layer is None:
@@ -8864,6 +9091,65 @@ class MainWindow(QMainWindow):
                     text_label.setStyleSheet(
                         f"background: transparent; color: {inactive_color}; font-weight: 400;"
                     )
+        if isinstance(obj, QLabel):
+            if event.type() == QEvent.MouseButtonDblClick:
+                if bool(obj.property("character_editable")):
+                    return self._handle_character_widget_double_click(obj)
+                perk_table_type = str(obj.property("character_perk_table_type") or "")
+                if perk_table_type in ("perk", "disadvantage"):
+                    row = int(obj.property("character_perk_row") or 0)
+                    field = str(obj.property("character_perk_field") or "")
+                    cell_ref = str(obj.property("character_perk_cell_ref") or "")
+                    sheet_name = str(obj.property("character_perk_sheet_name") or "")
+                    old_value = str(obj.property("character_perk_value") or "")
+                    if not cell_ref or not sheet_name:
+                        self._character_debug(
+                            f"[CHARACTER EDIT SKIP] field={perk_table_type}.{field} reason=no_cell_ref"
+                        )
+                        return True
+                    multiline = field == "effect"
+                    title = (
+                        "Perk Effekt bearbeiten"
+                        if perk_table_type == "perk" and multiline
+                        else "Nachteil Effekt bearbeiten"
+                        if perk_table_type == "disadvantage" and multiline
+                        else "Perk bearbeiten"
+                        if perk_table_type == "perk"
+                        else "Nachteil bearbeiten"
+                    )
+                    new_value, ok = self._open_character_field_dialog(title, old_value, multiline=multiline)
+                    if not ok:
+                        return True
+                    tag = "CHARACTER PERK EDIT" if perk_table_type == "perk" else "CHARACTER DISADVANTAGE EDIT"
+                    self._character_debug(
+                        f'[{tag}] row={row} field={field} cell={cell_ref} old="{old_value}" new="{new_value}"'
+                    )
+                    self.loader.set_cell_value(sheet_name, cell_ref, str(new_value))
+                    if (self._character_edit_cfg or {}).get("save_on_change", True):
+                        self.loader.save_active_character_json()
+                        self._character_debug("[CHARACTER SAVE] active character saved")
+                    self.show_main_section("character")
+                    return True
+            if event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonDblClick):
+                if bool(obj.property("character_wellbeing_toggle")) and self._character_edit_allowed("wellbeing"):
+                    row = int(obj.property("character_wellbeing_row") or 0)
+                    marker_cell = str(obj.property("character_wellbeing_marker_cell") or "")
+                    sheet_name = str(obj.property("character_wellbeing_sheet_name") or "")
+                    active = bool(obj.property("character_wellbeing_active"))
+                    if not marker_cell or not sheet_name:
+                        self._character_debug("[CHARACTER EDIT SKIP] field=wellbeing reason=no_cell_ref")
+                        return True
+                    new_active = not active
+                    new_value = "x" if new_active else ""
+                    self.loader.set_cell_value(sheet_name, marker_cell, new_value)
+                    if (self._character_edit_cfg or {}).get("save_on_change", True):
+                        self.loader.save_active_character_json()
+                        self._character_debug("[CHARACTER SAVE] active character saved")
+                    self._character_debug(
+                        f"[CHARACTER WELLBEING EDIT] row={row} marker_cell={marker_cell} active={new_active}"
+                    )
+                    self.show_main_section("character")
+                    return True
         return super().eventFilter(obj, event)
 
     def load_excel(self):

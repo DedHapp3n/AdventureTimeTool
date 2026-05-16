@@ -15,13 +15,6 @@
       "shadow_color": "#000000"
     }
   },
-
-
-
- 
-
-
-
   "canvas": {
     "width": 1527,
     "height": 1030
@@ -133,22 +126,15 @@
       "h": 60
     }
   ],
-
-
   "skills_screen": {
     "layout_file": "skills_layout.json"
   },
-  
   "content_area": {
     "x": 32,
     "y": 128,
     "w": 1460,
     "h": 870
   },
-
-
-
-
   "settings_page": {
     "title": {
       "text": "Settings",
@@ -276,10 +262,6 @@
       "text": "Cache neu laden"
     }
   },
-
-
-
-
   "character_screen": {
     "panels": {
       "character_info_panel": {
@@ -304,16 +286,8 @@
         "h": 882
       }
     },
-
-
-
-
-
-
-
     "data_map": {
       "sheet": "Charakterbogen",
-
       "basic": {
         "name": "G1",
         "race": "G3",
@@ -337,20 +311,52 @@
           "label": "Körper",
           "value": "AG4",
           "items": [
-            { "id": "kraft", "label": "Kraft", "value": "AG7" },
-            { "id": "geschick", "label": "Geschick", "value": "AG9" },
-            { "id": "zaehigkeit", "label": "Zähigkeit", "value": "AG11" },
-            { "id": "reflex", "label": "Reflex", "value": "AG13" }
+            {
+              "id": "kraft",
+              "label": "Kraft",
+              "value": "AG7"
+            },
+            {
+              "id": "geschick",
+              "label": "Geschick",
+              "value": "AG9"
+            },
+            {
+              "id": "zaehigkeit",
+              "label": "Zähigkeit",
+              "value": "AG11"
+            },
+            {
+              "id": "reflex",
+              "label": "Reflex",
+              "value": "AG13"
+            }
           ]
         },
         "mind": {
           "label": "Geist",
           "value": "AR4",
           "items": [
-            { "id": "intelligenz", "label": "Intelligenz", "value": "AR7" },
-            { "id": "willenskraft", "label": "Willenskraft", "value": "AR9" },
-            { "id": "charisma", "label": "Charisma", "value": "AR11" },
-            { "id": "sinne", "label": "Sinne", "value": "AR13" }
+            {
+              "id": "intelligenz",
+              "label": "Intelligenz",
+              "value": "AR7"
+            },
+            {
+              "id": "willenskraft",
+              "label": "Willenskraft",
+              "value": "AR9"
+            },
+            {
+              "id": "charisma",
+              "label": "Charisma",
+              "value": "AR11"
+            },
+            {
+              "id": "sinne",
+              "label": "Sinne",
+              "value": "AR13"
+            }
           ]
         }
       },
@@ -371,14 +377,6 @@
         "effect_col": "CA"
       }
     },
-
-
-
-
-
-
-
-
     "text_layout": {
       "character_info_panel": {
         "title": {
@@ -391,7 +389,6 @@
           "bold": true,
           "align": "center"
         },
-
         "portrait": {
           "enabled": true,
           "x": 34,
@@ -400,7 +397,6 @@
           "h": 135,
           "fallback_color": "rgba(0, 0, 0, 80)"
         },
-
         "fields": {
           "label_font_size": 13,
           "value_font_size": 14,
@@ -411,8 +407,18 @@
             {
               "id": "race",
               "label": "Rasse:",
-              "label_rect": { "x": 68, "y": 315, "w": 82, "h": 30 },
-              "value_rect": { "x": 180, "y": 315, "w": 140, "h": 30 },
+              "label_rect": {
+                "x": 68,
+                "y": 315,
+                "w": 82,
+                "h": 30
+              },
+              "value_rect": {
+                "x": 180,
+                "y": 315,
+                "w": 140,
+                "h": 30
+              },
               "font_size": 22,
               "color": "#f0e6c8",
               "mode": "raw"
@@ -420,94 +426,213 @@
             {
               "id": "size",
               "label": "Größe",
-              "label_rect": { "x": 222, "y": 370, "w": 62, "h": 24 },
-              "value_rect": { "x": 310, "y": 370, "w": 10, "h": 24 },
+              "label_rect": {
+                "x": 222,
+                "y": 370,
+                "w": 62,
+                "h": 24
+              },
+              "value_rect": {
+                "x": 310,
+                "y": 370,
+                "w": 10,
+                "h": 24
+              },
               "font_size": 20,
-              "color": "#f0e6c8",              
+              "color": "#f0e6c8",
               "mode": "int"
             },
             {
               "id": "weight",
               "label": "Gewicht",
-              "label_rect": { "x": 218, "y": 420, "w": 80, "h": 24 },
-              "value_rect": { "x": 310, "y": 420, "w": 10, "h": 24 },
+              "label_rect": {
+                "x": 218,
+                "y": 420,
+                "w": 80,
+                "h": 24
+              },
+              "value_rect": {
+                "x": 310,
+                "y": 420,
+                "w": 10,
+                "h": 24
+              },
               "font_size": 17,
               "color": "#f0e6c8",
               "mode": "int"
             },
-
             {
               "id": "hp",
               "label": "HP",
-              "label_rect": { "x": 160, "y": 122, "w": 78, "h": 24 },
-              "value_rect": { "x": 255, "y": 122, "w": 188, "h": 24 },
-              "format": "{current}   {max}",
+              "label_rect": {
+                "x": 160,
+                "y": 122,
+                "w": 78,
+                "h": 24
+              },
               "font_size": 22,
               "color": "#f71937",
-              "mode": "int"
+              "mode": "int",
+              "current_rect": {
+                "x": 255,
+                "y": 122,
+                "w": 60,
+                "h": 24
+              },
+              "max_rect": {
+                "x": 335,
+                "y": 122,
+                "w": 60,
+                "h": 24
+              },
+              "separator": {
+                "enabled": false
+              }
             },
             {
               "id": "mp",
               "label": "MP",
-              "label_rect": { "x": 160, "y": 175, "w": 78, "h": 24 },
-              "value_rect": { "x": 255, "y": 175, "w": 188, "h": 24 },
-              "format": "{current}      {max}",
+              "label_rect": {
+                "x": 160,
+                "y": 175,
+                "w": 78,
+                "h": 24
+              },
               "font_size": 22,
               "color": "#0f95f5",
-              "mode": "int"
+              "mode": "int",
+              "current_rect": {
+                "x": 255,
+                "y": 175,
+                "w": 60,
+                "h": 24
+              },
+              "max_rect": {
+                "x": 335,
+                "y": 175,
+                "w": 60,
+                "h": 24
+              },
+              "separator": {
+                "enabled": false
+              }
             },
             {
               "id": "exp",
               "label": "XP",
-              "label_rect": { "x": 160, "y": 230, "w": 78, "h": 24 },
-              "value_rect": { "x": 255, "y": 230, "w": 188, "h": 24 },
-              "format": "{current}      {max}",
+              "label_rect": {
+                "x": 160,
+                "y": 230,
+                "w": 78,
+                "h": 24
+              },
               "font_size": 22,
               "color": "#99f50f",
-              "mode": "int"
+              "mode": "int",
+              "current_rect": {
+                "x": 255,
+                "y": 230,
+                "w": 60,
+                "h": 24
+              },
+              "max_rect": {
+                "x": 335,
+                "y": 230,
+                "w": 60,
+                "h": 24
+              },
+              "separator": {
+                "enabled": false
+              }
             },
-
             {
               "id": "lifeforce",
               "label": "LifeForce",
-              "label_rect": { "x": 33, "y": 370, "w": 80, "h": 24 },
-              "value_rect": { "x": 133, "y": 370, "w": 10, "h": 24 },
+              "label_rect": {
+                "x": 33,
+                "y": 370,
+                "w": 80,
+                "h": 24
+              },
               "font_size": 17,
               "color": "#ffaf3e",
-              "format": "{current} / {max}",
-              "mode": "int"
+              "mode": "int",
+              "current_rect": {
+                "x": 133,
+                "y": 370,
+                "w": 40,
+                "h": 24
+              },
+              "max_rect": {
+                "x": 183,
+                "y": 370,
+                "w": 40,
+                "h": 24
+              },
+              "separator": {
+                "enabled": false
+              }
             },
             {
               "id": "sanity",
               "label": "Sanity",
-              "label_rect": { "x": 45, "y": 420, "w": 80, "h": 24 },
-              "value_rect": { "x": 133, "y": 420, "w": 10, "h": 24 },
+              "label_rect": {
+                "x": 45,
+                "y": 420,
+                "w": 80,
+                "h": 24
+              },
               "font_size": 17,
               "color": "#8bd0f2",
-              "format": "{current} / {max}",
-              "mode": "int"
+              "mode": "int",
+              "current_rect": {
+                "x": 133,
+                "y": 420,
+                "w": 40,
+                "h": 24
+              },
+              "max_rect": {
+                "x": 183,
+                "y": 420,
+                "w": 40,
+                "h": 24
+              },
+              "separator": {
+                "enabled": false
+              }
             },
             {
               "id": "faith",
               "label": "Faith",
-              "label_rect": { "x": 55, "y": 475, "w": 80, "h": 24 },
-              "value_rect": { "x": 133, "y": 475, "w": 10, "h": 24 },
+              "label_rect": {
+                "x": 55,
+                "y": 475,
+                "w": 80,
+                "h": 24
+              },
               "font_size": 17,
               "color": "#ffffff",
-              "format": "{current} / {max}",
-              "mode": "int"
+              "mode": "int",
+              "current_rect": {
+                "x": 133,
+                "y": 475,
+                "w": 40,
+                "h": 24
+              },
+              "max_rect": {
+                "x": 183,
+                "y": 475,
+                "w": 40,
+                "h": 24
+              },
+              "separator": {
+                "enabled": false
+              }
             }
           ]
         }
       },
-
-
-
-
-
-
-
-        "attribute_panel": {
+      "attribute_panel": {
         "panel_title": {
           "text": "Attribute",
           "x": -20,
@@ -519,148 +644,242 @@
           "bold": true,
           "align": "center"
         },
-
         "header_font_size": 20,
         "label_font_size": 15,
         "value_font_size": 18,
         "header_color": "#f2d28b",
         "label_color": "#ffffff",
         "value_color": "#ffffff",
-
         "body_header": {
-          "label_rect": { "x": 60, "y": 93, "w": 120, "h": 30 },
-          "value_rect": { "x": 167, "y": 81, "w": 55, "h": 55 },
+          "label_rect": {
+            "x": 60,
+            "y": 93,
+            "w": 120,
+            "h": 30
+          },
+          "value_rect": {
+            "x": 167,
+            "y": 81,
+            "w": 55,
+            "h": 55
+          },
           "label_align": "center",
           "value_align": "center"
         },
-
         "mind_header": {
-          "label_rect": { "x": 285, "y": 93, "w": 120, "h": 30 },
-          "value_rect": { "x": 238, "y": 81, "w": 55, "h": 55 }
-        },
-
-        "body_rows": {
-          "kraft": {
-            "label_rect": { "x": 90, "y": 153, "w": 120, "h": 24 },
-            "value_rect": { "x": 167, "y": 137, "w": 55, "h": 55 }
+          "label_rect": {
+            "x": 285,
+            "y": 93,
+            "w": 120,
+            "h": 30
           },
-          "geschick": {
-            "label_rect": { "x": 75, "y": 207, "w": 120, "h": 24 },
-            "value_rect": { "x": 167, "y": 192, "w": 55, "h": 55 }
-          },
-          "zaehigkeit": {
-            "label_rect": { "x": 75, "y": 264, "w": 120, "h": 24 },
-            "value_rect": { "x": 167, "y": 247, "w": 55, "h": 55 }
-          },
-          "reflex": {
-            "label_rect": { "x": 90, "y": 319, "w": 120, "h": 24 },
-            "value_rect": { "x": 167, "y": 304, "w": 55, "h": 55 }
+          "value_rect": {
+            "x": 238,
+            "y": 81,
+            "w": 55,
+            "h": 55
           }
         },
-
+        "body_rows": {
+          "kraft": {
+            "label_rect": {
+              "x": 90,
+              "y": 153,
+              "w": 120,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 167,
+              "y": 137,
+              "w": 55,
+              "h": 55
+            }
+          },
+          "geschick": {
+            "label_rect": {
+              "x": 75,
+              "y": 207,
+              "w": 120,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 167,
+              "y": 192,
+              "w": 55,
+              "h": 55
+            }
+          },
+          "zaehigkeit": {
+            "label_rect": {
+              "x": 75,
+              "y": 264,
+              "w": 120,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 167,
+              "y": 247,
+              "w": 55,
+              "h": 55
+            }
+          },
+          "reflex": {
+            "label_rect": {
+              "x": 90,
+              "y": 319,
+              "w": 120,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 167,
+              "y": 304,
+              "w": 55,
+              "h": 55
+            }
+          }
+        },
         "mind_rows": {
           "intelligenz": {
-            "label_rect": { "x": 300, "y": 153, "w": 140, "h": 24 },
-            "value_rect": { "x": 238, "y": 137, "w": 55, "h": 55 }
+            "label_rect": {
+              "x": 300,
+              "y": 153,
+              "w": 140,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 238,
+              "y": 137,
+              "w": 55,
+              "h": 55
+            }
           },
           "willenskraft": {
-            "label_rect": { "x": 300, "y": 207, "w": 140, "h": 24 },
-            "value_rect": { "x": 238, "y": 192, "w": 55, "h": 55 }
+            "label_rect": {
+              "x": 300,
+              "y": 207,
+              "w": 140,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 238,
+              "y": 192,
+              "w": 55,
+              "h": 55
+            }
           },
           "charisma": {
-            "label_rect": { "x": 300, "y": 264, "w": 140, "h": 24 },
-            "value_rect": { "x": 238, "y": 247, "w": 55, "h": 55 }
+            "label_rect": {
+              "x": 300,
+              "y": 264,
+              "w": 140,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 238,
+              "y": 247,
+              "w": 55,
+              "h": 55
+            }
           },
           "sinne": {
-            "label_rect": { "x": 320, "y": 319, "w": 140, "h": 24 },
-            "value_rect": { "x": 238, "y": 304, "w": 55, "h": 55 }
+            "label_rect": {
+              "x": 320,
+              "y": 319,
+              "w": 140,
+              "h": 24
+            },
+            "value_rect": {
+              "x": 238,
+              "y": 304,
+              "w": 55,
+              "h": 55
+            }
           }
         }
       },
-
-
-
-
-
-      
       "perk_panel": {
         "left_title": {
           "text": "Perks",
-          "rect": { "x": 135, "y": 50, "w": 290, "h": 32 },
+          "rect": {
+            "x": 135,
+            "y": 50,
+            "w": 290,
+            "h": 32
+          },
           "font_size": 24,
           "color": "#f2d28b",
           "bold": true,
           "align": "left"
         },
-
         "right_title": {
           "text": "Nachteile",
-          "rect": { "x": 408, "y": 50, "w": 290, "h": 32 },
+          "rect": {
+            "x": 408,
+            "y": 50,
+            "w": 290,
+            "h": 32
+          },
           "font_size": 24,
           "color": "#f2d28b",
           "bold": true,
           "align": "left"
         },
-
         "perk_table": {
           "header_y": 95,
           "start_y": 128,
           "row_h": 33,
           "max_rows": 22,
-
           "header_font_size": 13,
           "row_font_size": 12,
-
           "header_color": "#f0e6c8",
           "name_color": "#f2d28b",
           "bp_color": "#7fd0ff",
           "effect_color": "#ffffff",
-
           "name_x": 41,
           "name_w": 65,
-
           "bp_x": 114,
           "bp_w": 34,
-
           "effect_x": 155,
           "effect_w": 155,
-
           "name_header": "Name",
           "bp_header": "BP",
           "effect_header": "Effekt"
         },
-
         "disadvantage_table": {
           "header_y": 95,
           "start_y": 128,
           "row_h": 33,
           "max_rows": 22,
-
           "header_font_size": 13,
           "row_font_size": 12,
-
           "header_color": "#f0e6c8",
           "name_color": "#f2d28b",
           "bp_color": "#ff8f8f",
           "effect_color": "#ffffff",
-
           "name_x": 339,
           "name_w": 65,
-
           "bp_x": 410,
           "bp_w": 34,
-
           "effect_x": 455,
           "effect_w": 155,
-
           "name_header": "Name",
           "bp_header": "BP",
           "effect_header": "Effekt"
         }
       }
-
-
-
-
+    },
+    "edit": {
+      "enabled": true,
+      "save_on_change": true,
+      "debug": true,
+      "basic_fields": true,
+      "attributes": true,
+      "perks": true,
+      "disadvantages": true,
+      "wellbeing": true,
+      "edit_on": "double_click",
+      "text_editor": "dialog",
+      "empty_value": ""
+    }
   }
-}}
+}
