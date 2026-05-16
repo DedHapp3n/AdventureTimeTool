@@ -1,0 +1,226 @@
+{
+  "equipment_screen": {
+    "x": 20,
+    "y": 20,
+    "w": 1420,
+    "h": 820,
+    "title": {
+      "text": "Ausrüstung",
+      "x": 0,
+      "y": 0,
+      "w": 1380,
+      "h": 42,
+      "font_size": 24,
+      "color": "#f2d28b",
+      "align": "center"
+    },
+    "debug": {
+      "enabled": true,
+      "print_mapping": true,
+      "print_rows": true
+    },
+    "armor": {
+      "enabled": true,
+      "x": 20,
+      "y": 110,
+      "w": 1380,
+      "h": 330,
+      "title": "Rüstung",
+      "font_size": 14,
+      "header_font_size": 14,
+      "title_font_size": 20,
+      "title_color": "#f2d28b",
+      "header_color": "#f2d28b",
+      "text_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "min_row_h": 32,
+      "max_row_h": 120,
+      "min_rows": 10,
+      "columns": {
+        "slot": {
+          "title": "Wo",
+          "w": 140
+        },
+        "name": {
+          "title": "Name",
+          "w": 220
+        },
+        "pl": {
+          "title": "PL",
+          "w": 45
+        },
+        "phys_head": {
+          "title": "Kopf",
+          "w": 55
+        },
+        "phys_chest": {
+          "title": "Brust",
+          "w": 55
+        },
+        "phys_arms": {
+          "title": "Arme",
+          "w": 55
+        },
+        "phys_legs": {
+          "title": "Beine",
+          "w": 55
+        },
+        "fire": {
+          "title": "Feuer",
+          "w": 55
+        },
+        "water": {
+          "title": "Wasser",
+          "w": 55
+        },
+        "earth": {
+          "title": "Erde",
+          "w": 55
+        },
+        "wind": {
+          "title": "Wind",
+          "w": 55
+        },
+        "lightning": {
+          "title": "Blitz",
+          "w": 55
+        },
+        "ice": {
+          "title": "Eis",
+          "w": 55
+        },
+        "acid": {
+          "title": "Säure",
+          "w": 55
+        },
+        "light": {
+          "title": "Licht",
+          "w": 55
+        },
+        "dark": {
+          "title": "Dunkel",
+          "w": 55
+        },
+        "durability_current": {
+          "title": "Haltb.",
+          "w": 65
+        },
+        "durability_max": {
+          "title": "Max",
+          "w": 65
+        },
+        "attributes": {
+          "title": "Attribute / Sonderfertigkeiten",
+          "w": 260
+        }
+      },
+      "column_groups": {
+        "base": {
+          "background": "rgba(0, 0, 0, 20)"
+        },
+        "physical": {
+          "columns": [
+            "phys_head",
+            "phys_chest",
+            "phys_arms",
+            "phys_legs"
+          ],
+          "background": "rgba(210, 210, 210, 25)",
+          "header_color": "#d8d8d8"
+        },
+        "elemental": {
+          "columns": [
+            "fire",
+            "water",
+            "earth",
+            "wind",
+            "lightning",
+            "ice",
+            "acid",
+            "light",
+            "dark"
+          ],
+          "background": "rgba(255, 220, 120, 22)",
+          "header_color": "#f2d28b"
+        },
+        "durability": {
+          "columns": [
+            "durability_current",
+            "durability_max"
+          ],
+          "background": "rgba(180, 180, 180, 30)",
+          "header_color": "#d8d8d8"
+        }
+      },
+      "element_header_colors": {
+        "fire": "#ffb080",
+        "water": "#9fd8ff",
+        "earth": "#d6b25e",
+        "wind": "#b9f0a0",
+        "lightning": "#ffff66",
+        "ice": "#9fe8ff",
+        "acid": "#88ff88",
+        "light": "#fff2c0",
+        "dark": "#b8a0c8"
+      },
+      "column_backgrounds": {
+        "slot": "rgba(0, 0, 0, 125)",
+        "name": "rgba(0, 0, 0, 125)",
+        "pl": "rgba(0, 0, 0, 125)",
+        "phys_head": "rgba(180, 180, 180, 125)",
+        "phys_chest": "rgba(180, 180, 180, 125)",
+        "phys_arms": "rgba(180, 180, 180, 125)",
+        "phys_legs": "rgba(180, 180, 180, 125)",
+        "fire": "rgba(255, 80, 40, 135)",
+        "water": "rgba(60, 150, 255, 135)",
+        "earth": "rgba(170, 120, 35, 135)",
+        "wind": "rgba(120, 220, 100, 135)",
+        "lightning": "rgba(240, 240, 40, 135)",
+        "ice": "rgba(80, 220, 255, 135)",
+        "acid": "rgba(50, 230, 80, 135)",
+        "light": "rgba(255, 235, 150, 135)",
+        "dark": "rgba(100, 70, 150, 135)",
+        "durability_current": "rgba(170, 170, 185, 135)",
+        "durability_max": "rgba(170, 170, 185, 135)",
+        "attributes": "rgba(0, 0, 0, 125)"
+      },
+      "header_backgrounds": {
+        "phys_head": "rgba(180, 180, 180, 210)",
+        "phys_chest": "rgba(180, 180, 180, 210)",
+        "phys_arms": "rgba(180, 180, 180, 210)",
+        "phys_legs": "rgba(180, 180, 180, 210)",
+        "fire": "rgba(255, 70, 30, 220)",
+        "water": "rgba(40, 140, 255, 220)",
+        "earth": "rgba(160, 105, 25, 220)",
+        "wind": "rgba(100, 210, 80, 220)",
+        "lightning": "rgba(235, 235, 30, 220)",
+        "ice": "rgba(60, 210, 245, 220)",
+        "acid": "rgba(40, 220, 70, 220)",
+        "light": "rgba(255, 230, 140, 220)",
+        "dark": "rgba(90, 60, 140, 220)",
+        "durability_current": "rgba(165, 165, 180, 220)",
+        "durability_max": "rgba(165, 165, 180, 220)"
+      },
+      "colored_cell_text_color": "#000000",
+      "cell_text_colors": {
+        "phys_head": "#000000",
+        "phys_chest": "#000000",
+        "phys_arms": "#000000",
+        "phys_legs": "#000000",
+        "fire": "#000000",
+        "water": "#000000",
+        "earth": "#000000",
+        "wind": "#000000",
+        "lightning": "#000000",
+        "ice": "#000000",
+        "acid": "#000000",
+        "light": "#000000",
+        "dark": "#000000",
+        "durability_current": "#000000",
+        "durability_max": "#000000"
+      }
+    }
+  }
+}

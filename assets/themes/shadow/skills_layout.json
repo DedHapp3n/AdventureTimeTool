@@ -60,7 +60,10 @@
           "x": 1170,
           "w": 210
         }
-      }
+      },
+      "min_row_h": 42,
+      "max_row_h": 72,
+      "wrap_text": true
     }
   }
 }

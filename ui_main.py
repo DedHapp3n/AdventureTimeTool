@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QEvent, QRect
-from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics
+from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush
 import re
 import os
 import json
@@ -134,6 +134,7 @@ class MainWindow(QMainWindow):
         self._inventory_table_bindings = {}
         self._inventory_money_fields = {}
         self._inventory_money_delta_fields = {}
+        self.equipment_analysis = {}
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -648,6 +649,8 @@ class MainWindow(QMainWindow):
                     self.show_main_section("skills")
                 elif self.current_main_section == "inventory":
                     self.show_main_section("inventory")
+                elif self.current_main_section in ("equipment", "ausruestung", "ausrüstung"):
+                    self.show_main_section("equipment")
             print("[SETTINGS] Cache reload clicked")
             return
         print("[SETTINGS] Cache reload clicked")
@@ -681,6 +684,8 @@ class MainWindow(QMainWindow):
             self.render_skills_screen()
         elif section_id == "inventory":
             self.render_inventory_screen()
+        elif section_id in ("equipment", "ausruestung", "ausrüstung"):
+            self.render_equipment_screen()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -1330,6 +1335,58 @@ class MainWindow(QMainWindow):
                 continue
         print("[INVENTORY LAYOUT] fallback: internal default")
         return self.get_default_inventory_layout_config()
+
+    def get_default_equipment_layout_config(self):
+        return {
+            "equipment_screen": {
+                "x": 20,
+                "y": 20,
+                "w": 1420,
+                "h": 820,
+                "title": {
+                    "text": "Ausrüstung",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1380,
+                    "h": 42,
+                    "font_size": 24,
+                    "color": "#f2d28b",
+                    "align": "center",
+                },
+                "debug": {
+                    "enabled": True,
+                    "print_mapping": True,
+                    "print_rows": True,
+                },
+            }
+        }
+
+    def load_equipment_layout_config(self):
+        active_theme = self.get_active_theme()
+        layout_file = ""
+        screen_cfg = self.main_ui_layout_config.get("equipment_screen", {})
+        if isinstance(screen_cfg, dict):
+            layout_file = str(screen_cfg.get("layout_file", "")).strip()
+        if not layout_file:
+            layout_file = "equipment_layout.json"
+
+        candidates = [
+            self.base_dir / "assets" / "themes" / active_theme / layout_file,
+            self.base_dir / "assets" / "themes" / "diablo" / "equipment_layout.json",
+        ]
+        for layout_path in candidates:
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("equipment_screen"), dict):
+                    print(f"[EQUIPMENT LAYOUT] loaded: {layout_path}")
+                    return data
+            except Exception:
+                continue
+        print("[EQUIPMENT LAYOUT] fallback: internal default")
+        return self.get_default_equipment_layout_config()
 
     def get_default_roll_dialog_layout_config(self):
         return {
@@ -2420,13 +2477,16 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             print("[SKILLS EDIT ERROR]", str(exc))
 
-    def _estimate_skill_text_height(self, text, width, font_size, min_row_h, max_row_h=0):
+    def _estimate_skill_text_height(self, text, width, font_size, min_row_h, max_row_h=0, max_lines=0):
         safe_width = max(20, int(width) - 8)
         font = self.font()
         font.setPointSize(max(8, int(font_size)))
-        metrics = font.metrics()
+        metrics = QFontMetrics(font)
         rect = metrics.boundingRect(QRect(0, 0, safe_width, 5000), int(Qt.TextWordWrap), str(text or ""))
         text_height = max(metrics.lineSpacing() + 6, rect.height() + 10)
+        if int(max_lines) > 0:
+            line_cap = (metrics.lineSpacing() * int(max_lines)) + 10
+            text_height = min(text_height, line_cap)
         row_height = max(int(min_row_h), text_height)
         if int(max_row_h) > 0:
             row_height = min(row_height, int(max_row_h))
@@ -3902,6 +3962,832 @@ class MainWindow(QMainWindow):
             slot["title"] = self.get_inventory_tab_label(slot["id"], slot["default_label"])
         return slots
 
+    def _normalize_equipment_text(self, value):
+        text = str(value or "").strip().lower()
+        if not text:
+            return ""
+        replacements = {
+            "ä": "ae",
+            "ö": "oe",
+            "ü": "ue",
+            "ß": "ss",
+        }
+        for src, dst in replacements.items():
+            text = text.replace(src, dst)
+        text = text.replace("-", " ").replace("/", " ").replace("_", " ")
+        text = re.sub(r"[^a-z0-9 ]+", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _equipment_cache_text(self, sheet_cache, cell_ref):
+        cell_data = sheet_cache.get(cell_ref)
+        value = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    def _equipment_cell_sort_key(self, cell_ref):
+        match = re.match(r"^([A-Z]+)(\d+)$", str(cell_ref).strip().upper())
+        if not match:
+            return (0, 0)
+        return (int(match.group(2)), self._col_letters_to_index(match.group(1)))
+
+    def get_equipment_sheet_cache(self):
+        exact_candidates = {"ausrüstung", "ausruestung"}
+        cache = self.loader.cell_cache
+        if not isinstance(cache, dict):
+            print("[EQUIPMENT ERROR] sheet not found")
+            return "", {}
+
+        for sheet_name, sheet_cache in cache.items():
+            normalized = self._normalize_equipment_text(sheet_name)
+            if normalized in exact_candidates and isinstance(sheet_cache, dict):
+                print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                return sheet_name, sheet_cache
+
+        for sheet_name, sheet_cache in cache.items():
+            normalized = self._normalize_equipment_text(sheet_name)
+            if "ausruestung" in normalized and isinstance(sheet_cache, dict):
+                print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                return sheet_name, sheet_cache
+
+        print("[EQUIPMENT ERROR] sheet not found")
+        return "", {}
+
+    def _find_equipment_column(
+        self,
+        header_entries,
+        header_rows,
+        include_tokens,
+        exclude_tokens=None,
+        min_col=1,
+    ):
+        if exclude_tokens is None:
+            exclude_tokens = []
+        candidates = []
+        for entry in header_entries:
+            row = entry.get("row", 0)
+            col = entry.get("col", 0)
+            norm = entry.get("norm", "")
+            if row not in header_rows or col < min_col:
+                continue
+            if not all(token in norm for token in include_tokens):
+                continue
+            if any(token in norm for token in exclude_tokens):
+                continue
+            score = len(norm)
+            candidates.append((score, row, col))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        return candidates[0][2]
+
+    def _extract_equipment_rows(self, sheet_cache, mapping, kind, max_rows=30):
+        if not isinstance(mapping, dict):
+            return []
+        data_start_row = int(mapping.get("data_start_row", 0) or 0)
+        if data_start_row <= 0:
+            return []
+        columns = mapping.get("columns", {})
+        if not isinstance(columns, dict):
+            columns = {}
+        rows = []
+        empty_streak = 0
+        for offset in range(max_rows):
+            row_index = data_start_row + offset
+            row_data = {"row": row_index}
+            non_empty = False
+            for key, col_letters in columns.items():
+                if not isinstance(col_letters, str) or not col_letters:
+                    row_data[key] = ""
+                    continue
+                cell_ref = f"{col_letters}{row_index}"
+                value = self._equipment_cache_text(sheet_cache, cell_ref)
+                row_data[key] = value
+                if value:
+                    non_empty = True
+
+            if kind == "armor":
+                is_data = self._is_valid_armor_data_core(
+                    row_data.get("slot", ""),
+                    row_data.get("name", ""),
+                    row_data.get("pl", ""),
+                )
+            else:
+                is_data = bool(
+                    row_data.get("name")
+                    or row_data.get("weapon_type")
+                    or row_data.get("pl")
+                )
+
+            if is_data:
+                rows.append(row_data)
+                empty_streak = 0
+            else:
+                empty_streak = empty_streak + 1 if not non_empty else 0
+                if empty_streak >= 6:
+                    break
+        return rows
+
+    def _find_equipment_first_data_row(self, sheet_cache, start_row, key_columns):
+        if not isinstance(sheet_cache, dict):
+            return start_row + 3
+        normalized_cols = [str(col).strip().upper() for col in key_columns if isinstance(col, str) and col]
+        for row_index in range(start_row + 1, start_row + 30):
+            row_values = [
+                self._equipment_cache_text(sheet_cache, f"{col_letters}{row_index}")
+                for col_letters in normalized_cols
+            ]
+            if self._is_valid_armor_data_core(
+                row_values[0] if len(row_values) > 0 else "",
+                row_values[1] if len(row_values) > 1 else "",
+                row_values[2] if len(row_values) > 2 else "",
+            ):
+                return row_index
+        return start_row + 3
+
+    def _is_equipment_header_value(self, value):
+        normalized = self._normalize_equipment_text(value)
+        if not normalized:
+            return False
+        known_headers = {
+            "wo getragen",
+            "name",
+            "pl",
+            "kopf",
+            "brust",
+            "arme",
+            "beine",
+            "feuer",
+            "wasser",
+            "erde",
+            "wind",
+            "blitz",
+            "eis",
+            "saeure",
+            "licht",
+            "dunkel",
+            "haltbarkeit",
+            "attribute sonderfertigkeiten",
+            "ruestung",
+            "physische resistenzen",
+            "elementare resistenzen",
+            "summe",
+        }
+        return normalized in known_headers
+
+    def _is_valid_armor_data_core(self, slot_value, name_value, pl_value):
+        slot_text = str(slot_value or "").strip()
+        name_text = str(name_value or "").strip()
+        pl_text = str(pl_value or "").strip()
+        if name_text and self._normalize_equipment_text(name_text) != "name":
+            if not self._is_equipment_header_value(name_text):
+                return True
+        if slot_text and self._normalize_equipment_text(slot_text) != "wo getragen":
+            if not self._is_equipment_header_value(slot_text):
+                return True
+        if pl_text and self._normalize_equipment_text(pl_text) != "pl":
+            if not self._is_equipment_header_value(pl_text):
+                return True
+        return False
+
+    def _find_armor_header_columns(self, header_entries, anchor_row):
+        header_rows = [anchor_row + i for i in range(0, 8)]
+        slot_col = self._find_equipment_column(header_entries, header_rows, ["wo", "getragen"])
+        name_col = self._find_equipment_column(
+            header_entries, header_rows, ["name"], exclude_tokens=["waffe", "waffentyp"]
+        )
+        pl_col = self._find_equipment_column(header_entries, header_rows, ["pl"])
+        if slot_col is None or name_col is None or pl_col is None:
+            return None
+        return {"slot_col": slot_col, "name_col": name_col, "pl_col": pl_col}
+
+    def _find_equipment_slash_column(self, sheet_cache, base_col, data_start_row):
+        if not isinstance(sheet_cache, dict) or base_col <= 0:
+            return None
+        counts = {}
+        for row_index in range(data_start_row, data_start_row + 30):
+            for col in range(base_col + 1, base_col + 5):
+                value = self._equipment_cache_text(
+                    sheet_cache, f"{self._col_index_to_letters(col)}{row_index}"
+                )
+                if value == "/":
+                    counts[col] = counts.get(col, 0) + 1
+        if not counts:
+            return None
+        return max(counts.items(), key=lambda item: item[1])[0]
+
+    def _build_armor_mapping(self, header_entries, anchor_row, sheet_cache):
+        if anchor_row <= 0:
+            return {}
+        header_cols = self._find_armor_header_columns(header_entries, anchor_row)
+        if not isinstance(header_cols, dict):
+            return {}
+
+        slot_col = int(header_cols["slot_col"])
+        name_col = int(header_cols["name_col"])
+        pl_col = int(header_cols["pl_col"])
+        header_row = 0
+        for entry in header_entries:
+            if int(entry.get("col", 0)) == slot_col and "wo getragen" == entry.get("norm", ""):
+                header_row = int(entry.get("row", 0))
+                break
+        if header_row <= 0:
+            header_row = anchor_row + 2
+        header_rows = [header_row]
+
+        phys_head_col = pl_col + 2
+        phys_chest_col = pl_col + 4
+        phys_arms_col = pl_col + 6
+        phys_legs_col = pl_col + 8
+        fire_col = pl_col + 10
+        water_col = pl_col + 12
+        earth_col = pl_col + 14
+        wind_col = pl_col + 16
+        lightning_col = pl_col + 18
+        ice_col = pl_col + 20
+        acid_col = pl_col + 22
+        light_col = pl_col + 24
+        dark_col = pl_col + 26
+        durability_current_col = pl_col + 28
+        slash_col = pl_col + 30
+        durability_max_col = pl_col + 31
+        attributes_col = pl_col + 35
+
+        slot_letters = self._col_index_to_letters(slot_col)
+        name_letters = self._col_index_to_letters(name_col)
+        pl_letters = self._col_index_to_letters(pl_col)
+        data_start_row = self._find_equipment_first_data_row(
+            sheet_cache,
+            header_row,
+            [slot_letters, name_letters, pl_letters],
+        )
+
+        mapping = {
+            "start_row": header_row,
+            "header_rows": header_rows,
+            "data_start_row": data_start_row,
+            "columns": {
+                "slot": slot_letters,
+                "name": name_letters,
+                "pl": pl_letters,
+                "phys_head": self._col_index_to_letters(phys_head_col),
+                "phys_chest": self._col_index_to_letters(phys_chest_col),
+                "phys_arms": self._col_index_to_letters(phys_arms_col),
+                "phys_legs": self._col_index_to_letters(phys_legs_col),
+                "fire": self._col_index_to_letters(fire_col),
+                "water": self._col_index_to_letters(water_col),
+                "earth": self._col_index_to_letters(earth_col),
+                "wind": self._col_index_to_letters(wind_col),
+                "lightning": self._col_index_to_letters(lightning_col),
+                "ice": self._col_index_to_letters(ice_col),
+                "acid": self._col_index_to_letters(acid_col),
+                "light": self._col_index_to_letters(light_col),
+                "dark": self._col_index_to_letters(dark_col),
+                "durability_current": self._col_index_to_letters(durability_current_col),
+                "durability_max": self._col_index_to_letters(durability_max_col),
+                "attributes": self._col_index_to_letters(attributes_col),
+            },
+        }
+        slash_value = self._equipment_cache_text(
+            sheet_cache,
+            f"{self._col_index_to_letters(slash_col)}{data_start_row}",
+        )
+        print(
+            f"[EQUIPMENT ARMOR COLUMN CHECK] durability_slash="
+            f"{self._col_index_to_letters(slash_col)}{data_start_row} sample={slash_value}"
+        )
+        return mapping
+
+    def _build_weapon_mapping(self, header_entries, anchor_row):
+        if anchor_row <= 0:
+            return {}
+        header_rows = [anchor_row + i for i in range(0, 5)]
+        name_col = self._find_equipment_column(
+            header_entries, header_rows, ["name"], exclude_tokens=["wo", "getragen"]
+        )
+        weapon_type_col = self._find_equipment_column(
+            header_entries, header_rows, ["waffentyp"]
+        )
+        pl_col = self._find_equipment_column(header_entries, header_rows, ["pl"])
+        if weapon_type_col is None and name_col is not None:
+            weapon_type_col = name_col + 1
+        if pl_col is None and weapon_type_col is not None:
+            pl_col = weapon_type_col + 1
+        start_col = name_col or weapon_type_col or pl_col or 1
+        if name_col is None:
+            name_col = start_col
+
+        mapping = {
+            "start_row": anchor_row,
+            "header_rows": header_rows,
+            "data_start_row": anchor_row + 3,
+            "columns": {
+                "name": self._col_index_to_letters(name_col),
+                "weapon_type": self._col_index_to_letters(weapon_type_col) if weapon_type_col else "",
+                "pl": self._col_index_to_letters(pl_col) if pl_col else "",
+                "damage_cut": self._col_index_to_letters(start_col + 3),
+                "damage_blunt": self._col_index_to_letters(start_col + 4),
+                "damage_pierce": self._col_index_to_letters(start_col + 5),
+                "physical_dice": self._col_index_to_letters(start_col + 6),
+                "physical_bonus": self._col_index_to_letters(start_col + 7),
+                "elemental_dice": self._col_index_to_letters(start_col + 8),
+                "elemental_elements": self._col_index_to_letters(start_col + 9),
+                "elemental_bonus": self._col_index_to_letters(start_col + 10),
+                "durability_current": self._col_index_to_letters(start_col + 11),
+                "durability_max": self._col_index_to_letters(start_col + 12),
+                "attributes": self._col_index_to_letters(start_col + 13),
+            },
+        }
+        return mapping
+
+    def analyze_equipment_sheet(self):
+        sheet_name, sheet_cache = self.get_equipment_sheet_cache()
+        if not sheet_name or not isinstance(sheet_cache, dict) or not sheet_cache:
+            self.equipment_analysis = {"sheet": "", "armor": {"mapping": {}, "rows": []}, "weapons": {"mapping": {}, "rows": []}}
+            return self.equipment_analysis
+
+        entries = []
+        for cell_ref, cell_data in sheet_cache.items():
+            text = self._equipment_cache_text(sheet_cache, cell_ref)
+            if not text:
+                continue
+            row, col = self._equipment_cell_sort_key(cell_ref)
+            if row <= 0 or col <= 0:
+                continue
+            entries.append(
+                {
+                    "cell": str(cell_ref).upper(),
+                    "row": row,
+                    "col": col,
+                    "text": text,
+                    "norm": self._normalize_equipment_text(text),
+                }
+            )
+
+        entries.sort(key=lambda item: (item["row"], item["col"]))
+        target_headers = {
+            "ruestung",
+            "waffe",
+            "wo getragen",
+            "name",
+            "pl",
+            "physische resistenzen",
+            "elementare resistenzen",
+            "haltbarkeit",
+            "attribute sonderfertigkeiten",
+            "waffentyp",
+            "schadensart",
+            "physisch",
+            "elementar",
+        }
+        for entry in entries:
+            if entry["norm"] in target_headers:
+                print(f'[EQUIPMENT HEADER] text="{entry["text"]}" cell={entry["cell"]}')
+
+        armor_anchor = 0
+        weapon_anchor = 0
+        for entry in entries:
+            if entry["norm"] == "ruestung" and armor_anchor == 0:
+                armor_anchor = entry["row"]
+            if entry["norm"] == "waffe" and weapon_anchor == 0:
+                weapon_anchor = entry["row"]
+        if armor_anchor > 0:
+            print(f"[EQUIPMENT TABLE] armor start_row={armor_anchor}")
+        else:
+            print("[EQUIPMENT TABLE] armor not found")
+        if weapon_anchor > 0:
+            print(f"[EQUIPMENT TABLE] weapon start_row={weapon_anchor}")
+        else:
+            print("[EQUIPMENT TABLE] weapon not found")
+
+        armor_mapping = self._build_armor_mapping(entries, armor_anchor, sheet_cache)
+        weapon_mapping = self._build_weapon_mapping(entries, weapon_anchor)
+
+        if armor_mapping:
+            print(
+                f"[EQUIPMENT ARMOR MAP] start_row={armor_mapping['start_row']} "
+                f"data_start_row={armor_mapping['data_start_row']}"
+            )
+            for key, col_letters in armor_mapping.get("columns", {}).items():
+                if col_letters:
+                    print(f"[EQUIPMENT ARMOR COLUMN] {key}={col_letters}")
+            sample_row = int(armor_mapping.get("data_start_row", 0) or 0)
+            if sample_row > 0:
+                for check_key in ("phys_chest", "durability_current", "durability_max"):
+                    col_letters = str(armor_mapping.get("columns", {}).get(check_key, "") or "")
+                    if not col_letters:
+                        continue
+                    sample_value = self._equipment_cache_text(sheet_cache, f"{col_letters}{sample_row}")
+                    print(
+                        f"[EQUIPMENT ARMOR COLUMN CHECK] {check_key}="
+                        f"{col_letters}{sample_row} sample={sample_value}"
+                    )
+        if weapon_mapping:
+            print(
+                f"[EQUIPMENT WEAPON MAP] start_row={weapon_mapping['start_row']} "
+                f"data_start_row={weapon_mapping['data_start_row']}"
+            )
+            for key, col_letters in weapon_mapping.get("columns", {}).items():
+                if col_letters:
+                    print(f"[EQUIPMENT WEAPON COLUMN] {key}={col_letters}")
+
+        armor_rows = self._extract_equipment_rows(sheet_cache, armor_mapping, "armor")
+        weapon_rows = self._extract_equipment_rows(sheet_cache, weapon_mapping, "weapon")
+
+        if armor_mapping:
+            data_start_row = int(armor_mapping.get("data_start_row", 0) or 0)
+            debug_fields = [
+                ("slot", "slot"),
+                ("name", "name"),
+                ("pl", "pl"),
+                ("phys_chest", "phys_chest"),
+                ("phys_arms", "phys_arms"),
+                ("phys_legs", "phys_legs"),
+                ("durability_current", "durability_current"),
+                ("durability_max", "durability_max"),
+            ]
+            for row_index in range(data_start_row, data_start_row + 3):
+                for field_key, label in debug_fields:
+                    col_letters = str(armor_mapping.get("columns", {}).get(field_key, "") or "")
+                    if not col_letters:
+                        continue
+                    cell_ref = f"{col_letters}{row_index}"
+                    value = self._equipment_cache_text(sheet_cache, cell_ref)
+                    print(
+                        f"[EQUIPMENT ARMOR DEBUG CELL] row={row_index} field={label} "
+                        f"cell={cell_ref} value={value}"
+                    )
+
+        expected_found = False
+        for row_data in armor_rows:
+            name_norm = self._normalize_equipment_text(row_data.get("name", ""))
+            slot_norm = self._normalize_equipment_text(row_data.get("slot", ""))
+            if name_norm == "leder ruestung" and slot_norm == "brust arme beine":
+                expected_found = True
+                break
+        if not expected_found and armor_rows:
+            print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
+        elif not armor_rows:
+            print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
+
+        for row_data in armor_rows:
+            print(
+                f'[EQUIPMENT ARMOR ROW] row={row_data["row"]} '
+                f'slot="{row_data.get("slot", "")}" name="{row_data.get("name", "")}" '
+                f'pl="{row_data.get("pl", "")}"'
+            )
+        for row_data in weapon_rows:
+            print(
+                f'[EQUIPMENT WEAPON ROW] row={row_data["row"]} '
+                f'name="{row_data.get("name", "")}" type="{row_data.get("weapon_type", "")}" '
+                f'pl="{row_data.get("pl", "")}"'
+            )
+
+        self.equipment_analysis = {
+            "sheet": sheet_name,
+            "armor": {
+                "mapping": armor_mapping,
+                "rows": armor_rows,
+            },
+            "weapons": {
+                "mapping": weapon_mapping,
+                "rows": weapon_rows,
+            },
+        }
+        return self.equipment_analysis
+
+    def render_equipment_armor_table(self, parent, armor_cfg, armor_rows):
+        if not isinstance(armor_cfg, dict) or not armor_cfg.get("enabled", True):
+            return
+
+        table_x = self._safe_int(armor_cfg.get("x", 20), 20)
+        table_y = self._safe_int(armor_cfg.get("y", 70), 70)
+        table_w = self._safe_int(armor_cfg.get("w", 1380), 1380)
+        table_h = self._safe_int(armor_cfg.get("h", 330), 330)
+        title_text = str(armor_cfg.get("title", "Rüstung"))
+        title_font_size = self._safe_int(armor_cfg.get("title_font_size", 20), 20)
+        title_color = str(armor_cfg.get("title_color", "#f2d28b"))
+        font_size = self._safe_int(armor_cfg.get("font_size", 14), 14)
+        header_font_size = self._safe_int(armor_cfg.get("header_font_size", 14), 14)
+        header_color = str(armor_cfg.get("header_color", "#f2d28b"))
+        text_color = str(armor_cfg.get("text_color", "#ffffff"))
+        value_color = str(armor_cfg.get("value_color", "#7fd0ff"))
+        border_color = str(armor_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        background = str(armor_cfg.get("background", "rgba(5, 5, 5, 95)"))
+        min_row_h = self._safe_int(armor_cfg.get("min_row_h", 32), 32)
+        max_row_h = self._safe_int(armor_cfg.get("max_row_h", 120), 120)
+        min_rows = self._safe_int(armor_cfg.get("min_rows", 10), 10)
+
+        panel = QFrame(parent)
+        panel.setGeometry(table_x, table_y, table_w, table_h)
+        panel.setStyleSheet(
+            f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+        )
+        panel.show()
+
+        self.create_panel_text(
+            panel,
+            {"x": 10, "y": 8, "w": table_w - 20, "h": 28},
+            title_text,
+            title_font_size,
+            title_color,
+            bold=True,
+            align="left",
+        )
+
+        columns_cfg = armor_cfg.get("columns", {})
+        if not isinstance(columns_cfg, dict):
+            columns_cfg = {}
+
+        column_order = [
+            ("slot", "Wo getragen"),
+            ("name", "Name"),
+            ("pl", "PL"),
+            ("phys_head", "Kopf"),
+            ("phys_chest", "Brust"),
+            ("phys_arms", "Arme"),
+            ("phys_legs", "Beine"),
+            ("fire", "Feuer"),
+            ("water", "Wasser"),
+            ("earth", "Erde"),
+            ("wind", "Wind"),
+            ("lightning", "Blitz"),
+            ("ice", "Eis"),
+            ("acid", "Säure"),
+            ("light", "Licht"),
+            ("dark", "Dunkel"),
+            ("durability_current", "Haltb."),
+            ("durability_max", "Max"),
+            ("attributes", "Attribute / Sonderfertigkeiten"),
+        ]
+
+        table = QTableWidget(panel)
+        table.setGeometry(10, 42, table_w - 20, table_h - 52)
+        table.setColumnCount(len(column_order))
+        table_row_count = max(len(armor_rows), min_rows)
+        table.setRowCount(table_row_count)
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setWordWrap(True)
+        table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.setAlternatingRowColors(False)
+        table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        table.setSelectionMode(QAbstractItemView.SingleSelection)
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setStretchLastSection(False)
+
+        field_to_col_index = {}
+        header_labels = []
+        for col_index, (field_key, fallback_title) in enumerate(column_order):
+            field_to_col_index[field_key] = col_index
+            col_cfg = columns_cfg.get(field_key, {})
+            if not isinstance(col_cfg, dict):
+                col_cfg = {}
+            header_title = str(col_cfg.get("title", fallback_title))
+            col_width = self._safe_int(col_cfg.get("w", 70), 70)
+            header_labels.append(header_title)
+            table.setColumnWidth(col_index, col_width)
+        table.setHorizontalHeaderLabels(header_labels)
+
+        table.setStyleSheet(
+            "QTableWidget {"
+            f"background: {background};"
+            f"color: {text_color};"
+            f"gridline-color: {border_color};"
+            "border: none;"
+            f"font-size: {font_size}px;"
+            "}"
+            "QHeaderView::section {"
+            "background: rgba(0,0,0,0);"
+            f"color: {header_color};"
+            f"font-size: {header_font_size}px; font-weight: 700;"
+            f"border: 1px solid {border_color};"
+            "padding: 4px;"
+            "}"
+            "QTableWidget::item { padding: 4px; }"
+        )
+
+        group_styles = {}
+        column_groups = armor_cfg.get("column_groups", {})
+        if not isinstance(column_groups, dict):
+            column_groups = {}
+        for group_cfg in column_groups.values():
+            if not isinstance(group_cfg, dict):
+                continue
+            group_columns = group_cfg.get("columns", [])
+            if not isinstance(group_columns, list):
+                group_columns = []
+            for field_key in group_columns:
+                field_name = str(field_key or "").strip()
+                if field_name:
+                    group_styles[field_name] = group_cfg
+
+        element_header_colors = armor_cfg.get("element_header_colors", {})
+        if not isinstance(element_header_colors, dict):
+            element_header_colors = {}
+        column_backgrounds = armor_cfg.get("column_backgrounds", {})
+        if not isinstance(column_backgrounds, dict):
+            column_backgrounds = {}
+        header_backgrounds = armor_cfg.get("header_backgrounds", {})
+        if not isinstance(header_backgrounds, dict):
+            header_backgrounds = {}
+        cell_text_colors = armor_cfg.get("cell_text_colors", {})
+        if not isinstance(cell_text_colors, dict):
+            cell_text_colors = {}
+
+        value_fields = {
+            "pl",
+            "phys_head",
+            "phys_chest",
+            "phys_arms",
+            "phys_legs",
+            "fire",
+            "water",
+            "earth",
+            "wind",
+            "lightning",
+            "ice",
+            "acid",
+            "light",
+            "dark",
+            "durability_current",
+            "durability_max",
+        }
+        center_fields = value_fields
+
+        column_background_brushes = {}
+        header_background_brushes = {}
+        for field_key, _ in column_order:
+            col_bg_raw = column_backgrounds.get(field_key, "")
+            if not col_bg_raw:
+                group_cfg = group_styles.get(field_key, {})
+                if isinstance(group_cfg, dict):
+                    col_bg_raw = group_cfg.get("background", "")
+            col_color, col_ok = self.parse_layout_color(col_bg_raw, "rgba(0,0,0,0)")
+            column_background_brushes[field_key] = QBrush(col_color)
+
+            header_bg_raw = header_backgrounds.get(field_key, "")
+            if not header_bg_raw:
+                group_cfg = group_styles.get(field_key, {})
+                if isinstance(group_cfg, dict):
+                    header_bg_raw = group_cfg.get("background", "")
+            header_color_parsed, header_ok = self.parse_layout_color(header_bg_raw, "rgba(0,0,0,0)")
+            header_background_brushes[field_key] = QBrush(header_color_parsed)
+
+            print(
+                f"[EQUIPMENT ARMOR STYLE TEST] column={field_key} "
+                f"cell_bg={col_bg_raw} header_bg={header_bg_raw}"
+            )
+            if field_key == "durability_current":
+                title_text_current = header_labels[field_to_col_index[field_key]]
+                print(f"[EQUIPMENT ARMOR STYLE TEST] column=durability_current title={title_text_current}")
+            if not col_ok:
+                print(
+                    f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={col_bg_raw} parsed=False"
+                )
+            if not header_ok:
+                print(
+                    f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={header_bg_raw} parsed=False"
+                )
+
+        for field_key, _ in column_order:
+            col_index = field_to_col_index.get(field_key)
+            if col_index is None:
+                continue
+            header_item = table.horizontalHeaderItem(col_index)
+            if header_item is None:
+                continue
+            header_item.setToolTip(header_item.text())
+            header_item.setBackground(header_background_brushes.get(field_key, QBrush()))
+            header_item.setForeground(QBrush(QColor("#f2d28b")))
+
+        for field_key, color_value in element_header_colors.items():
+            col_index = field_to_col_index.get(str(field_key or "").strip())
+            if col_index is None:
+                continue
+            header_item = table.horizontalHeaderItem(col_index)
+            if header_item is None:
+                continue
+            element_color = QColor(str(color_value))
+            if element_color.isValid():
+                header_item.setForeground(QBrush(element_color))
+
+        for row_index in range(table_row_count):
+            row_data = armor_rows[row_index] if row_index < len(armor_rows) and isinstance(armor_rows[row_index], dict) else {}
+            row_has_data = any(str(row_data.get(key, "") or "").strip() for key, _ in column_order)
+            for col_index, (field_key, _) in enumerate(column_order):
+                raw_value = str(row_data.get(field_key, "") or "").strip()
+                display_value = raw_value if raw_value else ""
+                item = QTableWidgetItem(display_value)
+                if field_key in center_fields:
+                    item.setTextAlignment(Qt.AlignCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+                custom_text_color = str(cell_text_colors.get(field_key, "") or "").strip()
+                if custom_text_color:
+                    item.setForeground(QBrush(QColor(custom_text_color)))
+                elif raw_value and field_key in value_fields:
+                    item.setForeground(QColor(value_color))
+                else:
+                    item.setForeground(QColor(text_color))
+                item.setBackground(column_background_brushes.get(field_key, QBrush()))
+                if raw_value:
+                    item.setToolTip(raw_value)
+                elif not row_has_data:
+                    item.setToolTip("")
+                table.setItem(row_index, col_index, item)
+            table.setRowHeight(row_index, min_row_h)
+
+        table.resizeRowsToContents()
+        for row_index in range(table_row_count):
+            current_h = table.rowHeight(row_index)
+            if current_h < min_row_h:
+                table.setRowHeight(row_index, min_row_h)
+            elif current_h > max_row_h:
+                table.setRowHeight(row_index, max_row_h)
+
+        table.show()
+
+    def render_equipment_screen(self):
+        if self.content_layer is None:
+            return
+
+        layout_config = self.load_equipment_layout_config()
+        screen_cfg = layout_config.get("equipment_screen", {})
+        screen = QFrame(self.content_layer)
+        screen.setGeometry(
+            self._safe_int(screen_cfg.get("x", 20), 20),
+            self._safe_int(screen_cfg.get("y", 20), 20),
+            self._safe_int(screen_cfg.get("w", 1420), 1420),
+            self._safe_int(screen_cfg.get("h", 820), 820),
+        )
+        screen.setStyleSheet("background: transparent;")
+        screen.show()
+
+        title_cfg = screen_cfg.get("title", {})
+        self.create_panel_text(
+            screen,
+            title_cfg,
+            str(title_cfg.get("text", "Ausrüstung")),
+            self._safe_int(title_cfg.get("font_size", 24), 24),
+            str(title_cfg.get("color", "#f2d28b")),
+            bold=True,
+            align=str(title_cfg.get("align", "center")),
+        )
+        self.create_panel_text(
+            screen,
+            {"x": 20, "y": 70, "w": 700, "h": 30},
+            "Ausrüstung Analyse - siehe Terminal",
+            16,
+            "#e8e0c8",
+            bold=False,
+            align="left",
+        )
+        analysis = self.analyze_equipment_sheet()
+        if not isinstance(analysis, dict):
+            analysis = {}
+        armor_block = analysis.get("armor", {}) if isinstance(analysis, dict) else {}
+        armor_rows = armor_block.get("rows", []) if isinstance(armor_block, dict) else []
+        if not isinstance(armor_rows, list):
+            armor_rows = []
+
+        try:
+            self.render_equipment_armor_table(screen, screen_cfg.get("armor", {}), armor_rows)
+        except Exception as exc:
+            print(f"[EQUIPMENT ARMOR RENDER ERROR] {exc}")
+            self.create_panel_text(
+                screen,
+                {"x": 20, "y": 150, "w": 760, "h": 32},
+                "Rüstung konnte nicht gerendert werden - siehe Terminal",
+                16,
+                "#e8e0c8",
+                bold=False,
+                align="left",
+            )
+
+        if not armor_rows:
+            self.create_panel_text(
+                screen,
+                {"x": 20, "y": 410, "w": 700, "h": 30},
+                "Keine Rüstungsdaten gefunden",
+                16,
+                "#e8e0c8",
+                bold=False,
+                align="left",
+            )
+        self.create_panel_text(
+            screen,
+            {"x": 20, "y": 450, "w": 700, "h": 30},
+            "Waffen folgen in Phase 5.2",
+            15,
+            "#c8c0aa",
+            bold=False,
+            align="left",
+        )
+
     def render_inventory_screen(self):
         if self.content_layer is None:
             return
@@ -5361,9 +6247,6 @@ class MainWindow(QMainWindow):
 
         header_h = self._safe_int(table_cfg.get("header_h", 42), 42)
         row_h = self._safe_int(table_cfg.get("row_h", 42), 42)
-        min_row_h = self._safe_int(table_cfg.get("min_row_h", row_h), row_h)
-        max_row_h = self._safe_int(table_cfg.get("max_row_h", 120), 120)
-        wrap_text = bool(table_cfg.get("wrap_text", True))
         max_rows = self._safe_int(table_cfg.get("max_visible_rows", 15), 15)
         font_size = self._safe_int(table_cfg.get("font_size", 17), 17)
         header_font_size = self._safe_int(table_cfg.get("header_font_size", 19), 19)
@@ -5426,6 +6309,9 @@ class MainWindow(QMainWindow):
             skills = []
         category_id = str(category.get("id", "")) if isinstance(category, dict) else ""
         visible_skills = skills[:max_rows]
+        print("[SKILLS RENDER]", f"category={category_id}")
+        print("[SKILLS RENDER]", f"source rows={len(skills)}")
+        print("[SKILLS RENDER]", f"visible rows={len(visible_skills)}")
         if len(skills) > max_rows:
             print("[SKILLS] rows truncated:", category_id)
 
@@ -5494,6 +6380,12 @@ class MainWindow(QMainWindow):
                         display_value,
                     )
             print("[SKILLS] skill value:", display_name, attributes[:4], "->", display_value)
+            print(
+                "[SKILLS ROW]",
+                f"row={source_info.get('row')}",
+                f"name={display_name}",
+                f"value={display_value}",
+            )
             slot_values = source_info.get("display_attribute_slots", [])
             if not isinstance(slot_values, list) or len(slot_values) < 4:
                 row_value = source_info.get("row")
@@ -5513,19 +6405,6 @@ class MainWindow(QMainWindow):
             note_x = self._safe_int(note_col.get("x", 1170), 1170) + 8
             note_w = max(1, self._safe_int(note_col.get("w", 210), 210) - 12)
             row_height = row_h
-            if wrap_text:
-                row_height = max(
-                    min_row_h,
-                    self._estimate_skill_text_height(
-                        display_specialization, spec_w, font_size, min_row_h, max_row_h
-                    ),
-                    self._estimate_skill_text_height(
-                        display_note, note_w, font_size, min_row_h, max_row_h
-                    ),
-                )
-            if max_row_h > 0:
-                row_height = min(row_height, max_row_h)
-            row_height = max(min_row_h, row_height)
             row_bg.setGeometry(0, y, table.width(), row_height)
 
             skill_x = self._safe_int(skill_col.get("x", 0), 0) + 8
@@ -5550,6 +6429,7 @@ class MainWindow(QMainWindow):
             skill_button.clicked.connect(
                 lambda checked=False, sk=source_key: self.on_skill_row_roll_clicked(sk)
             )
+            skill_button.setToolTip(display_name if display_name else "")
             skill_button.show()
 
             slot_w = self._safe_int(attr_col.get("slot_w", 42), 42)
@@ -5649,10 +6529,10 @@ class MainWindow(QMainWindow):
                     "}"
                     "QTextEdit:focus { border: 1px solid rgba(242, 210, 139, 120); }"
                 )
-                spec_editor.setToolTip("Spezialisierung bearbeiten")
+                spec_editor.setToolTip(spec_text if spec_text else "Spezialisierung bearbeiten")
                 spec_editor.show()
             else:
-                self.create_panel_text(
+                spec_label = self.create_panel_text(
                     table,
                     {
                         "x": spec_x,
@@ -5664,6 +6544,7 @@ class MainWindow(QMainWindow):
                     font_size,
                     str(table_cfg.get("specialization_color", "#ffffff")),
                 )
+                spec_label.setToolTip(spec_text if spec_text else "")
             note_text = str(display_note)
             if self.is_skill_note_editable(source_info):
                 note_editor = InlineTextEdit(
@@ -5674,6 +6555,7 @@ class MainWindow(QMainWindow):
                 )
                 note_editor.setGeometry(note_x, y + 2, note_w, max(24, row_height - 4))
                 note_editor.set_initial_text(note_text)
+                note_editor.setLineWrapMode(QTextEdit.NoWrap)
                 note_editor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
                 note_editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
                 note_editor.setStyleSheet(
@@ -5687,10 +6569,10 @@ class MainWindow(QMainWindow):
                     "}"
                     "QTextEdit:focus { border: 1px solid rgba(216, 208, 176, 100); }"
                 )
-                note_editor.setToolTip("Notiz bearbeiten")
+                note_editor.setToolTip(note_text if note_text else "Notiz bearbeiten")
                 note_editor.show()
             else:
-                self.create_panel_text(
+                note_label = self.create_panel_text(
                     table,
                     {
                         "x": note_x,
@@ -5702,6 +6584,7 @@ class MainWindow(QMainWindow):
                     font_size,
                     str(table_cfg.get("note_color", "#d8d0b0")),
                 )
+                note_label.setToolTip(note_text if note_text else "")
             current_y += row_height
 
     def _read_data_map_cell(self, mapping_entry, default_sheet, fallback="-"):
@@ -5761,6 +6644,41 @@ class MainWindow(QMainWindow):
             return int(value)
         except Exception:
             return int(default)
+
+    def parse_layout_color(self, value, fallback=None):
+        text = str(value or "").strip()
+        if text:
+            rgba_match = re.match(
+                r"rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if rgba_match:
+                r_val = max(0, min(255, int(rgba_match.group(1))))
+                g_val = max(0, min(255, int(rgba_match.group(2))))
+                b_val = max(0, min(255, int(rgba_match.group(3))))
+                a_val = max(0, min(255, int(rgba_match.group(4))))
+                return QColor(r_val, g_val, b_val, a_val), True
+
+            rgb_match = re.match(
+                r"rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if rgb_match:
+                r_val = max(0, min(255, int(rgb_match.group(1))))
+                g_val = max(0, min(255, int(rgb_match.group(2))))
+                b_val = max(0, min(255, int(rgb_match.group(3))))
+                return QColor(r_val, g_val, b_val), True
+
+            color = QColor(text)
+            if color.isValid():
+                return color, True
+
+        fallback_color = QColor(fallback) if fallback else QColor()
+        if not fallback_color.isValid():
+            fallback_color = QColor(0, 0, 0, 0)
+        return fallback_color, False
 
     def get_text_font_size(self, cfg, fallback):
         if isinstance(cfg, dict) and cfg.get("font_size") is not None:

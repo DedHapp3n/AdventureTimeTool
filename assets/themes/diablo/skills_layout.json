@@ -24,7 +24,7 @@
       "header_h": 42,
       "row_h": 42,
       "min_row_h": 42,
-      "max_row_h": 120,
+      "max_row_h": 72,
       "wrap_text": true,
       "max_visible_rows": 15,
       "font_size": 17,
