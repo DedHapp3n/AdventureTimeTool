@@ -6893,7 +6893,8 @@ class MainWindow(QMainWindow):
                     )
             custom_sections["skills_se"] = {"rows": clean_rows}
             self.loader.save_active_character_json()
-            print("[SKILLS SE SAVE] saved")
+            if self.skills_debug_sources:
+                print("[SKILLS SE SAVE] saved")
             return True
         except Exception as exc:
             print("[SKILLS SE SAVE ERROR]", str(exc))
@@ -7055,6 +7056,13 @@ class MainWindow(QMainWindow):
             item.setToolTip(skill_name)
             item.setData(Qt.UserRole, skill_key)
             item.setData(Qt.UserRole + 1, skill_name)
+            if self.skills_debug_sources:
+                print(
+                    "[SKILLS SE SELECT]",
+                    f"row={row}",
+                    f'skill_key="{skill_key}"',
+                    f'skill_name="{skill_name}"',
+                )
         finally:
             table.blockSignals(False)
             self._skills_se_loading = False
@@ -7170,7 +7178,7 @@ class MainWindow(QMainWindow):
             se_value = max(0, self._parse_int_for_se_upgrade(row.get("value", "")))
             if not skill_key:
                 legacy_text = str(row.get("text", "") or "").strip()
-                if legacy_text:
+                if legacy_text and self.skills_debug_sources:
                     print(f'[SKILLS SE LEGACY] row={idx} text="{legacy_text}" ignored_for_upgrade=no_skill_key')
                 continue
             entry = bound_entries.setdefault(
@@ -7191,13 +7199,14 @@ class MainWindow(QMainWindow):
 
         if not isinstance(self.skill_source_infos, dict) or not self.skill_source_infos:
             return {"status": "no_upgrade_data", "items": [], "groups": {}}
-        print(
-            "[SKILLS UPGRADE ROWS]",
-            f"bound_rows={sum(len(v.get('row_indices', [])) for v in bound_entries.values())}",
-            f"merged_skills={len(bound_entries)}",
-        )
+        if self.skills_debug_sources:
+            print(
+                "[SKILLS UPGRADE ROWS]",
+                f"bound_rows={sum(len(v.get('row_indices', [])) for v in bound_entries.values())}",
+                f"merged_skills={len(bound_entries)}",
+            )
         for skill_key, merged in bound_entries.items():
-            if len(merged.get("row_indices", [])) > 1:
+            if len(merged.get("row_indices", [])) > 1 and self.skills_debug_sources:
                 print(
                     "[SKILLS UPGRADE MERGE]",
                     f"skill_key={skill_key}",
@@ -7224,11 +7233,12 @@ class MainWindow(QMainWindow):
                         "status": "broken_link",
                     }
                 )
-                print(
-                    "[SKILLS UPGRADE SE BROKEN_LINK]",
-                    f'rows={entry.get("row_indices")}',
-                    f"skill_key={source_key}",
-                )
+                if self.skills_debug_sources:
+                    print(
+                        "[SKILLS UPGRADE SE BROKEN_LINK]",
+                        f'rows={entry.get("row_indices")}',
+                        f"skill_key={source_key}",
+                    )
                 continue
             if not isinstance(info, dict):
                 continue
@@ -7279,13 +7289,14 @@ class MainWindow(QMainWindow):
             needed_se = int(se_costs[next_index])
             needed_xp = int(xp_costs[next_index])
             available_se = int(entry.get("value", 0))
-            print(
-                "[SKILLS UPGRADE SE LINK]",
-                f'rows={entry.get("row_indices")}',
-                f'skill_key="{source_key}"',
-                f'skill="{skill_name}"',
-                f"se={available_se}",
-            )
+            if self.skills_debug_sources:
+                print(
+                    "[SKILLS UPGRADE SE LINK]",
+                    f'rows={entry.get("row_indices")}',
+                    f'skill_key="{source_key}"',
+                    f'skill="{skill_name}"',
+                    f"se={available_se}",
+                )
 
             xp_ok = int(available_xp) >= needed_xp
             se_ok = int(available_se) >= needed_se
