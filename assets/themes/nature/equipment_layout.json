@@ -221,6 +221,121 @@
         "durability_current": "#000000",
         "durability_max": "#000000"
       }
+    },
+    "weapons": {
+      "enabled": true,
+      "x": 20,
+      "y": 470,
+      "w": 1380,
+      "h": 300,
+      "title": "Waffen",
+      "font_size": 14,
+      "header_font_size": 14,
+      "title_font_size": 20,
+      "title_color": "#f2d28b",
+      "header_color": "#f2d28b",
+      "text_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "colored_cell_text_color": "#000000",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "min_row_h": 32,
+      "max_row_h": 72,
+      "min_rows": 8,
+      "columns": {
+        "name": {
+          "title": "Name",
+          "w": 190
+        },
+        "weapon_type": {
+          "title": "Waffentyp",
+          "w": 150
+        },
+        "pl": {
+          "title": "PL",
+          "w": 45
+        },
+        "damage_cut": {
+          "title": "Schnitt",
+          "w": 60
+        },
+        "damage_blunt": {
+          "title": "Stoß",
+          "w": 60
+        },
+        "damage_pierce": {
+          "title": "Stich",
+          "w": 60
+        },
+        "physical_dice": {
+          "title": "Würfel",
+          "w": 95
+        },
+        "physical_bonus": {
+          "title": "Bonus",
+          "w": 70
+        },
+        "elemental_dice": {
+          "title": "Würfel",
+          "w": 95
+        },
+        "elemental_elements": {
+          "title": "Element(e)",
+          "w": 150
+        },
+        "elemental_bonus": {
+          "title": "Bonus",
+          "w": 70
+        },
+        "durability_current": {
+          "title": "Haltb.",
+          "w": 65
+        },
+        "durability_max": {
+          "title": "Max",
+          "w": 65
+        },
+        "attributes": {
+          "title": "Attribute / Sonderfertigkeiten",
+          "w": 330
+        }
+      },
+      "column_backgrounds": {
+        "damage_cut": "rgba(210, 210, 210, 110)",
+        "damage_blunt": "rgba(210, 210, 210, 110)",
+        "damage_pierce": "rgba(210, 210, 210, 110)",
+        "physical_dice": "rgba(235, 210, 130, 120)",
+        "physical_bonus": "rgba(235, 210, 130, 120)",
+        "elemental_dice": "rgba(255, 220, 120, 110)",
+        "elemental_elements": "rgba(255, 220, 120, 110)",
+        "elemental_bonus": "rgba(255, 220, 120, 110)",
+        "durability_current": "rgba(170, 170, 185, 120)",
+        "durability_max": "rgba(170, 170, 185, 120)"
+      },
+      "header_backgrounds": {
+        "damage_cut": "rgba(180, 180, 180, 180)",
+        "damage_blunt": "rgba(180, 180, 180, 180)",
+        "damage_pierce": "rgba(180, 180, 180, 180)",
+        "physical_dice": "rgba(185, 150, 75, 180)",
+        "physical_bonus": "rgba(185, 150, 75, 180)",
+        "elemental_dice": "rgba(210, 170, 70, 180)",
+        "elemental_elements": "rgba(210, 170, 70, 180)",
+        "elemental_bonus": "rgba(210, 170, 70, 180)",
+        "durability_current": "rgba(165, 165, 180, 180)",
+        "durability_max": "rgba(165, 165, 180, 180)"
+      },
+      "cell_text_colors": {
+        "damage_cut": "#000000",
+        "damage_blunt": "#000000",
+        "damage_pierce": "#000000",
+        "physical_dice": "#000000",
+        "physical_bonus": "#000000",
+        "elemental_dice": "#000000",
+        "elemental_elements": "#000000",
+        "elemental_bonus": "#000000",
+        "durability_current": "#000000",
+        "durability_max": "#000000"
+      }
     }
   }
 }

@@ -4074,10 +4074,12 @@ class MainWindow(QMainWindow):
                     row_data.get("pl", ""),
                 )
             else:
-                is_data = bool(
-                    row_data.get("name")
-                    or row_data.get("weapon_type")
-                    or row_data.get("pl")
+                is_data = self._is_valid_weapon_data_core(
+                    row_data.get("name", ""),
+                    row_data.get("weapon_type", ""),
+                    row_data.get("pl", ""),
+                    row_data.get("physical_dice", ""),
+                    row_data.get("attributes", ""),
                 )
 
             if is_data:
@@ -4148,6 +4150,39 @@ class MainWindow(QMainWindow):
                 return True
         if pl_text and self._normalize_equipment_text(pl_text) != "pl":
             if not self._is_equipment_header_value(pl_text):
+                return True
+        return False
+
+    def _is_valid_weapon_data_core(
+        self, name_value, weapon_type_value, pl_value, physical_dice_value="", attributes_value=""
+    ):
+        header_values = {
+            "name",
+            "waffentyp",
+            "pl",
+            "schnitt",
+            "stoss",
+            "stich",
+            "wuerfel",
+            "bonus",
+            "elemente",
+            "haltbarkeit",
+            "attribute sonderfertigkeiten",
+            "waffe",
+            "schadensart",
+            "physisch",
+            "elementar",
+        }
+        for value in (
+            name_value,
+            weapon_type_value,
+            pl_value,
+            physical_dice_value,
+            attributes_value,
+        ):
+            text = str(value or "").strip()
+            normalized = self._normalize_equipment_text(text)
+            if text and normalized and normalized not in header_values:
                 return True
         return False
 
@@ -4270,35 +4305,61 @@ class MainWindow(QMainWindow):
             header_entries, header_rows, ["waffentyp"]
         )
         pl_col = self._find_equipment_column(header_entries, header_rows, ["pl"])
-        if weapon_type_col is None and name_col is not None:
-            weapon_type_col = name_col + 1
-        if pl_col is None and weapon_type_col is not None:
-            pl_col = weapon_type_col + 1
-        start_col = name_col or weapon_type_col or pl_col or 1
-        if name_col is None:
-            name_col = start_col
+        if name_col is None or pl_col is None:
+            return {}
+
+        header_row = 0
+        for entry in header_entries:
+            if int(entry.get("col", 0)) == name_col and entry.get("norm", "") == "name":
+                header_row = int(entry.get("row", 0))
+                break
+        if header_row <= 0:
+            header_row = anchor_row + 2
+
+        if weapon_type_col is None:
+            weapon_type_col = name_col + 4
+
+        damage_cut_col = pl_col + 2
+        damage_blunt_col = pl_col + 4
+        damage_pierce_col = pl_col + 6
+        physical_dice_col = pl_col + 9
+        physical_bonus_col = pl_col + 13
+        elemental_dice_col = pl_col + 16
+        elemental_elements_col = pl_col + 20
+        elemental_bonus_col = pl_col + 24
+        durability_current_col = pl_col + 27
+        slash_col = pl_col + 29
+        durability_max_col = pl_col + 30
+        attributes_col = pl_col + 32
+        data_start_row = header_row + 2
 
         mapping = {
-            "start_row": anchor_row,
-            "header_rows": header_rows,
-            "data_start_row": anchor_row + 3,
+            "start_row": header_row,
+            "header_rows": [header_row],
+            "data_start_row": data_start_row,
             "columns": {
                 "name": self._col_index_to_letters(name_col),
-                "weapon_type": self._col_index_to_letters(weapon_type_col) if weapon_type_col else "",
-                "pl": self._col_index_to_letters(pl_col) if pl_col else "",
-                "damage_cut": self._col_index_to_letters(start_col + 3),
-                "damage_blunt": self._col_index_to_letters(start_col + 4),
-                "damage_pierce": self._col_index_to_letters(start_col + 5),
-                "physical_dice": self._col_index_to_letters(start_col + 6),
-                "physical_bonus": self._col_index_to_letters(start_col + 7),
-                "elemental_dice": self._col_index_to_letters(start_col + 8),
-                "elemental_elements": self._col_index_to_letters(start_col + 9),
-                "elemental_bonus": self._col_index_to_letters(start_col + 10),
-                "durability_current": self._col_index_to_letters(start_col + 11),
-                "durability_max": self._col_index_to_letters(start_col + 12),
-                "attributes": self._col_index_to_letters(start_col + 13),
+                "weapon_type": self._col_index_to_letters(weapon_type_col),
+                "pl": self._col_index_to_letters(pl_col),
+                "damage_cut": self._col_index_to_letters(damage_cut_col),
+                "damage_blunt": self._col_index_to_letters(damage_blunt_col),
+                "damage_pierce": self._col_index_to_letters(damage_pierce_col),
+                "physical_dice": self._col_index_to_letters(physical_dice_col),
+                "physical_bonus": self._col_index_to_letters(physical_bonus_col),
+                "elemental_dice": self._col_index_to_letters(elemental_dice_col),
+                "elemental_elements": self._col_index_to_letters(elemental_elements_col),
+                "elemental_bonus": self._col_index_to_letters(elemental_bonus_col),
+                "durability_current": self._col_index_to_letters(durability_current_col),
+                "durability_max": self._col_index_to_letters(durability_max_col),
+                "attributes": self._col_index_to_letters(attributes_col),
             },
         }
+        print(
+            f"[EQUIPMENT WEAPON COLUMN CHECK] durability_current="
+            f"{self._col_index_to_letters(durability_current_col)}{data_start_row} "
+            f"slash={self._col_index_to_letters(slash_col)}{data_start_row} "
+            f"durability_max={self._col_index_to_letters(durability_max_col)}{data_start_row}"
+        )
         return mapping
 
     def analyze_equipment_sheet(self):
@@ -4438,11 +4499,19 @@ class MainWindow(QMainWindow):
                 f'pl="{row_data.get("pl", "")}"'
             )
         for row_data in weapon_rows:
+            durability_summary = ""
+            current_value = str(row_data.get("durability_current", "") or "").strip()
+            max_value = str(row_data.get("durability_max", "") or "").strip()
+            if current_value or max_value:
+                durability_summary = f"{current_value}/{max_value}".strip("/")
             print(
                 f'[EQUIPMENT WEAPON ROW] row={row_data["row"]} '
                 f'name="{row_data.get("name", "")}" type="{row_data.get("weapon_type", "")}" '
-                f'pl="{row_data.get("pl", "")}"'
+                f'pl="{row_data.get("pl", "")}" phys_dice="{row_data.get("physical_dice", "")}" '
+                f'phys_bonus="{row_data.get("physical_bonus", "")}" durability="{durability_summary}"'
             )
+        if not weapon_rows:
+            print("[EQUIPMENT WEAPON] no rows found")
 
         self.equipment_analysis = {
             "sheet": sheet_name,
@@ -4711,6 +4780,196 @@ class MainWindow(QMainWindow):
 
         table.show()
 
+    def render_equipment_weapons_table(self, parent, weapons_cfg, weapon_rows):
+        if not isinstance(weapons_cfg, dict) or not weapons_cfg.get("enabled", True):
+            return
+
+        table_x = self._safe_int(weapons_cfg.get("x", 20), 20)
+        table_y = self._safe_int(weapons_cfg.get("y", 470), 470)
+        table_w = self._safe_int(weapons_cfg.get("w", 1380), 1380)
+        table_h = self._safe_int(weapons_cfg.get("h", 300), 300)
+        title_text = str(weapons_cfg.get("title", "Waffen"))
+        title_font_size = self._safe_int(weapons_cfg.get("title_font_size", 20), 20)
+        title_color = str(weapons_cfg.get("title_color", "#f2d28b"))
+        font_size = self._safe_int(weapons_cfg.get("font_size", 14), 14)
+        header_font_size = self._safe_int(weapons_cfg.get("header_font_size", 14), 14)
+        header_color = str(weapons_cfg.get("header_color", "#f2d28b"))
+        text_color = str(weapons_cfg.get("text_color", "#ffffff"))
+        value_color = str(weapons_cfg.get("value_color", "#7fd0ff"))
+        border_color = str(weapons_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+        background = str(weapons_cfg.get("background", "rgba(5, 5, 5, 95)"))
+        min_row_h = self._safe_int(weapons_cfg.get("min_row_h", 32), 32)
+        max_row_h = self._safe_int(weapons_cfg.get("max_row_h", 72), 72)
+        min_rows = self._safe_int(weapons_cfg.get("min_rows", 8), 8)
+
+        panel = QFrame(parent)
+        panel.setGeometry(table_x, table_y, table_w, table_h)
+        panel.setStyleSheet(
+            f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+        )
+        panel.show()
+
+        self.create_panel_text(
+            panel,
+            {"x": 10, "y": 8, "w": table_w - 20, "h": 28},
+            title_text,
+            title_font_size,
+            title_color,
+            bold=True,
+            align="left",
+        )
+
+        columns_cfg = weapons_cfg.get("columns", {})
+        if not isinstance(columns_cfg, dict):
+            columns_cfg = {}
+
+        column_order = [
+            ("name", "Name"),
+            ("weapon_type", "Waffentyp"),
+            ("pl", "PL"),
+            ("damage_cut", "Schnitt"),
+            ("damage_blunt", "Stoß"),
+            ("damage_pierce", "Stich"),
+            ("physical_dice", "Phys. Würfel"),
+            ("physical_bonus", "Phys. Bonus"),
+            ("elemental_dice", "Elem. Würfel"),
+            ("elemental_elements", "Element(e)"),
+            ("elemental_bonus", "Elem. Bonus"),
+            ("durability_current", "Haltb."),
+            ("durability_max", "Max"),
+            ("attributes", "Attribute / Sonderfertigkeiten"),
+        ]
+
+        table = QTableWidget(panel)
+        table.setGeometry(10, 42, table_w - 20, table_h - 52)
+        table.setColumnCount(len(column_order))
+        table_row_count = max(len(weapon_rows), min_rows)
+        table.setRowCount(table_row_count)
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setWordWrap(True)
+        table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.setAlternatingRowColors(False)
+        table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        table.setSelectionMode(QAbstractItemView.SingleSelection)
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setStretchLastSection(False)
+
+        field_to_col_index = {}
+        header_labels = []
+        for col_index, (field_key, fallback_title) in enumerate(column_order):
+            field_to_col_index[field_key] = col_index
+            col_cfg = columns_cfg.get(field_key, {})
+            if not isinstance(col_cfg, dict):
+                col_cfg = {}
+            header_title = str(col_cfg.get("title", fallback_title))
+            col_width = self._safe_int(col_cfg.get("w", 70), 70)
+            header_labels.append(header_title)
+            table.setColumnWidth(col_index, col_width)
+        table.setHorizontalHeaderLabels(header_labels)
+
+        table.setStyleSheet(
+            "QTableWidget {"
+            f"background: {background};"
+            f"color: {text_color};"
+            f"gridline-color: {border_color};"
+            "border: none;"
+            f"font-size: {font_size}px;"
+            "}"
+            "QHeaderView::section {"
+            "background: rgba(0,0,0,0);"
+            f"color: {header_color};"
+            f"font-size: {header_font_size}px; font-weight: 700;"
+            f"border: 1px solid {border_color};"
+            "padding: 4px;"
+            "}"
+            "QTableWidget::item { padding: 4px; }"
+        )
+
+        column_backgrounds = weapons_cfg.get("column_backgrounds", {})
+        if not isinstance(column_backgrounds, dict):
+            column_backgrounds = {}
+        header_backgrounds = weapons_cfg.get("header_backgrounds", {})
+        if not isinstance(header_backgrounds, dict):
+            header_backgrounds = {}
+        cell_text_colors = weapons_cfg.get("cell_text_colors", {})
+        if not isinstance(cell_text_colors, dict):
+            cell_text_colors = {}
+
+        value_fields = {
+            "pl",
+            "damage_cut",
+            "damage_blunt",
+            "damage_pierce",
+            "physical_dice",
+            "physical_bonus",
+            "elemental_dice",
+            "elemental_bonus",
+            "durability_current",
+            "durability_max",
+        }
+        center_fields = value_fields | {"weapon_type", "elemental_elements"}
+
+        column_background_brushes = {}
+        header_background_brushes = {}
+        for field_key, _ in column_order:
+            col_bg_raw = str(column_backgrounds.get(field_key, "") or "")
+            col_color, _ = self.parse_layout_color(col_bg_raw, "rgba(0,0,0,0)")
+            column_background_brushes[field_key] = QBrush(col_color)
+
+            header_bg_raw = str(header_backgrounds.get(field_key, "") or col_bg_raw)
+            header_color_parsed, _ = self.parse_layout_color(header_bg_raw, "rgba(0,0,0,0)")
+            header_background_brushes[field_key] = QBrush(header_color_parsed)
+
+        for field_key, _ in column_order:
+            col_index = field_to_col_index.get(field_key)
+            if col_index is None:
+                continue
+            header_item = table.horizontalHeaderItem(col_index)
+            if header_item is None:
+                continue
+            header_item.setToolTip(header_item.text())
+            header_item.setBackground(header_background_brushes.get(field_key, QBrush()))
+            header_item.setForeground(QBrush(QColor("#f2d28b")))
+
+        for row_index in range(table_row_count):
+            row_data = (
+                weapon_rows[row_index]
+                if row_index < len(weapon_rows) and isinstance(weapon_rows[row_index], dict)
+                else {}
+            )
+            for col_index, (field_key, _) in enumerate(column_order):
+                raw_value = str(row_data.get(field_key, "") or "").strip()
+                item = QTableWidgetItem(raw_value)
+                if field_key in center_fields:
+                    item.setTextAlignment(Qt.AlignCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+                custom_text_color = str(cell_text_colors.get(field_key, "") or "").strip()
+                if custom_text_color:
+                    item.setForeground(QBrush(QColor(custom_text_color)))
+                elif raw_value and field_key in value_fields:
+                    item.setForeground(QColor(value_color))
+                else:
+                    item.setForeground(QColor(text_color))
+                item.setBackground(column_background_brushes.get(field_key, QBrush()))
+                if raw_value:
+                    item.setToolTip(raw_value)
+                table.setItem(row_index, col_index, item)
+            table.setRowHeight(row_index, min_row_h)
+
+        table.resizeRowsToContents()
+        for row_index in range(table_row_count):
+            current_h = table.rowHeight(row_index)
+            if current_h < min_row_h:
+                table.setRowHeight(row_index, min_row_h)
+            elif current_h > max_row_h:
+                table.setRowHeight(row_index, max_row_h)
+
+        table.show()
+
     def render_equipment_screen(self):
         if self.content_layer is None:
             return
@@ -4753,6 +5012,10 @@ class MainWindow(QMainWindow):
         armor_rows = armor_block.get("rows", []) if isinstance(armor_block, dict) else []
         if not isinstance(armor_rows, list):
             armor_rows = []
+        weapons_block = analysis.get("weapons", {}) if isinstance(analysis, dict) else {}
+        weapon_rows = weapons_block.get("rows", []) if isinstance(weapons_block, dict) else []
+        if not isinstance(weapon_rows, list):
+            weapon_rows = []
 
         try:
             self.render_equipment_armor_table(screen, screen_cfg.get("armor", {}), armor_rows)
@@ -4778,15 +5041,19 @@ class MainWindow(QMainWindow):
                 bold=False,
                 align="left",
             )
-        self.create_panel_text(
-            screen,
-            {"x": 20, "y": 450, "w": 700, "h": 30},
-            "Waffen folgen in Phase 5.2",
-            15,
-            "#c8c0aa",
-            bold=False,
-            align="left",
-        )
+        try:
+            self.render_equipment_weapons_table(screen, screen_cfg.get("weapons", {}), weapon_rows)
+        except Exception as exc:
+            print(f"[EQUIPMENT WEAPON RENDER ERROR] {exc}")
+            self.create_panel_text(
+                screen,
+                {"x": 20, "y": 470, "w": 760, "h": 32},
+                "Waffen konnten nicht gerendert werden - siehe Terminal",
+                16,
+                "#e8e0c8",
+                bold=False,
+                align="left",
+            )
 
     def render_inventory_screen(self):
         if self.content_layer is None:
