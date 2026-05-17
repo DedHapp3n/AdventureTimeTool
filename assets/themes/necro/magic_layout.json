@@ -1,0 +1,78 @@
+{
+  "magic_screen": {
+    "x": 30,
+    "y": 25,
+    "w": 1400,
+    "h": 820,
+    "title": {
+      "enabled": true,
+      "text": "Magie",
+      "x": 0,
+      "y": 0,
+      "w": 1400,
+      "h": 38,
+      "font_size": 24,
+      "color": "#f2d28b",
+      "align": "center"
+    },
+    "debug": {
+      "enabled": true,
+      "print_mapping": true,
+      "print_rows": true
+    },
+    "upgrade_table": {
+      "enabled": true,
+      "x": 20,
+      "y": 50,
+      "w": 980,
+      "h": 350,
+      "title": "Upgrade Tabelle",
+      "font_size": 14,
+      "title_font_size": 18,
+      "header_color": "#f2d28b",
+      "text_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "background": "rgba(5, 5, 5, 95)",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "selection": {
+        "enabled": true,
+        "background": "rgba(242, 210, 139, 45)",
+        "text_color": "#ffffff",
+        "border_color": "rgba(242, 210, 139, 120)"
+      },
+      "readonly": true
+    },
+    "spell_table": {
+      "enabled": true,
+      "x": 20,
+      "y": 420,
+      "w": 1360,
+      "h": 390,
+      "title": "Magie",
+      "font_size": 14,
+      "title_font_size": 18,
+      "header_color": "#f2d28b",
+      "text_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "background": "rgba(5, 5, 5, 95)",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "selection": {
+        "enabled": true,
+        "background": "rgba(242, 210, 139, 45)",
+        "text_color": "#ffffff",
+        "border_color": "rgba(242, 210, 139, 120)"
+      },
+      "editable": true,
+      "min_rows": 14,
+      "max_scan_rows": 25,
+      "columns": {
+        "school": { "title": "Magieschule", "w": 180 },
+        "info": { "title": "Info", "w": 330 },
+        "prepared_spell": { "title": "Vorbereiteter Zauber", "w": 300 },
+        "charge": { "title": "Ladung", "w": 80 },
+        "duration": { "title": "Dauer", "w": 90 },
+        "effect": { "title": "Effekt", "w": 360 }
+      }
+    }
+  }
+}

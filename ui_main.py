@@ -144,6 +144,10 @@ class MainWindow(QMainWindow):
         self._character_edit_cfg = {}
         self.character_paradigm_analysis = {}
         self._notes_loading_text = False
+        self.magic_analysis = {}
+        self.magic_layout_config = {}
+        self._magic_table_bindings = {}
+        self._magic_rendering = False
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -660,6 +664,8 @@ class MainWindow(QMainWindow):
                     self.show_main_section("inventory")
                 elif self.current_main_section in ("equipment", "ausruestung", "ausrüstung"):
                     self.show_main_section("equipment")
+                elif self.current_main_section == "magic":
+                    self.show_main_section("magic")
                 elif self.current_main_section == "notes":
                     self.show_main_section("notes")
             print("[SETTINGS] Cache reload clicked")
@@ -697,6 +703,8 @@ class MainWindow(QMainWindow):
             self.render_inventory_screen()
         elif section_id in ("equipment", "ausruestung", "ausrüstung"):
             self.render_equipment_screen()
+        elif section_id == "magic":
+            self.render_magic_screen()
         elif section_id == "notes":
             self.render_notes_screen()
         self.window_close_button.raise_()
@@ -1486,6 +1494,101 @@ class MainWindow(QMainWindow):
         print("[NOTES LAYOUT] fallback: internal default")
         return self.get_default_notes_layout_config()
 
+    def get_default_magic_layout_config(self):
+        return {
+            "magic_screen": {
+                "x": 30,
+                "y": 25,
+                "w": 1400,
+                "h": 820,
+                "title": {
+                    "enabled": True,
+                    "text": "Magie",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1400,
+                    "h": 38,
+                    "font_size": 24,
+                    "color": "#f2d28b",
+                    "align": "center",
+                },
+                "debug": {"enabled": True, "print_mapping": True, "print_rows": True},
+                "upgrade_table": {
+                    "enabled": True,
+                    "x": 20,
+                    "y": 50,
+                    "w": 760,
+                    "h": 250,
+                    "title": "Upgrade Tabelle",
+                    "font_size": 14,
+                    "title_font_size": 18,
+                    "header_color": "#f2d28b",
+                    "text_color": "#ffffff",
+                    "value_color": "#7fd0ff",
+                    "background": "rgba(5, 5, 5, 95)",
+                    "border_color": "rgba(242, 210, 139, 90)",
+                    "readonly": True,
+                },
+                "spell_table": {
+                    "enabled": True,
+                    "x": 20,
+                    "y": 330,
+                    "w": 1360,
+                    "h": 450,
+                    "title": "Magie",
+                    "font_size": 14,
+                    "title_font_size": 18,
+                    "header_color": "#f2d28b",
+                    "text_color": "#ffffff",
+                    "value_color": "#7fd0ff",
+                    "background": "rgba(5, 5, 5, 95)",
+                    "border_color": "rgba(242, 210, 139, 90)",
+                    "editable": True,
+                    "min_rows": 14,
+                    "max_scan_rows": 25,
+                    "columns": {
+                        "school": {"title": "Magieschule", "w": 180},
+                        "info": {"title": "Info", "w": 330},
+                        "prepared_spell": {"title": "Vorbereiteter Zauber", "w": 300},
+                        "charge": {"title": "Ladung", "w": 80},
+                        "duration": {"title": "Dauer", "w": 90},
+                        "effect": {"title": "Effekt", "w": 360},
+                    },
+                },
+            }
+        }
+
+    def load_magic_layout_config(self):
+        active_theme = self.get_active_theme()
+        layout_file = ""
+        screen_cfg = self.main_ui_layout_config.get("magic_screen", {})
+        if isinstance(screen_cfg, dict):
+            layout_file = str(screen_cfg.get("layout_file", "")).strip()
+        if not layout_file:
+            layout_file = "magic_layout.json"
+
+        candidates = [
+            self.base_dir / "assets" / "themes" / active_theme / layout_file,
+            self.base_dir / "assets" / "themes" / "diablo" / "magic_layout.json",
+        ]
+        for layout_path in candidates:
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("magic_screen"), dict):
+                    debug_cfg = data.get("magic_screen", {}).get("debug", {})
+                    if isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False)):
+                        print(f"[MAGIC LAYOUT] loaded: {layout_path}")
+                    self.magic_layout_config = data
+                    return data
+            except Exception:
+                continue
+        print("[MAGIC LAYOUT] fallback: internal default")
+        self.magic_layout_config = self.get_default_magic_layout_config()
+        return self.magic_layout_config
+
     def _notes_debug_enabled(self, notes_layout):
         screen_cfg = notes_layout.get("notes_screen", {}) if isinstance(notes_layout, dict) else {}
         debug_cfg = screen_cfg.get("debug", {}) if isinstance(screen_cfg, dict) else {}
@@ -1533,6 +1636,27 @@ class MainWindow(QMainWindow):
 
     def _equipment_debug_enabled(self):
         return bool(self._get_equipment_debug_config().get("enabled", True))
+
+    def _get_magic_debug_config(self):
+        layout_config = getattr(self, "magic_layout_config", None)
+        if not isinstance(layout_config, dict) or not layout_config:
+            layout_config = self.load_magic_layout_config()
+        screen_cfg = layout_config.get("magic_screen", {}) if isinstance(layout_config, dict) else {}
+        debug_cfg = screen_cfg.get("debug", {}) if isinstance(screen_cfg, dict) else {}
+        if not isinstance(debug_cfg, dict):
+            return {}
+        return debug_cfg
+
+    def _magic_debug_enabled(self):
+        return bool(self._get_magic_debug_config().get("enabled", True))
+
+    def _magic_print_mapping_enabled(self):
+        debug_cfg = self._get_magic_debug_config()
+        return bool(debug_cfg.get("print_mapping", True)) and self._magic_debug_enabled()
+
+    def _magic_print_rows_enabled(self):
+        debug_cfg = self._get_magic_debug_config()
+        return bool(debug_cfg.get("print_rows", True)) and self._magic_debug_enabled()
 
     def _equipment_print_mapping_enabled(self):
         debug_cfg = self._get_equipment_debug_config()
@@ -4133,6 +4257,9 @@ class MainWindow(QMainWindow):
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
+    def _normalize_magic_text(self, value):
+        return self._normalize_equipment_text(value)
+
     def _equipment_cache_text(self, sheet_cache, cell_ref):
         cell_data = sheet_cache.get(cell_ref)
         value = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
@@ -4145,6 +4272,193 @@ class MainWindow(QMainWindow):
         if not match:
             return (0, 0)
         return (int(match.group(2)), self._col_letters_to_index(match.group(1)))
+
+    def _magic_cell_sort_key(self, cell_ref):
+        return self._equipment_cell_sort_key(cell_ref)
+
+    def _magic_cache_text(self, sheet_cache, cell_ref):
+        cell_data = sheet_cache.get(cell_ref)
+        value = cell_data.get("value") if isinstance(cell_data, dict) else cell_data
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    def get_magic_sheet_cache(self):
+        exact_candidates = {"magie", "magic"}
+        cache = self.loader.cell_cache
+        if not isinstance(cache, dict):
+            print("[MAGIC ERROR] sheet not found")
+            return "", {}
+
+        for sheet_name, sheet_cache in cache.items():
+            normalized = self._normalize_magic_text(sheet_name)
+            if normalized in exact_candidates and isinstance(sheet_cache, dict):
+                if self._magic_print_mapping_enabled():
+                    print(f"[MAGIC] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                return sheet_name, sheet_cache
+
+        for sheet_name, sheet_cache in cache.items():
+            normalized = self._normalize_magic_text(sheet_name)
+            if ("magie" in normalized or "magic" in normalized) and isinstance(sheet_cache, dict):
+                if self._magic_print_mapping_enabled():
+                    print(f"[MAGIC] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                return sheet_name, sheet_cache
+
+        print("[MAGIC ERROR] sheet not found")
+        return "", {}
+
+    def _find_magic_row_with_label(self, entries, labels):
+        expected = {self._normalize_magic_text(label) for label in labels}
+        for entry in entries:
+            if entry.get("norm", "") in expected:
+                return int(entry.get("row", 0))
+        return 0
+
+    def _find_magic_header_column(self, header_entries, start_row, header_labels):
+        candidates = [self._normalize_magic_text(v) for v in header_labels]
+        for row in range(start_row, start_row + 4):
+            for entry in header_entries:
+                if int(entry.get("row", 0)) != row:
+                    continue
+                norm = str(entry.get("norm", ""))
+                if norm in candidates:
+                    return int(entry.get("col", 0)), row
+        return 0, 0
+
+    def analyze_magic_sheet(self):
+        sheet_name, sheet_cache = self.get_magic_sheet_cache()
+        empty = {"sheet": "", "upgrade_table": {"mapping": {}, "rows": []}, "spells": {"mapping": {}, "rows": []}}
+        if not sheet_name or not isinstance(sheet_cache, dict) or not sheet_cache:
+            self.magic_analysis = empty
+            return self.magic_analysis
+
+        entries = []
+        for cell_ref in sheet_cache.keys():
+            text = self._magic_cache_text(sheet_cache, cell_ref)
+            row, col = self._magic_cell_sort_key(cell_ref)
+            if row <= 0 or col <= 0:
+                continue
+            entries.append(
+                {"cell": str(cell_ref).upper(), "row": row, "col": col, "text": text, "norm": self._normalize_magic_text(text)}
+            )
+        entries.sort(key=lambda item: (item["row"], item["col"]))
+
+        upgrade_anchor_row = self._find_magic_row_with_label(entries, ["Upgrade Tabelle"])
+        upgrade_mapping = {}
+        upgrade_rows = []
+        if upgrade_anchor_row > 0:
+            if self._magic_print_mapping_enabled():
+                print(f"[MAGIC UPGRADE TABLE] start={upgrade_anchor_row}")
+            expected_labels = [
+                "Base",
+                "Dice Up I",
+                "Dice Up II",
+                "Dice Up III",
+                "Dice Up IV",
+                "Dice Up V",
+                "Scale Up I",
+                "Scale Up II",
+                "Scale Up III",
+                "Scale Up IV",
+                "Scale Up V",
+            ]
+            label_to_row = {}
+            for entry in entries:
+                if entry["row"] <= upgrade_anchor_row:
+                    continue
+                normalized_text = self._normalize_magic_text(entry.get("text", ""))
+                for label in expected_labels:
+                    if normalized_text == self._normalize_magic_text(label) and label not in label_to_row:
+                        label_to_row[label] = int(entry["row"])
+            if label_to_row:
+                data_cols = []
+                for label in expected_labels:
+                    row_index = label_to_row.get(label)
+                    if not row_index:
+                        continue
+                    label_col = 0
+                    for entry in entries:
+                        if int(entry.get("row", 0)) == row_index and self._normalize_magic_text(entry.get("text", "")) == self._normalize_magic_text(label):
+                            label_col = int(entry.get("col", 0))
+                            break
+                    row_values = []
+                    row_cells = []
+                    for col_index in range(label_col + 1, label_col + 16):
+                        cell_ref = f"{self._col_index_to_letters(col_index)}{row_index}"
+                        value = self._magic_cache_text(sheet_cache, cell_ref)
+                        if value:
+                            row_values.append(value)
+                            row_cells.append(cell_ref)
+                            data_cols.append(col_index)
+                    upgrade_rows.append({"label": label, "row": row_index, "values": row_values, "cells": row_cells})
+                    if self._magic_print_rows_enabled():
+                        print(f'[MAGIC UPGRADE ROW] label="{label}" values={row_values}')
+                if data_cols:
+                    unique_cols = sorted(set(data_cols))
+                    upgrade_mapping = {"start_row": upgrade_anchor_row, "value_columns": [self._col_index_to_letters(c) for c in unique_cols]}
+
+        magic_anchor_row = self._find_magic_row_with_label(entries, ["Magie", "Magic"])
+        spell_mapping = {}
+        spell_rows = []
+        if magic_anchor_row > 0:
+            school_col, header_row = self._find_magic_header_column(entries, magic_anchor_row, ["Magieschule", "School"])
+            info_col, _ = self._find_magic_header_column(entries, magic_anchor_row, ["Info"])
+            prepared_col, _ = self._find_magic_header_column(entries, magic_anchor_row, ["Vorbereiteter Zauber", "Prepared Spell"])
+            charge_col, _ = self._find_magic_header_column(entries, magic_anchor_row, ["Ladung", "Charge"])
+            duration_col, _ = self._find_magic_header_column(entries, magic_anchor_row, ["Dauer", "Duration"])
+            effect_col, _ = self._find_magic_header_column(entries, magic_anchor_row, ["Effekt", "Effect"])
+
+            if header_row > 0 and all(c > 0 for c in [school_col, info_col, prepared_col, charge_col, duration_col, effect_col]):
+                data_start_row = header_row + 1
+                spell_mapping = {
+                    "sheet": sheet_name,
+                    "start_row": magic_anchor_row,
+                    "header_row": header_row,
+                    "data_start_row": data_start_row,
+                    "columns": {
+                        "school": self._col_index_to_letters(school_col),
+                        "info": self._col_index_to_letters(info_col),
+                        "prepared_spell": self._col_index_to_letters(prepared_col),
+                        "charge": self._col_index_to_letters(charge_col),
+                        "duration": self._col_index_to_letters(duration_col),
+                        "effect": self._col_index_to_letters(effect_col),
+                    },
+                }
+                if self._magic_print_mapping_enabled():
+                    print(f"[MAGIC SPELL MAP] start_row={magic_anchor_row} data_start_row={data_start_row}")
+                    for key, col_letters in spell_mapping["columns"].items():
+                        print(f"[MAGIC SPELL COLUMN] {key}={col_letters}")
+                max_scan_rows = 25
+                try:
+                    max_scan_rows = max(1, min(50, int(self.magic_layout_config.get("magic_screen", {}).get("spell_table", {}).get("max_scan_rows", 25))))
+                except Exception:
+                    max_scan_rows = 25
+                for offset in range(max_scan_rows):
+                    row_index = data_start_row + offset
+                    row_data = {"row": row_index, "row_index": row_index, "values": {}, "cells": {}}
+                    has_cell = False
+                    has_value = False
+                    for key, col_letters in spell_mapping["columns"].items():
+                        cell_ref = f"{col_letters}{row_index}"
+                        if cell_ref in sheet_cache:
+                            has_cell = True
+                        value = self._magic_cache_text(sheet_cache, cell_ref)
+                        row_data["values"][key] = value
+                        row_data["cells"][key] = cell_ref if cell_ref in sheet_cache else ""
+                        row_data[key] = value
+                        if value:
+                            has_value = True
+                    if has_cell or has_value:
+                        spell_rows.append(row_data)
+                        if self._magic_print_rows_enabled():
+                            print(
+                                f'[MAGIC SPELL ROW] row={row_index} school="{row_data["values"].get("school", "")}" '
+                                f'prepared_spell="{row_data["values"].get("prepared_spell", "")}" '
+                                f'charge="{row_data["values"].get("charge", "")}" duration="{row_data["values"].get("duration", "")}"'
+                            )
+
+        self.magic_analysis = {"sheet": sheet_name, "upgrade_table": {"mapping": upgrade_mapping, "rows": upgrade_rows}, "spells": {"mapping": spell_mapping, "rows": spell_rows}}
+        return self.magic_analysis
 
     def get_equipment_sheet_cache(self):
         exact_candidates = {"ausrüstung", "ausruestung"}
@@ -5751,6 +6065,338 @@ class MainWindow(QMainWindow):
 
             save_button.clicked.connect(on_save_clicked)
             save_button.show()
+
+    def on_magic_spell_table_item_changed(self, table, row_index, column_index):
+        if self._magic_rendering:
+            return
+        binding = self._magic_table_bindings.get(id(table), {})
+        if not isinstance(binding, dict):
+            return
+        rows = binding.get("rows", [])
+        if not isinstance(rows, list) or row_index < 0 or row_index >= len(rows):
+            return
+        column_order = binding.get("column_order", [])
+        if column_index < 0 or column_index >= len(column_order):
+            return
+        key = str(column_order[column_index])
+        row_data = rows[row_index]
+        if not isinstance(row_data, dict):
+            return
+        cells = row_data.get("cells", {})
+        if not isinstance(cells, dict):
+            return
+        cell_ref = str(cells.get(key, "") or "").strip().upper()
+        if not cell_ref:
+            return
+        item = table.item(row_index, column_index)
+        if item is None:
+            return
+        new_value = str(item.text() or "")
+        old_value = str(item.data(Qt.UserRole) or "")
+        if new_value == old_value:
+            return
+        source_row = row_data.get("row_index", row_data.get("row", row_index))
+        print(f'[MAGIC EDIT] row={source_row} column={key} cell={cell_ref} value="{new_value}"')
+        self.loader.set_cell_value(str(binding.get("sheet", "Magie")), cell_ref, new_value)
+        self.loader.save_active_character_json()
+        row_data[key] = new_value
+        row_data.setdefault("values", {})[key] = new_value
+        item.setData(Qt.UserRole, new_value)
+        print("[MAGIC SAVE] active character saved")
+
+    def _render_magic_upgrade_table(self, parent, table_cfg, upgrade_rows):
+        if not isinstance(table_cfg, dict) or not bool(table_cfg.get("enabled", True)):
+            return
+
+        panel = QFrame(parent)
+        panel.setGeometry(
+            self._safe_int(table_cfg.get("x", 20), 20),
+            self._safe_int(table_cfg.get("y", 50), 50),
+            self._safe_int(table_cfg.get("w", 760), 760),
+            self._safe_int(table_cfg.get("h", 250), 250),
+        )
+        panel.setStyleSheet("background: transparent;")
+        panel.show()
+
+        self.create_panel_text(
+            panel,
+            {"x": 0, "y": 0, "w": panel.width(), "h": 30},
+            str(table_cfg.get("title", "Upgrade Tabelle")),
+            self._safe_int(table_cfg.get("title_font_size", 18), 18),
+            str(table_cfg.get("header_color", "#f2d28b")),
+            bold=True,
+            align="left",
+        )
+
+        table = QTableWidget(panel)
+        table.setGeometry(0, 34, panel.width(), max(60, panel.height() - 36))
+        row_count = len(upgrade_rows) if isinstance(upgrade_rows, list) and upgrade_rows else 1
+        max_cols = 0
+        for row_data in (upgrade_rows or []):
+            if isinstance(row_data, dict):
+                max_cols = max(max_cols, len(row_data.get("values", [])))
+        max_cols = max(1, max_cols)
+        table.setRowCount(row_count)
+        table.setColumnCount(1 + max_cols)
+        headers = ["Upgrade"] + [f"Wert {i+1}" for i in range(max_cols)]
+        table.setHorizontalHeaderLabels(headers)
+        table.verticalHeader().setVisible(False)
+        table.setAlternatingRowColors(False)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        table.setSelectionBehavior(QAbstractItemView.SelectItems)
+        table.setSelectionMode(QAbstractItemView.NoSelection)
+        table.setWordWrap(True)
+        selection_cfg = table_cfg.get("selection", {})
+        if not isinstance(selection_cfg, dict):
+            selection_cfg = {}
+        selection_bg = str(selection_cfg.get("background", "rgba(242, 210, 139, 45)"))
+        selection_text = str(selection_cfg.get("text_color", "#ffffff"))
+        selection_border = str(selection_cfg.get("border_color", "rgba(242, 210, 139, 120)"))
+        selection_enabled = bool(selection_cfg.get("enabled", True))
+        table.setStyleSheet(
+            "QTableWidget {"
+            f"background: {str(table_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            f"color: {str(table_cfg.get('text_color', '#ffffff'))};"
+            f"gridline-color: {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px;"
+            "}"
+            "QTableWidget::item:selected {"
+            + (
+                f"background: {selection_bg}; color: {selection_text}; border: 1px solid {selection_border};"
+                if selection_enabled
+                else "background: transparent; color: inherit; border: none;"
+            )
+            + "}"
+            "QTableWidget::item:focus { outline: none; }"
+            "QHeaderView::section {"
+            f"background: rgba(20, 16, 10, 180); color: {str(table_cfg.get('header_color', '#f2d28b'))};"
+            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px; font-weight: 700; border: 0px;"
+            "}"
+        )
+
+        for row_index, row_data in enumerate(upgrade_rows or []):
+            label_item = QTableWidgetItem(str(row_data.get("label", "") or ""))
+            label_item.setFlags(label_item.flags() & ~Qt.ItemIsEditable)
+            label_item.setForeground(QColor(str(table_cfg.get("header_color", "#f2d28b"))))
+            table.setItem(row_index, 0, label_item)
+            values = row_data.get("values", [])
+            for value_index in range(max_cols):
+                value = str(values[value_index] if value_index < len(values) else "")
+                item = QTableWidgetItem(value)
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setForeground(QColor(str(table_cfg.get("value_color", "#7fd0ff"))))
+                table.setItem(row_index, value_index + 1, item)
+
+        table.verticalHeader().setDefaultSectionSize(26)
+        content_w = max(120, table.width() - 24)
+        label_w = max(180, min(260, int(content_w * 0.22)))
+        min_value_col_w = 110
+        required_w = label_w + (max_cols * min_value_col_w)
+        needs_h_scroll = required_w > content_w
+        if needs_h_scroll:
+            table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        else:
+            table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        table.setColumnWidth(0, label_w)
+        remaining_w = max(10, content_w - label_w)
+        if max_cols > 0:
+            if needs_h_scroll:
+                per_col = min_value_col_w
+            else:
+                per_col = max(min_value_col_w, int(remaining_w / max_cols))
+            for col in range(1, 1 + max_cols):
+                table.setColumnWidth(col, per_col)
+
+        header_h = max(24, table.horizontalHeader().height())
+        content_h = max(60, table.height() - header_h - 6)
+        row_h = max(24, min(34, int(content_h / max(1, row_count))))
+        for row_index in range(row_count):
+            table.setRowHeight(row_index, row_h)
+        required_h = header_h + (row_count * row_h) + 6
+        needs_v_scroll = required_h > table.height()
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded if needs_v_scroll else Qt.ScrollBarAlwaysOff)
+        table.show()
+
+    def _render_magic_spell_table(self, parent, table_cfg, sheet_name, rows, mapping):
+        if not isinstance(table_cfg, dict) or not bool(table_cfg.get("enabled", True)):
+            return
+
+        panel = QFrame(parent)
+        panel.setGeometry(
+            self._safe_int(table_cfg.get("x", 20), 20),
+            self._safe_int(table_cfg.get("y", 330), 330),
+            self._safe_int(table_cfg.get("w", 1360), 1360),
+            self._safe_int(table_cfg.get("h", 450), 450),
+        )
+        panel.setStyleSheet("background: transparent;")
+        panel.show()
+
+        self.create_panel_text(
+            panel,
+            {"x": 0, "y": 0, "w": panel.width(), "h": 30},
+            str(table_cfg.get("title", "Magie")),
+            self._safe_int(table_cfg.get("title_font_size", 18), 18),
+            str(table_cfg.get("header_color", "#f2d28b")),
+            bold=True,
+            align="left",
+        )
+
+        columns_cfg = table_cfg.get("columns", {})
+        if not isinstance(columns_cfg, dict):
+            columns_cfg = {}
+        column_order = ["school", "info", "prepared_spell", "charge", "duration", "effect"]
+        headers = [str(columns_cfg.get(key, {}).get("title", key)) for key in column_order]
+
+        min_rows = max(1, self._safe_int(table_cfg.get("min_rows", 14), 14))
+        visible_rows = list(rows) if isinstance(rows, list) else []
+        while len(visible_rows) < min_rows:
+            visible_rows.append({"row": 0, "row_index": 0, "values": {}, "cells": {}, "school": "", "info": "", "prepared_spell": "", "charge": "", "duration": "", "effect": ""})
+
+        table = QTableWidget(panel)
+        table.setGeometry(0, 34, panel.width(), max(80, panel.height() - 36))
+        table.setRowCount(len(visible_rows))
+        table.setColumnCount(len(column_order))
+        table.setHorizontalHeaderLabels(headers)
+        table.verticalHeader().setVisible(False)
+        table.setWordWrap(True)
+        table.setAlternatingRowColors(False)
+        table.setSelectionBehavior(QAbstractItemView.SelectItems)
+        table.setSelectionMode(QAbstractItemView.SingleSelection)
+        selection_cfg = table_cfg.get("selection", {})
+        if not isinstance(selection_cfg, dict):
+            selection_cfg = {}
+        selection_bg = str(selection_cfg.get("background", "rgba(242, 210, 139, 45)"))
+        selection_text = str(selection_cfg.get("text_color", "#ffffff"))
+        selection_border = str(selection_cfg.get("border_color", "rgba(242, 210, 139, 120)"))
+        selection_enabled = bool(selection_cfg.get("enabled", True))
+        table.setStyleSheet(
+            "QTableWidget {"
+            f"background: {str(table_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            f"color: {str(table_cfg.get('text_color', '#ffffff'))};"
+            f"gridline-color: {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px;"
+            "}"
+            "QTableWidget::item:selected {"
+            + (
+                f"background: {selection_bg}; color: {selection_text}; border: 1px solid {selection_border};"
+                if selection_enabled
+                else "background: transparent; color: inherit; border: none;"
+            )
+            + "}"
+            "QTableWidget::item:focus { outline: none; }"
+            "QHeaderView::section {"
+            f"background: rgba(20, 16, 10, 180); color: {str(table_cfg.get('header_color', '#f2d28b'))};"
+            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px; font-weight: 700; border: 0px;"
+            "}"
+        )
+
+        self._magic_rendering = True
+        try:
+            for row_index, row_data in enumerate(visible_rows):
+                values = row_data.get("values", {})
+                cells = row_data.get("cells", {})
+                if not isinstance(values, dict):
+                    values = {}
+                if not isinstance(cells, dict):
+                    cells = {}
+                for col_index, key in enumerate(column_order):
+                    value = str(values.get(key, row_data.get(key, "")) or "")
+                    item = QTableWidgetItem(value)
+                    item.setToolTip(value if value else "")
+                    item.setData(Qt.UserRole, value)
+                    can_edit = bool(table_cfg.get("editable", True)) and bool(str(cells.get(key, "") or "").strip())
+                    if can_edit:
+                        item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    else:
+                        item.setFlags((item.flags() & ~Qt.ItemIsEditable) | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    color = str(table_cfg.get("value_color", "#7fd0ff")) if key in ("charge", "duration") else str(table_cfg.get("text_color", "#ffffff"))
+                    item.setForeground(QColor(color))
+                    item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                    table.setItem(row_index, col_index, item)
+        finally:
+            self._magic_rendering = False
+
+        total_w = panel.width()
+        used_w = 0
+        for col_index, key in enumerate(column_order):
+            width = self._safe_int(columns_cfg.get(key, {}).get("w", 150), 150)
+            if col_index == len(column_order) - 1:
+                width = max(80, total_w - used_w - 20)
+            table.setColumnWidth(col_index, width)
+            used_w += width
+        table.verticalHeader().setDefaultSectionSize(max(30, self._safe_int(table_cfg.get("font_size", 14), 14) * 2))
+        table.resizeRowsToContents()
+
+        self._magic_table_bindings[id(table)] = {
+            "sheet": str(sheet_name or "Magie"),
+            "rows": visible_rows,
+            "mapping": mapping if isinstance(mapping, dict) else {},
+            "column_order": column_order,
+        }
+        table.itemChanged.connect(
+            lambda item, widget=table: self.on_magic_spell_table_item_changed(widget, item.row(), item.column())
+        )
+        table.show()
+
+    def render_magic_screen(self):
+        if self.content_layer is None:
+            return
+        self._magic_table_bindings = {}
+        layout_config = self.load_magic_layout_config()
+        screen_cfg = layout_config.get("magic_screen", {})
+        if not isinstance(screen_cfg, dict):
+            screen_cfg = self.get_default_magic_layout_config().get("magic_screen", {})
+
+        screen = QFrame(self.content_layer)
+        screen.setGeometry(
+            self._safe_int(screen_cfg.get("x", 30), 30),
+            self._safe_int(screen_cfg.get("y", 25), 25),
+            self._safe_int(screen_cfg.get("w", 1400), 1400),
+            self._safe_int(screen_cfg.get("h", 820), 820),
+        )
+        screen.setStyleSheet("background: transparent;")
+        screen.show()
+
+        title_cfg = screen_cfg.get("title", {})
+        if isinstance(title_cfg, dict) and bool(title_cfg.get("enabled", True)):
+            self.create_panel_text(
+                screen,
+                {"x": self._safe_int(title_cfg.get("x", 0), 0), "y": self._safe_int(title_cfg.get("y", 0), 0), "w": self._safe_int(title_cfg.get("w", 1400), 1400), "h": self._safe_int(title_cfg.get("h", 38), 38)},
+                str(title_cfg.get("text", "Magie")),
+                self._safe_int(title_cfg.get("font_size", 24), 24),
+                str(title_cfg.get("color", "#f2d28b")),
+                bold=True,
+                align=str(title_cfg.get("align", "center")),
+            )
+
+        analysis = self.analyze_magic_sheet()
+        if not str(analysis.get("sheet", "") or "").strip():
+            self.create_panel_text(
+                screen,
+                {"x": 20, "y": 80, "w": 1200, "h": 38},
+                "Magie-Sheet nicht gefunden",
+                20,
+                "#f2d28b",
+                bold=True,
+                align="left",
+            )
+            return
+
+        upgrade_cfg = screen_cfg.get("upgrade_table", {})
+        self._render_magic_upgrade_table(screen, upgrade_cfg, analysis.get("upgrade_table", {}).get("rows", []))
+
+        spell_cfg = screen_cfg.get("spell_table", {})
+        spell_data = analysis.get("spells", {})
+        self._render_magic_spell_table(
+            screen,
+            spell_cfg,
+            analysis.get("sheet", "Magie"),
+            spell_data.get("rows", []),
+            spell_data.get("mapping", {}),
+        )
 
     def on_inventory_category_clicked(self, category_id):
         self.current_inventory_category = str(category_id or "")
@@ -10534,6 +11180,8 @@ class MainWindow(QMainWindow):
             self.show_main_section("skills")
         elif self.current_main_section == "inventory":
             self.show_main_section("inventory")
+        elif self.current_main_section == "magic":
+            self.show_main_section("magic")
         elif self.current_main_section == "notes":
             self.show_main_section("notes")
         print("[CHARACTER CACHE] loaded:", cache_path)
