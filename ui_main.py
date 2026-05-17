@@ -4436,26 +4436,23 @@ class MainWindow(QMainWindow):
                 for offset in range(max_scan_rows):
                     row_index = data_start_row + offset
                     row_data = {"row": row_index, "row_index": row_index, "values": {}, "cells": {}}
-                    has_cell = False
                     has_value = False
                     for key, col_letters in spell_mapping["columns"].items():
                         cell_ref = f"{col_letters}{row_index}"
-                        if cell_ref in sheet_cache:
-                            has_cell = True
                         value = self._magic_cache_text(sheet_cache, cell_ref)
                         row_data["values"][key] = value
-                        row_data["cells"][key] = cell_ref if cell_ref in sheet_cache else ""
+                        # Keep mapped sheet coordinates writable even when currently empty.
+                        row_data["cells"][key] = cell_ref
                         row_data[key] = value
                         if value:
                             has_value = True
-                    if has_cell or has_value:
-                        spell_rows.append(row_data)
-                        if self._magic_print_rows_enabled():
-                            print(
-                                f'[MAGIC SPELL ROW] row={row_index} school="{row_data["values"].get("school", "")}" '
-                                f'prepared_spell="{row_data["values"].get("prepared_spell", "")}" '
-                                f'charge="{row_data["values"].get("charge", "")}" duration="{row_data["values"].get("duration", "")}"'
-                            )
+                    spell_rows.append(row_data)
+                    if self._magic_print_rows_enabled() and (has_value or offset < 3):
+                        print(
+                            f'[MAGIC SPELL ROW] row={row_index} school="{row_data["values"].get("school", "")}" '
+                            f'prepared_spell="{row_data["values"].get("prepared_spell", "")}" '
+                            f'charge="{row_data["values"].get("charge", "")}" duration="{row_data["values"].get("duration", "")}"'
+                        )
 
         self.magic_analysis = {"sheet": sheet_name, "upgrade_table": {"mapping": upgrade_mapping, "rows": upgrade_rows}, "spells": {"mapping": spell_mapping, "rows": spell_rows}}
         return self.magic_analysis
@@ -6087,6 +6084,9 @@ class MainWindow(QMainWindow):
             return
         cell_ref = str(cells.get(key, "") or "").strip().upper()
         if not cell_ref:
+            if self._magic_print_mapping_enabled():
+                source_row = row_data.get("row_index", row_data.get("row", row_index))
+                print(f"[MAGIC EDIT SKIP] no cell_ref row={source_row} column={key}")
             return
         item = table.item(row_index, column_index)
         if item is None:
@@ -6096,13 +6096,18 @@ class MainWindow(QMainWindow):
         if new_value == old_value:
             return
         source_row = row_data.get("row_index", row_data.get("row", row_index))
-        print(f'[MAGIC EDIT] row={source_row} column={key} cell={cell_ref} value="{new_value}"')
-        self.loader.set_cell_value(str(binding.get("sheet", "Magie")), cell_ref, new_value)
+        if self._magic_print_mapping_enabled():
+            print(
+                f'[MAGIC EDIT] row={source_row} column={key} cell={cell_ref} '
+                f'old="{old_value}" new="{new_value}"'
+            )
+        self.loader.set_cell_value(str(binding.get("sheet", "Magie") or "Magie"), cell_ref, new_value)
         self.loader.save_active_character_json()
         row_data[key] = new_value
         row_data.setdefault("values", {})[key] = new_value
         item.setData(Qt.UserRole, new_value)
-        print("[MAGIC SAVE] active character saved")
+        if self._magic_print_mapping_enabled():
+            print("[MAGIC SAVE] active character saved")
 
     def _render_magic_upgrade_table(self, parent, table_cfg, upgrade_rows):
         if not isinstance(table_cfg, dict) or not bool(table_cfg.get("enabled", True)):
@@ -6264,6 +6269,11 @@ class MainWindow(QMainWindow):
         table.setAlternatingRowColors(False)
         table.setSelectionBehavior(QAbstractItemView.SelectItems)
         table.setSelectionMode(QAbstractItemView.SingleSelection)
+        table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.SelectedClicked
+        )
         selection_cfg = table_cfg.get("selection", {})
         if not isinstance(selection_cfg, dict):
             selection_cfg = {}
