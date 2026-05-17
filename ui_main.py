@@ -15,6 +15,13 @@ import html
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app_paths import (
+    app_base_dir,
+    ensure_runtime_defaults,
+    load_settings,
+    resource_path,
+    save_settings,
+)
 from data_loader import DataLoader
 from formula_parser import FormulaParser
 from ui_tabs.sheet_tab import SheetTab
@@ -82,14 +89,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        ensure_runtime_defaults()
         self.setWindowTitle("Adventure Time Tool")
-        self.resize(800, 600)
+        self.settings, _ = load_settings()
+        window_settings = self.settings.get("window", {}) if isinstance(self.settings, dict) else {}
+        self.resize(int(window_settings.get("width", 1500)), int(window_settings.get("height", 900)))
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
 
         self.loader = DataLoader()
         self.parser = FormulaParser()
-        self.base_dir = Path(__file__).resolve().parent
-        self.theme_config_path = self.base_dir / "assets" / "config" / "theme_config.json"
+        self.base_dir = app_base_dir()
+        self.assets_dir = resource_path("assets")
         self.theme_config = self.load_theme_config()
         self.active_theme = self.get_active_theme()
         self.theme_asset_base_path = self.get_theme_asset_base_path()
@@ -219,7 +229,7 @@ class MainWindow(QMainWindow):
         primary = self.get_theme_asset_base_path() / filename
         if primary.exists():
             return primary
-        fallback = self.base_dir / "assets" / "themes" / "diablo" / "ui" / filename
+        fallback = self.assets_dir / "themes" / "diablo" / "ui" / filename
         if fallback.exists():
             return fallback
         print(f"[THEME] missing asset: {primary}")
@@ -252,29 +262,18 @@ class MainWindow(QMainWindow):
 
     def load_theme_config(self):
         default = {"active_theme": "diablo", "themes": ["diablo", "nature"]}
-        try:
-            if not self.theme_config_path.exists():
-                return default
-            content = self.theme_config_path.read_text(encoding="utf-8").strip()
-            if not content:
-                return default
-            parsed = json.loads(content)
-            if not isinstance(parsed, dict):
-                return default
-            themes = parsed.get("themes")
-            if not isinstance(themes, list) or not themes:
-                parsed["themes"] = default["themes"]
-            if not isinstance(parsed.get("active_theme"), str):
-                parsed["active_theme"] = parsed["themes"][0]
-            return parsed
-        except Exception:
-            return default
+        loaded, _ = load_settings()
+        self.settings = loaded
+        theme = str(loaded.get("theme", "diablo") or "diablo")
+        themes = default["themes"]
+        if theme not in themes:
+            themes = [theme] + [t for t in default["themes"] if t != theme]
+        return {"active_theme": theme, "themes": themes}
 
     def save_theme_config(self):
         try:
-            self.theme_config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.theme_config_path, "w", encoding="utf-8") as f:
-                json.dump(self.theme_config, f, ensure_ascii=False, indent=2)
+            self.settings["theme"] = str(self.theme_config.get("active_theme", "diablo") or "diablo")
+            save_settings(self.settings)
         except Exception:
             pass
 
@@ -291,19 +290,19 @@ class MainWindow(QMainWindow):
 
     def get_theme_layout_path(self):
         active = self.get_active_theme()
-        layout_path = self.base_dir / "assets" / "themes" / active / "ui_layout.json"
+        layout_path = self.assets_dir / "themes" / active / "ui_layout.json"
         if layout_path.exists():
             return layout_path
-        fallback = self.base_dir / "assets" / "themes" / "diablo" / "ui_layout.json"
+        fallback = self.assets_dir / "themes" / "diablo" / "ui_layout.json"
         print(f"[THEME] missing layout: {layout_path}, fallback: {fallback}")
         return fallback
 
     def get_theme_asset_base_path(self):
         active = self.get_active_theme()
-        base = self.base_dir / "assets" / "themes" / active / "ui"
+        base = self.assets_dir / "themes" / active / "ui"
         if base.exists():
             return base
-        fallback = self.base_dir / "assets" / "themes" / "diablo" / "ui"
+        fallback = self.assets_dir / "themes" / "diablo" / "ui"
         print(f"[THEME] missing asset base: {base}, fallback: {fallback}")
         return fallback
 
@@ -1133,7 +1132,7 @@ class MainWindow(QMainWindow):
         return entries
 
     def load_skill_definitions(self):
-        definitions_path = self.base_dir / "assets" / "config" / "skill_definitions.json"
+        definitions_path = self.assets_dir / "config" / "skill_definitions.json"
         empty = {"attribute_map": {}, "categories": []}
         try:
             if not definitions_path.exists():
@@ -1219,8 +1218,8 @@ class MainWindow(QMainWindow):
             layout_file = "skills_layout.json"
 
         candidates = [
-            self.base_dir / "assets" / "themes" / active_theme / layout_file,
-            self.base_dir / "assets" / "themes" / "diablo" / "skills_layout.json",
+            self.assets_dir / "themes" / active_theme / layout_file,
+            self.assets_dir / "themes" / "diablo" / "skills_layout.json",
         ]
         for layout_path in candidates:
             try:
@@ -1349,8 +1348,8 @@ class MainWindow(QMainWindow):
             layout_file = "inventory_layout.json"
 
         candidates = [
-            self.base_dir / "assets" / "themes" / active_theme / layout_file,
-            self.base_dir / "assets" / "themes" / "diablo" / "inventory_layout.json",
+            self.assets_dir / "themes" / active_theme / layout_file,
+            self.assets_dir / "themes" / "diablo" / "inventory_layout.json",
         ]
         for layout_path in candidates:
             try:
@@ -1404,8 +1403,8 @@ class MainWindow(QMainWindow):
             layout_file = "equipment_layout.json"
 
         candidates = [
-            self.base_dir / "assets" / "themes" / active_theme / layout_file,
-            self.base_dir / "assets" / "themes" / "diablo" / "equipment_layout.json",
+            self.assets_dir / "themes" / active_theme / layout_file,
+            self.assets_dir / "themes" / "diablo" / "equipment_layout.json",
         ]
         for layout_path in candidates:
             try:
@@ -1484,8 +1483,8 @@ class MainWindow(QMainWindow):
             layout_file = "notes_layout.json"
 
         candidates = [
-            self.base_dir / "assets" / "themes" / active_theme / layout_file,
-            self.base_dir / "assets" / "themes" / "diablo" / "notes_layout.json",
+            self.assets_dir / "themes" / active_theme / layout_file,
+            self.assets_dir / "themes" / "diablo" / "notes_layout.json",
         ]
         for layout_path in candidates:
             try:
@@ -1577,8 +1576,8 @@ class MainWindow(QMainWindow):
             layout_file = "magic_layout.json"
 
         candidates = [
-            self.base_dir / "assets" / "themes" / active_theme / layout_file,
-            self.base_dir / "assets" / "themes" / "diablo" / "magic_layout.json",
+            self.assets_dir / "themes" / active_theme / layout_file,
+            self.assets_dir / "themes" / "diablo" / "magic_layout.json",
         ]
         for layout_path in candidates:
             try:
@@ -1743,8 +1742,8 @@ class MainWindow(QMainWindow):
         active_theme = self.get_active_theme()
         default_config = self.get_default_roll_dialog_layout_config()
         candidates = [
-            self.base_dir / "assets" / "themes" / active_theme / "roll_dialog_layout.json",
-            self.base_dir / "assets" / "themes" / "diablo" / "roll_dialog_layout.json",
+            self.assets_dir / "themes" / active_theme / "roll_dialog_layout.json",
+            self.assets_dir / "themes" / "diablo" / "roll_dialog_layout.json",
         ]
         for layout_path in candidates:
             try:
@@ -1761,7 +1760,7 @@ class MainWindow(QMainWindow):
         return default_config
 
     def load_perk_rules_config(self):
-        rules_path = self.base_dir / "assets" / "config" / "perk_rules.json"
+        rules_path = self.assets_dir / "config" / "perk_rules.json"
         empty = {"version": 1, "description": "", "rules": []}
         try:
             if not rules_path.exists():
@@ -1823,7 +1822,7 @@ class MainWindow(QMainWindow):
         }
 
     def load_skill_sheet_mapping_config(self):
-        mapping_path = self.base_dir / "assets" / "config" / "skill_sheet_mapping.json"
+        mapping_path = self.assets_dir / "config" / "skill_sheet_mapping.json"
         default = self.get_default_skill_sheet_mapping_config()
         try:
             if not mapping_path.exists():
@@ -3300,8 +3299,8 @@ class MainWindow(QMainWindow):
         counter_minus_asset = str(counter_cfg.get("minus_asset", "") or "")
         counter_plus_asset = str(counter_cfg.get("plus_asset", "") or "")
 
-        theme_dir = self.base_dir / "assets" / "themes" / self.get_active_theme()
-        fallback_theme_dir = self.base_dir / "assets" / "themes" / "diablo"
+        theme_dir = self.assets_dir / "themes" / self.get_active_theme()
+        fallback_theme_dir = self.assets_dir / "themes" / "diablo"
 
         def resolve_roll_asset_path(relative_path):
             rel = str(relative_path or "").strip()

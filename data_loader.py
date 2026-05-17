@@ -7,6 +7,8 @@ import zipfile
 from datetime import datetime
 from typing import Any
 
+from app_paths import data_path, ensure_runtime_defaults
+
 try:
     from openpyxl import load_workbook
 except ImportError:
@@ -52,6 +54,7 @@ class SimpleWorkbook:
 
 class DataLoader:
     def __init__(self):
+        ensure_runtime_defaults()
         self.workbook = None
         self.cell_cache: dict[str, dict[str, dict[str, Any]]] = {}
         self.app_meta: dict[str, Any] = {}
@@ -136,14 +139,14 @@ class DataLoader:
         if path is None:
             character_name = self._get_character_name_from_cache()
             slug = self.make_character_slug(character_name)
-            path = os.path.join("data", "cache", f"{slug}.json")
+            path = str(data_path(f"cache/{slug}.json"))
         return self.save_active_character_json(path)
 
     def save_active_character_json(self, path=None):
         if path is None:
             character_name = self._get_character_name_from_cache()
             slug = self.make_character_slug(character_name)
-            path = self.active_cache_path or os.path.join("data", "cache", f"{slug}.json")
+            path = self.active_cache_path or str(data_path(f"cache/{slug}.json"))
         else:
             character_name = self._get_character_name_from_cache()
 
@@ -178,7 +181,7 @@ class DataLoader:
         metadata_source_file = ""
         metadata_character_name = "unknown_character"
         if path is None:
-            metadata_path = os.path.join("data", "current_character.json")
+            metadata_path = str(data_path("current_character.json"))
             if os.path.exists(metadata_path):
                 try:
                     with open(metadata_path, "r", encoding="utf-8") as f:
@@ -250,7 +253,7 @@ class DataLoader:
         return slug if slug else "unknown_character"
 
     def list_character_caches(self) -> list[dict[str, str]]:
-        cache_dir = os.path.join("data", "cache")
+        cache_dir = str(data_path("cache"))
         if not os.path.isdir(cache_dir):
             return []
 
@@ -711,7 +714,7 @@ class DataLoader:
         return True
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
-        metadata_path = os.path.join("data", "current_character.json")
+        metadata_path = str(data_path("current_character.json"))
         os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
         now = datetime.now().isoformat()
         payload = {

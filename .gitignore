@@ -3,6 +3,9 @@ data/*
 __pycache__/*
 ui_tabs/__pycache__/*
 .usefullfles/*
+dist/
+build/
+*.pyc
 
 data/*
 data/cache/*

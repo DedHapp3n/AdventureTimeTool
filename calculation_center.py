@@ -26,6 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app_paths import config_path, ensure_runtime_defaults
+
 
 OVERRIDE_DEFAULT = {"version": 1, "overrides": {}}
 RULES_DEFAULT = {"version": 1, "rules": {}}
@@ -39,16 +41,12 @@ RULE_TYPES = [
 ]
 
 
-def _project_base_dir() -> Path:
-    return Path(__file__).resolve().parent
-
-
 def _override_file_path() -> Path:
-    return _project_base_dir() / "assets" / "config" / "calculation_overrides.json"
+    return config_path("calculation_overrides.json")
 
 
 def _rules_file_path() -> Path:
-    return _project_base_dir() / "assets" / "config" / "calculation_rules.json"
+    return config_path("calculation_rules.json")
 
 
 def _default_override_entry(sheet: str, cell: str) -> dict[str, Any]:
@@ -65,6 +63,7 @@ def _default_override_entry(sheet: str, cell: str) -> dict[str, Any]:
 
 
 def load_calculation_overrides() -> dict[str, Any]:
+    ensure_runtime_defaults()
     path = _override_file_path()
     if not path.exists():
         print("[CALC OVERRIDE] loaded count=0")
@@ -107,6 +106,7 @@ def save_calculation_overrides(data: dict[str, Any]) -> bool:
 
 
 def load_calculation_rules() -> dict[str, Any]:
+    ensure_runtime_defaults()
     path = _rules_file_path()
     if not path.exists():
         print("[CALC RULES] loaded count=0")
