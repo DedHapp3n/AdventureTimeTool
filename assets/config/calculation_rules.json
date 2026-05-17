@@ -1,0 +1,384 @@
+{
+  "version": 1,
+  "rules": {
+    "Charakterbogen!B10": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "B10"
+      },
+      "id": "character.hp_current",
+      "display_name": "HP Current",
+      "category": "Charakter / Ressourcen",
+      "description": "Aktuelle Lebenspunkte des Charakters.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!F10": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "F10"
+      },
+      "id": "character.hp_max",
+      "display_name": "HP Max",
+      "category": "Charakter / Ressourcen",
+      "description": "Maximale HP. Größe/Gewicht beeinflussen natürliche HP; Körper ist ein zentraler Modifikator. Aktuelle Sheet-Formel wird als Startregel übernommen.",
+      "rule_type": "expression",
+      "expression": "=(1+G5+(AG4*C5)+(F16/10))",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [
+        "Charakterbogen!G5",
+        "Charakterbogen!AG4",
+        "Charakterbogen!F16",
+        "Charakterbogen!C5",
+        "Charakterbogen!G7"
+      ],
+      "notes": "PDF sagt: Größe und Gewicht beeinflussen natürliche HP; Körper/Attribute beeinflussen Charakterwerte. Exakte finale Regel ggf. prüfen. Gewicht derzeit als mögliche Quelle markiert.",
+      "possible_sources": [
+        "Charakterbogen!G7"
+      ]
+    },
+    "Charakterbogen!B13": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "B13"
+      },
+      "id": "character.mp_current",
+      "display_name": "MP Current",
+      "category": "Charakter / Ressourcen",
+      "description": "Aktuelle Magiepunkte.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!F13": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "F13"
+      },
+      "id": "character.mp_max",
+      "display_name": "MP Max",
+      "category": "Charakter / Ressourcen",
+      "description": "Maximale Magiepunkte.",
+      "rule_type": "expression_or_missing",
+      "expression": "=(AR7+AR9+AR18)",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [
+        "Charakterbogen!AR7",
+        "Charakterbogen!AR9",
+        "Charakterbogen!AR18"
+      ],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!B16": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "B16"
+      },
+      "id": "character.xp_current",
+      "display_name": "XP Current",
+      "category": "Charakter / Ressourcen",
+      "description": "Aktuelle Erfahrungspunkte.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!F16": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "F16"
+      },
+      "id": "character.xp_max",
+      "display_name": "XP Max",
+      "category": "Charakter / Ressourcen",
+      "description": "Maximale Erfahrungspunkte.",
+      "rule_type": "expression_or_manual",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "Wenn keine Formel im Sheet vorhanden ist, bleibt der Wert als manual_value katalogisiert.",
+      "possible_sources": []
+    },
+    "Charakterbogen!AM23": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AM23"
+      },
+      "id": "character.lifeforce_current",
+      "display_name": "LifeForce Current",
+      "category": "Charakter / Ressourcen",
+      "description": "Aktueller Lebensenergie-Wert.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AO23": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AO23"
+      },
+      "id": "character.lifeforce_max",
+      "display_name": "LifeForce Max",
+      "category": "Charakter / Ressourcen",
+      "description": "Maximaler Lebensenergie-Wert.",
+      "rule_type": "manual_value",
+      "expression": "=((1+AU9)+(G5))",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "LifeForce Max ggf. durch Spezies/Perks beeinflusst. Exakte Regel prüfen.",
+      "possible_sources": []
+    },
+    "Charakterbogen!AM27": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AM27"
+      },
+      "id": "character.sanity_current",
+      "display_name": "Sanity Current",
+      "category": "Charakter / Ressourcen",
+      "description": "Aktueller Sanity-Wert.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AO27": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AO27"
+      },
+      "id": "character.sanity_max",
+      "display_name": "Sanity Max",
+      "category": "Charakter / Ressourcen",
+      "description": "Maximaler Sanity-Wert.",
+      "rule_type": "manual_value",
+      "expression": "=1+AR4+AR4",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AM31": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AM31"
+      },
+      "id": "character.faith_current",
+      "display_name": "Faith Current",
+      "category": "Charakter / Ressourcen",
+      "description": "Aktueller Faith-Wert.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "Faith Current und Faith Max zeigen derzeit auf dieselbe Zielzelle.",
+      "possible_sources": []
+    },
+    "Charakterbogen!AG4": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AG4"
+      },
+      "id": "character.body",
+      "display_name": "Körper",
+      "category": "Charakter / Attribute",
+      "description": "Körper wird aus den darunterliegenden Körper-Attributen berechnet.",
+      "rule_type": "expression",
+      "expression": "=(AG7+AG9+AG11+AG13)/4",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [
+        "Charakterbogen!AG7",
+        "Charakterbogen!AG9",
+        "Charakterbogen!AG11",
+        "Charakterbogen!AG13"
+      ],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AR4": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AR4"
+      },
+      "id": "character.mind",
+      "display_name": "Geist",
+      "category": "Charakter / Attribute",
+      "description": "Geist wird aus den darunterliegenden Geist-Attributen berechnet.",
+      "rule_type": "expression",
+      "expression": "=(AR7+AR9+AR11+AR13)/4",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [
+        "Charakterbogen!AR7",
+        "Charakterbogen!AR9",
+        "Charakterbogen!AR11",
+        "Charakterbogen!AR13"
+      ],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AG7": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AG7"
+      },
+      "id": "character.kraft",
+      "display_name": "Kraft",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Kraft.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AG9": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AG9"
+      },
+      "id": "character.geschick",
+      "display_name": "Geschick",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Geschick.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AG11": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AG11"
+      },
+      "id": "character.zaehigkeit",
+      "display_name": "Zähigkeit",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Zähigkeit.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AG13": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AG13"
+      },
+      "id": "character.reflex",
+      "display_name": "Reflex",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Reflex.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AR7": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AR7"
+      },
+      "id": "character.intelligenz",
+      "display_name": "Intelligenz",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Intelligenz.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AR9": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AR9"
+      },
+      "id": "character.willenskraft",
+      "display_name": "Willenskraft",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Willenskraft.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AR11": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AR11"
+      },
+      "id": "character.charisma",
+      "display_name": "Charisma",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Charisma.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    },
+    "Charakterbogen!AR13": {
+      "target": {
+        "sheet": "Charakterbogen",
+        "cell": "AR13"
+      },
+      "id": "character.sinne",
+      "display_name": "Sinne",
+      "category": "Charakter / Attribute",
+      "description": "Attributwert Sinne.",
+      "rule_type": "manual_value",
+      "expression": "",
+      "enabled": true,
+      "apply_to_cache": false,
+      "sources": [],
+      "notes": "",
+      "possible_sources": []
+    }
+  }
+}

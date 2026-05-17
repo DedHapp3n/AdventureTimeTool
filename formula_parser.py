@@ -472,3 +472,143 @@ class FormulaParser:
             if str(existing).strip().lower() == wanted.lower():
                 return existing
         return None
+
+    def trace_formula(self, sheet_name, cell_ref, cache=None):
+        target_cache = cache if isinstance(cache, dict) else self.cell_cache
+        if not isinstance(target_cache, dict):
+            return {
+                "formula": None,
+                "normalized": None,
+                "sources": [],
+                "steps": [],
+                "value": None,
+                "error": "missing_cache",
+            }
+
+        previous_cache = self.cell_cache
+        self.cell_cache = target_cache
+        try:
+            resolved_sheet = self._resolve_sheet_name(sheet_name)
+            if resolved_sheet is None:
+                return {
+                    "formula": None,
+                    "normalized": None,
+                    "sources": [],
+                    "steps": [],
+                    "value": None,
+                    "error": "missing_sheet",
+                }
+
+            normalized_cell = str(cell_ref or "").replace("$", "").upper()
+            cell_info = target_cache.get(resolved_sheet, {}).get(normalized_cell)
+            if not isinstance(cell_info, dict):
+                return {
+                    "formula": None,
+                    "normalized": None,
+                    "sources": [],
+                    "steps": [],
+                    "value": None,
+                    "error": "missing_cell",
+                }
+
+            formula = cell_info.get("formula")
+            if not isinstance(formula, str) or not formula.startswith("="):
+                return {
+                    "formula": formula,
+                    "normalized": None,
+                    "sources": [],
+                    "steps": ["Keine Formel vorhanden / manuell"],
+                    "value": cell_info.get("value"),
+                    "error": None,
+                }
+
+            normalized = self.normalize_excel_de_syntax(formula)
+            parsed_sources = []
+            for source in self.extract_references(formula):
+                parsed_sources.append(
+                    {"sheet": resolved_sheet, "cell": source, "ref": f"{resolved_sheet}!{source}"}
+                )
+
+            cross_matches = re.findall(
+                r"(?:'([^']+)'|([A-Za-z0-9_ äöüÄÖÜß.-]+))!([A-Za-z]+[0-9]+)",
+                formula,
+                flags=re.IGNORECASE,
+            )
+            for match in cross_matches:
+                source_sheet = (match[0] or match[1] or "").strip()
+                source_cell = (match[2] or "").replace("$", "").upper()
+                ref_text = f"{source_sheet}!{source_cell}"
+                if not any(s.get("ref") == ref_text for s in parsed_sources):
+                    parsed_sources.append(
+                        {"sheet": source_sheet, "cell": source_cell, "ref": ref_text}
+                    )
+
+            steps = [f"Original: {formula}", f"Normalisiert: {normalized}"]
+            expression = self.preprocess_formula_for_eval(formula)
+            steps.append(f"Ausdruck: {expression}")
+
+            def value_getter(ref_sheet, ref_cell):
+                local_sheet = self._resolve_sheet_name(ref_sheet)
+                if local_sheet is None:
+                    return None
+                local_cell = str(ref_cell).replace("$", "").upper()
+                source_info = target_cache.get(local_sheet, {}).get(local_cell)
+                if not isinstance(source_info, dict):
+                    return None
+                return source_info.get("value")
+
+            resolved_expression = self.resolve_references(
+                resolved_sheet, expression, value_getter, set()
+            )
+            if resolved_expression is None:
+                return {
+                    "formula": formula,
+                    "normalized": normalized,
+                    "sources": parsed_sources,
+                    "steps": steps + ["Referenzauflösung nicht verfügbar"],
+                    "value": cell_info.get("value"),
+                    "error": "unsupported",
+                }
+
+            steps.append(f"Aufgelöst: {resolved_expression}")
+            if not re.fullmatch(r"[0-9+\-*/().\s<>=!a-zA-Z_]+", resolved_expression):
+                return {
+                    "formula": formula,
+                    "normalized": normalized,
+                    "sources": parsed_sources,
+                    "steps": steps + ["Ausdruck enthält nicht unterstützte Zeichen"],
+                    "value": cell_info.get("value"),
+                    "error": "unsupported",
+                }
+
+            try:
+                evaluated = eval(resolved_expression, {"__builtins__": {}}, {})
+                steps.append(f"Ergebnis: {evaluated}")
+                return {
+                    "formula": formula,
+                    "normalized": normalized,
+                    "sources": parsed_sources,
+                    "steps": steps,
+                    "value": evaluated,
+                    "error": None,
+                }
+            except FormulaEvaluationError as exc:
+                return {
+                    "formula": formula,
+                    "normalized": normalized,
+                    "sources": parsed_sources,
+                    "steps": steps + [f"Fehler: {exc.code}"],
+                    "value": cell_info.get("value"),
+                    "error": exc.code,
+                }
+            except Exception:
+                return {
+                    "formula": formula,
+                    "normalized": normalized,
+                    "sources": parsed_sources,
+                    "steps": steps + ["Fehler: unsupported"],
+                    "value": cell_info.get("value"),
+                    "error": "unsupported",
+                }
+        finally:
+            self.cell_cache = previous_cache

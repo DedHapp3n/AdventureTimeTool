@@ -242,6 +242,14 @@
       "h": 58,
       "text": "Debug öffnen"
     },
+    "calculation_center_button": {
+      "asset": "buttons/menu_button_medium.png",
+      "x": 450,
+      "y": 615,
+      "w": 300,
+      "h": 58,
+      "text": "Berechnungen"
+    },
     "checkbox_debug_start": {
       "asset_true": "icons/checkmark_true.png",
       "asset_false": "icons/checkmark_false.png",

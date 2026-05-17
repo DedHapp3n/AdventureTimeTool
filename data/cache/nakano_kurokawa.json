@@ -110,7 +110,7 @@
         "error": null
       },
       "AG4": {
-        "value": "2",
+        "value": 1.75,
         "formula": "=(AG7+AG9+AG11+AG13)/4",
         "references": [
           "AG7",
@@ -127,7 +127,7 @@
         "error": null
       },
       "AR4": {
-        "value": "2",
+        "value": 1.5,
         "formula": "=(AR7+AR9+AR11+AR13)/4",
         "references": [
           "AR7",
@@ -150,7 +150,7 @@
         "error": null
       },
       "G5": {
-        "value": 3,
+        "value": "3",
         "formula": null,
         "references": [],
         "error": null
@@ -678,7 +678,7 @@
         "error": null
       },
       "AO23": {
-        "value": "4",
+        "value": 4,
         "formula": "=((1+AU9)+(G5))",
         "references": [
           "AU9",
@@ -867,7 +867,7 @@
         "error": null
       },
       "AO27": {
-        "value": "4",
+        "value": 4.0,
         "formula": "=1+AR4+AR4",
         "references": [
           "AR4"

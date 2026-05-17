@@ -18,6 +18,7 @@ from pathlib import Path
 from data_loader import DataLoader
 from formula_parser import FormulaParser
 from ui_tabs.sheet_tab import SheetTab
+from calculation_center import CalculationCenterDialog
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -117,7 +118,7 @@ class MainWindow(QMainWindow):
         self._skills_se_loading = False
         self.current_inventory_category = "inventory_01"
         self.skill_source_infos = {}
-        self.skills_debug_sources = True
+        self.skills_debug_sources = False
         self.skill_sheet_mapping_config = None
         self.settings_debug_on_start = False
         self.nav_buttons = {}
@@ -132,6 +133,7 @@ class MainWindow(QMainWindow):
         self._settings_checkbox_asset_false = "icons/checkmark_false.png"
         self.settings_character_active_label = None
         self.settings_character_combo = None
+        self.calculation_center_dialog = None
         self._inventory_loading = False
         self._inventory_table_bindings = {}
         self._inventory_money_fields = {}
@@ -141,6 +143,7 @@ class MainWindow(QMainWindow):
         self._equipment_table_bindings = {}
         self._equipment_rendering = False
         self._character_rendering = False
+        self._recalc_in_progress = False
         self._character_edit_cfg = {}
         self.character_paradigm_analysis = {}
         self._notes_loading_text = False
@@ -954,6 +957,12 @@ class MainWindow(QMainWindow):
             settings_page.get("debug_button", {}),
             "Debug öffnen",
             self.open_debug_dialog,
+        )
+        self.create_asset_text_button(
+            self.content_layer,
+            settings_page.get("calculation_center_button", {}),
+            "Berechnungen",
+            self.open_calculation_center,
         )
 
         checkbox_cfg = settings_page.get("checkbox_debug_start", {})
@@ -6646,7 +6655,7 @@ class MainWindow(QMainWindow):
                 item.setBackground(QColor(0, 0, 0, 0))
                 item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
                 item.setTextAlignment(
-                    Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
+                Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
                 )
                 table.setItem(row_index, column_index, item)
 
@@ -7244,16 +7253,16 @@ class MainWindow(QMainWindow):
                     str(row.get("pl", "") or ""),
                     str(row.get("count", "") or ""),
                 ]
-            for column_index, value in enumerate(display_values):
-                item = QTableWidgetItem(value)
-                item.setData(Qt.UserRole, raw_values[column_index])
-                item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                item.setBackground(QColor(0, 0, 0, 0))
-                item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
-                item.setTextAlignment(
+                for column_index, value in enumerate(display_values):
+                    item = QTableWidgetItem(value)
+                    item.setData(Qt.UserRole, raw_values[column_index])
+                    item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                    item.setBackground(QColor(0, 0, 0, 0))
+                    item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
+                    item.setTextAlignment(
                     Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
-                )
-                table.setItem(row_index, column_index, item)
+                    )
+                    table.setItem(row_index, column_index, item)
 
             column_widths = [
                 self._safe_int(name_col.get("w", 320), 320),
@@ -7724,8 +7733,9 @@ class MainWindow(QMainWindow):
             for category in categories_for_tabs
             if isinstance(category, dict) and str(category.get("id", "")).strip()
         ]
-        print("[SKILLS] render category:", self.current_skill_category)
-        print("[SKILLS] loaded categories:", category_ids)
+        if self.skills_debug_sources:
+            print("[SKILLS] render category:", self.current_skill_category)
+            print("[SKILLS] loaded categories:", category_ids)
         has_skills_cache = bool(self.loader.cell_cache) and isinstance(
             self.loader.cell_cache.get("Fertigkeiten"),
             dict,
@@ -7734,7 +7744,8 @@ class MainWindow(QMainWindow):
             self.build_skill_source_infos(categories, attribute_map)
         else:
             self.skill_source_infos = {}
-            print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+            if self.skills_debug_sources:
+                print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
 
         if self.current_skill_category not in category_ids and category_ids:
             self.current_skill_category = category_ids[0]
@@ -8773,7 +8784,8 @@ class MainWindow(QMainWindow):
                 bold=True,
                 align="center",
             )
-            print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+            if self.skills_debug_sources:
+                print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
             return
         if not isinstance(self.loader.cell_cache.get("Fertigkeiten"), dict):
             self.create_panel_text(
@@ -8793,11 +8805,13 @@ class MainWindow(QMainWindow):
             skills = []
         category_id = str(category.get("id", "")) if isinstance(category, dict) else ""
         visible_skills = skills[:max_rows]
-        print("[SKILLS RENDER]", f"category={category_id}")
-        print("[SKILLS RENDER]", f"source rows={len(skills)}")
-        print("[SKILLS RENDER]", f"visible rows={len(visible_skills)}")
+        if self.skills_debug_sources:
+            print("[SKILLS RENDER]", f"category={category_id}")
+            print("[SKILLS RENDER]", f"source rows={len(skills)}")
+            print("[SKILLS RENDER]", f"visible rows={len(visible_skills)}")
         if len(skills) > max_rows:
-            print("[SKILLS] rows truncated:", category_id)
+            if self.skills_debug_sources:
+                print("[SKILLS] rows truncated:", category_id)
 
         row_colors = ("rgba(8, 8, 8, 125)", "rgba(20, 20, 20, 105)")
         current_y = header_h
@@ -8829,12 +8843,13 @@ class MainWindow(QMainWindow):
             sheet_value = source_info.get("calculated_value")
             if sheet_value is None:
                 display_value = "0" if source_info.get("row") is not None else ""
-                print(
-                    "[SKILLS FALLBACK]",
-                    display_name,
-                    "no sheet value, using:",
-                    display_value if display_value else "blank",
-                )
+                if self.skills_debug_sources:
+                    print(
+                        "[SKILLS FALLBACK]",
+                        display_name,
+                        "no sheet value, using:",
+                        display_value if display_value else "blank",
+                    )
             else:
                 display_value = self.format_character_display_value(sheet_value, "int")
                 try:
@@ -8842,34 +8857,37 @@ class MainWindow(QMainWindow):
                 except Exception:
                     sheet_int_value = sheet_value
                 if sheet_int_value != attribute_sum:
-                    print(
-                        "[SKILLS DIFF]",
-                        display_name,
-                        "sheet:",
-                        sheet_value,
-                        "attribute_sum:",
-                        attribute_sum,
-                        "display:",
-                        display_value,
-                    )
+                    if self.skills_debug_sources:
+                        print(
+                            "[SKILLS DIFF]",
+                            display_name,
+                            "sheet:",
+                            sheet_value,
+                            "attribute_sum:",
+                            attribute_sum,
+                            "display:",
+                            display_value,
+                        )
                 else:
-                    print(
-                        "[SKILLS OK]",
-                        display_name,
-                        "sheet:",
-                        sheet_value,
-                        "attribute_sum:",
-                        attribute_sum,
-                        "display:",
-                        display_value,
-                    )
-            print("[SKILLS] skill value:", display_name, attributes[:4], "->", display_value)
-            print(
-                "[SKILLS ROW]",
-                f"row={source_info.get('row')}",
-                f"name={display_name}",
-                f"value={display_value}",
-            )
+                    if self.skills_debug_sources:
+                        print(
+                            "[SKILLS OK]",
+                            display_name,
+                            "sheet:",
+                            sheet_value,
+                            "attribute_sum:",
+                            attribute_sum,
+                            "display:",
+                            display_value,
+                        )
+            if self.skills_debug_sources:
+                print("[SKILLS] skill value:", display_name, attributes[:4], "->", display_value)
+                print(
+                    "[SKILLS ROW]",
+                    f"row={source_info.get('row')}",
+                    f"name={display_name}",
+                    f"value={display_value}",
+                )
             slot_values = source_info.get("display_attribute_slots", [])
             if not isinstance(slot_values, list) or len(slot_values) < 4:
                 row_value = source_info.get("row")
@@ -9108,9 +9126,41 @@ class MainWindow(QMainWindow):
         new_value = "" if value is None else str(value)
         print(f"[{tag}] field={field_key} cell={cell_ref} value={new_value}")
         self.loader.set_cell_value(sheet_name, cell_ref, new_value)
-        if (self._character_edit_cfg or {}).get("save_on_change", True):
-            self.loader.save_active_character_json()
-            print("[CHARACTER SAVE] active character saved")
+        self._recalculate_after_user_edit(
+            reason=f"{sheet_name}!{cell_ref}",
+            save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+            rerender=True,
+        )
+
+    def _recalculate_after_user_edit(self, reason="", save=True, rerender=True):
+        if self._recalc_in_progress:
+            return
+        if not isinstance(self.loader.cell_cache, dict):
+            return
+        self._recalc_in_progress = True
+        try:
+            reason_text = str(reason or "").strip() or "unknown"
+            print(f"[RECALC] after user edit: {reason_text}")
+            self.parser.recalculate_cache(self.loader.cell_cache)
+            if save:
+                self.loader.save_active_character_json()
+                print("[RECALC] saved active character")
+            if rerender:
+                if self.current_main_section == "character":
+                    self.show_main_section("character")
+                    print("[RECALC] refreshed section: character")
+                if (
+                    hasattr(self, "calculation_center_dialog")
+                    and self.calculation_center_dialog is not None
+                    and self.calculation_center_dialog.isVisible()
+                ):
+                    try:
+                        self.calculation_center_dialog.refresh_data()
+                        print("[RECALC] refreshed calculation center")
+                    except Exception:
+                        pass
+        finally:
+            self._recalc_in_progress = False
 
     def _character_edit_config(self):
         cfg = self.main_ui_layout_config.get("character_screen", {})
@@ -11200,6 +11250,20 @@ class MainWindow(QMainWindow):
         self.refresh_character_cache_list()
         print("[CHARACTER] cache list refreshed")
 
+    def open_calculation_center(self):
+        if self.calculation_center_dialog is not None and self.calculation_center_dialog.isVisible():
+            self.calculation_center_dialog.raise_()
+            self.calculation_center_dialog.activateWindow()
+            return
+        self.calculation_center_dialog = CalculationCenterDialog(
+            self,
+            self.loader,
+            self.parser,
+        )
+        self.calculation_center_dialog.show()
+        self.calculation_center_dialog.raise_()
+        self.calculation_center_dialog.activateWindow()
+
     def reset_character_runtime_state(self):
         if hasattr(self, "tabs") and self.tabs is not None:
             self.tabs.clear()
@@ -11310,10 +11374,11 @@ class MainWindow(QMainWindow):
                         f'[{tag}] row={row} field={field} cell={cell_ref} old="{old_value}" new="{new_value}"'
                     )
                     self.loader.set_cell_value(sheet_name, cell_ref, str(new_value))
-                    if (self._character_edit_cfg or {}).get("save_on_change", True):
-                        self.loader.save_active_character_json()
-                        self._character_debug("[CHARACTER SAVE] active character saved")
-                    self.show_main_section("character")
+                    self._recalculate_after_user_edit(
+                        reason=f"{sheet_name}!{cell_ref}",
+                        save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                        rerender=True,
+                    )
                     return True
                 if bool(obj.property("character_paradigm_name_edit")):
                     cell_ref = str(obj.property("character_paradigm_cell_ref") or "")
@@ -11332,10 +11397,11 @@ class MainWindow(QMainWindow):
                         f'[CHARACTER PARADIGM EDIT] field=name index={index} cell={cell_ref} old="{old_value}" new="{new_value}"'
                     )
                     self.loader.set_cell_value(sheet_name, cell_ref, str(new_value))
-                    if (self._character_edit_cfg or {}).get("save_on_change", True):
-                        self.loader.save_active_character_json()
-                        self._character_debug("[CHARACTER SAVE] active character saved")
-                    self.show_main_section("character")
+                    self._recalculate_after_user_edit(
+                        reason=f"{sheet_name}!{cell_ref}",
+                        save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                        rerender=True,
+                    )
                     return True
             if event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonDblClick):
                 if bool(obj.property("character_wellbeing_toggle")) and self._character_edit_allowed("wellbeing"):
@@ -11349,13 +11415,14 @@ class MainWindow(QMainWindow):
                     new_active = not active
                     new_value = "x" if new_active else ""
                     self.loader.set_cell_value(sheet_name, marker_cell, new_value)
-                    if (self._character_edit_cfg or {}).get("save_on_change", True):
-                        self.loader.save_active_character_json()
-                        self._character_debug("[CHARACTER SAVE] active character saved")
+                    self._recalculate_after_user_edit(
+                        reason=f"{sheet_name}!{marker_cell}",
+                        save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                        rerender=True,
+                    )
                     self._character_debug(
                         f"[CHARACTER WELLBEING EDIT] row={row} marker_cell={marker_cell} active={new_active}"
                     )
-                    self.show_main_section("character")
                     return True
                 if (
                     event.type() == QEvent.MouseButtonPress
@@ -11373,13 +11440,14 @@ class MainWindow(QMainWindow):
                         return True
                     new_active = not active
                     self.loader.set_cell_value(sheet_name, cell_ref, "X" if new_active else "")
-                    if (self._character_edit_cfg or {}).get("save_on_change", True):
-                        self.loader.save_active_character_json()
-                        self._character_debug("[CHARACTER SAVE] active character saved")
+                    self._recalculate_after_user_edit(
+                        reason=f"{sheet_name}!{cell_ref}",
+                        save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                        rerender=True,
+                    )
                     self._character_paradigm_debug(
                         f"[CHARACTER PARADIGM TOGGLE] row={row_id} index={index} marker={marker_index} cell={cell_ref} active={new_active}"
                     )
-                    self.show_main_section("character")
                     return True
         return super().eventFilter(obj, event)
 
