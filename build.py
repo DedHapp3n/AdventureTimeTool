@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from app_logger import log_info, log_warning
+
 
 APP_NAME = "AdventureTimeTool"
 
@@ -18,7 +20,7 @@ def main() -> int:
     try:
         import PyInstaller  # noqa: F401
     except Exception:
-        print("Bitte installieren: pip install pyinstaller")
+        log_warning("build", "Bitte installieren: pip install pyinstaller")
         return 1
 
     root = Path(__file__).resolve().parent
@@ -35,7 +37,7 @@ def main() -> int:
         "main.py",
     ]
 
-    print("[BUILD]", " ".join(cmd))
+    log_info("build", " ".join(cmd))
     exit_code = subprocess.call(cmd, cwd=str(root))
     if exit_code != 0:
         return exit_code
@@ -60,12 +62,12 @@ def _post_build_theme_check(root: Path) -> None:
     dist_base = root / "dist" / APP_NAME
     dist_themes = _discover_themes(dist_base)
     if dist_themes:
-        print("[BUILD CHECK] themes copied:", ", ".join(dist_themes))
+        log_info("build", f"themes copied: {', '.join(dist_themes)}")
     else:
-        print("[BUILD CHECK] themes copied: <none>")
+        log_info("build", "themes copied: <none>")
     missing = [name for name in src_themes if name not in dist_themes]
     if missing:
-        print("[BUILD CHECK][WARN] missing themes in dist:", ", ".join(missing))
+        log_warning("build", f"missing themes in dist: {', '.join(missing)}")
 
 
 if __name__ == "__main__":
