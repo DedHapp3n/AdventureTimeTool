@@ -972,7 +972,8 @@
         "bonus_label_text": "Bonus",
         "value_cell": "",
         "bonus_cell": "",
-        "scan_enabled": true
+        "scan_enabled": true,
+        "bonus_editable": true
       }
     }
   }
