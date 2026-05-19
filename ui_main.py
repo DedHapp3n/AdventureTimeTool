@@ -1059,16 +1059,6 @@ class MainWindow(QMainWindow):
 
         self.update_settings_checkbox_icon()
 
-    def _get_cache_value_for_front_parser(self, sheet_name, cell_ref):
-        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
-        cell_data = sheet_cache.get(cell_ref)
-        if not isinstance(cell_data, dict):
-            return None
-        formula = cell_data.get("formula")
-        if isinstance(formula, str) and formula.startswith("="):
-            return formula
-        return cell_data.get("value")
-
     def _get_character_front_value(self, sheet_name, cell_ref, fallback="-"):
         sheet_cache = self.loader.cell_cache.get(sheet_name, {})
         cell_data = sheet_cache.get(cell_ref)
@@ -1907,9 +1897,6 @@ class MainWindow(QMainWindow):
             total += self.get_attribute_value_by_key(attribute_key)
         return int(total)
 
-    def calculate_skill_value(self, skill, attribute_map):
-        return self.calculate_skill_attribute_sum(skill, attribute_map)
-
     def normalize_skill_name(self, text):
         normalized = str(text or "").strip().lower()
         normalized = (
@@ -1921,9 +1908,6 @@ class MainWindow(QMainWindow):
         normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
         normalized = re.sub(r"\s+", " ", normalized).strip()
         return normalized
-
-    def _skill_name_matches(self, wanted_name, cached_name):
-        return self.get_skill_name_match_quality(wanted_name, cached_name) in ("exact", "legacy")
 
     def get_skill_name_match_quality(self, wanted_name, cached_name):
         wanted = self.normalize_skill_name(wanted_name)
@@ -3155,21 +3139,6 @@ class MainWindow(QMainWindow):
             self.show_main_section("skills")
         except Exception as exc:
             log_error("skills", f"edit text failed: {exc}")
-
-    def _estimate_skill_text_height(self, text, width, font_size, min_row_h, max_row_h=0, max_lines=0):
-        safe_width = max(20, int(width) - 8)
-        font = self.font()
-        font.setPointSize(max(8, int(font_size)))
-        metrics = QFontMetrics(font)
-        rect = metrics.boundingRect(QRect(0, 0, safe_width, 5000), int(Qt.TextWordWrap), str(text or ""))
-        text_height = max(metrics.lineSpacing() + 6, rect.height() + 10)
-        if int(max_lines) > 0:
-            line_cap = (metrics.lineSpacing() * int(max_lines)) + 10
-            text_height = min(text_height, line_cap)
-        row_height = max(int(min_row_h), text_height)
-        if int(max_row_h) > 0:
-            row_height = min(row_height, int(max_row_h))
-        return row_height
 
     def build_roll20_command(self, dice_count, keep_mode, skill_bonus, manual_bonus, extra_bonuses=None):
         try:
@@ -9653,9 +9622,6 @@ class MainWindow(QMainWindow):
         col = self._col_letters_to_index(match.group(1))
         return row, col
 
-    def _normalize_sheet_text(self, value):
-        return str(value or "").strip().lower()
-
     def _analyze_character_paradigm_area(self, default_sheet="Charakterbogen"):
         sheet_name = str(default_sheet or "Charakterbogen")
         sheet_cache = self.loader.cell_cache.get(sheet_name, {})
@@ -11778,11 +11744,6 @@ class MainWindow(QMainWindow):
         log_debug("character", f"import loaded: {self.loader.current_character_name}")
         self.show_main_section("character")
 
-    def load_selected_character_cache(self):
-        if self.settings_character_combo is None:
-            return
-        self.on_settings_character_selection_changed(self.settings_character_combo.currentIndex())
-
     def on_settings_character_selection_changed(self, index):
         if self.settings_character_combo is None:
             return
@@ -12453,15 +12414,6 @@ class MainWindow(QMainWindow):
         if cell_data.get("formula"):
             return cell_data["formula"]
         return cell_data.get("value")
-
-    def get_table_for_sheet(self, sheet_name):
-        for i in range(self.tabs.count()):
-            if self.tabs.tabText(i) == sheet_name:
-                tab = self.tabs.widget(i)
-                if tab is None or tab.layout() is None:
-                    return None
-                return tab.layout().itemAt(0).widget()
-        return None
 
     def resolve_sheet_name(self, sheet_name):
         for i in range(self.tabs.count()):
