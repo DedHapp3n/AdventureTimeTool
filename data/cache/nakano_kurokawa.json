@@ -1212,6 +1212,42 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "Q25": {
+        "value": "X",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA40": {
+        "value": "x",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA41": {
+        "value": "x",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA42": {
+        "value": "x",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA43": {
+        "value": "x",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "BeastForm": {
@@ -4229,6 +4265,24 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "T13": {
+        "value": "Random Beutel Korvessa ???",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T15": {
+        "value": "Potion Miau ???",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T17": {
+        "value": "Gürtel Maus ???",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Ausrüstung": {
@@ -5782,7 +5836,7 @@
             "text": "Etikette und Redegewandheit",
             "skill_key": "allgemein/etikette_und_redegewandheit",
             "skill_name": "Etikette und Redegewandheit",
-            "value": "1"
+            "value": "2"
           },
           {
             "text": "Klettern , Athletik , Ini-Wurf",
@@ -5830,13 +5884,13 @@
             "text": "Mustern und Menschenkenntnis",
             "skill_key": "allgemein/mustern_und_menschenkenntnis",
             "skill_name": "Mustern und Menschenkenntnis",
-            "value": "5"
+            "value": "6"
           },
           {
             "text": "Handel und Wertgegenstände",
             "skill_key": "wissen/handel_und_wertgegenstaende",
             "skill_name": "Handel und Wertgegenstände",
-            "value": "1"
+            "value": "2"
           },
           {
             "text": "Schreiber, Maler und Kartograph",
@@ -5851,10 +5905,10 @@
             "value": "2"
           },
           {
-            "text": "",
-            "skill_key": "",
-            "skill_name": "",
-            "value": ""
+            "text": "Ritualistik",
+            "skill_key": "handwerk/ritualistik",
+            "skill_name": "Ritualistik",
+            "value": "1"
           },
           {
             "text": "",

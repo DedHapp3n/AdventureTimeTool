@@ -945,6 +945,35 @@
         "fallback_text": "X",
         "icon_padding": 4
       }
+    },
+    "initiative_panel": {
+      "enabled": true,
+      "x": 363,
+      "y": 430,
+      "w": 180,
+      "h": 170,
+      "title": "Initiative",
+      "font_size": 16,
+      "title_font_size": 18,
+      "color": "#f2d28b",
+      "value_color": "#7fd0ff",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "button_text": "Ini-Wurf",
+      "button_asset": "buttons/menu_button_medium.png",
+      "button_font_size": 16,
+      "button_x": 12,
+      "button_y": 120,
+      "button_w": 150,
+      "button_h": 28,
+      "data": {
+        "sheet": "Charakterbogen",
+        "label_text": "Initiative",
+        "bonus_label_text": "Bonus",
+        "value_cell": "",
+        "bonus_cell": "",
+        "scan_enabled": true
+      }
     }
   }
 }

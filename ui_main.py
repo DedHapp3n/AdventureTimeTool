@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
-    QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog,
+    QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog, QGroupBox,
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QEvent, QRect, QTimer
@@ -261,14 +261,41 @@ class MainWindow(QMainWindow):
         return {}
 
     def load_theme_config(self):
-        default = {"active_theme": "diablo", "themes": ["diablo", "nature"]}
         loaded, _ = load_settings()
         self.settings = loaded
-        theme = str(loaded.get("theme", "diablo") or "diablo")
-        themes = default["themes"]
-        if theme not in themes:
-            themes = [theme] + [t for t in default["themes"] if t != theme]
-        return {"active_theme": theme, "themes": themes}
+        discovered_themes = self.discover_available_themes()
+
+        saved_theme = str(loaded.get("theme", "") or "").strip()
+        active_theme = saved_theme if saved_theme in discovered_themes else ""
+        if not active_theme:
+            active_theme = "diablo" if "diablo" in discovered_themes else (discovered_themes[0] if discovered_themes else "diablo")
+
+        saved_themes = loaded.get("themes", [])
+        normalized_saved = saved_themes if isinstance(saved_themes, list) else []
+        normalized_saved = [str(item) for item in normalized_saved if str(item).strip()]
+        if normalized_saved != discovered_themes or loaded.get("theme") != active_theme:
+            self.settings["themes"] = discovered_themes
+            self.settings["theme"] = active_theme
+            save_settings(self.settings)
+
+        print(f"[THEME] discovered themes: {discovered_themes}")
+        print(f"[THEME] active theme: {active_theme}")
+        return {"active_theme": active_theme, "themes": discovered_themes}
+
+    def discover_available_themes(self):
+        themes_dir = resource_path("assets/themes")
+        discovered = []
+        try:
+            if themes_dir.exists():
+                for child in themes_dir.iterdir():
+                    if child.is_dir() and (child / "ui_layout.json").exists():
+                        discovered.append(child.name)
+        except Exception:
+            pass
+        discovered = sorted(set(discovered))
+        if not discovered:
+            discovered = ["diablo"]
+        return discovered
 
     def save_theme_config(self):
         try:
@@ -736,13 +763,14 @@ class MainWindow(QMainWindow):
         bg_label.lower()
 
         nav_style = self.theme_style.get("nav_button", {})
-        text_color = str(nav_style.get("active_color", "#f2d28b"))
+        text_color = str(cfg.get("color", nav_style.get("active_color", "#f2d28b")))
+        font_size = int(cfg.get("font_size", 20))
         text_label = QLabel(container)
         text_label.setGeometry(0, 0, w, h)
         text_label.setText(text)
         text_label.setAlignment(Qt.AlignCenter)
         text_label.setStyleSheet(
-            f"background: transparent; color: {text_color}; font-size: 20px; font-weight: 700;"
+            f"background: transparent; color: {text_color}; font-size: {font_size}px; font-weight: 700;"
         )
         text_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
@@ -2522,15 +2550,561 @@ class MainWindow(QMainWindow):
                     info["ignored_formula_cell_value"] = formula_raw
 
         self.skill_source_infos[source_key] = info
-        self.log_skill_source_info(source_key, info)
+
+    def ensure_skill_source_infos_ready(self):
+        if isinstance(self.skill_source_infos, dict) and self.skill_source_infos:
+            return
+        skill_definitions = self.load_skill_definitions()
+        categories = skill_definitions.get("categories", [])
+        if not isinstance(categories, list):
+            categories = []
+        attribute_map = skill_definitions.get("attribute_map", {})
+        if not isinstance(attribute_map, dict):
+            attribute_map = {}
+        self.build_skill_source_infos(categories, attribute_map)
+
+    def find_initiative_skill_source_key(self):
+        self.ensure_skill_source_infos_ready()
+        if not isinstance(self.skill_source_infos, dict) or not self.skill_source_infos:
+            print("[CHARACTER INITIATIVE SOURCE] not found")
+            return None
+
+        def is_initiative_match(value):
+            text = str(value or "").strip().lower()
+            if not text:
+                return False
+            compact = text.replace("-", " ").replace("_", " ")
+            return ("ini wurf" in compact) or ("initiative" in compact)
+
+        matches = []
+        for source_key, info in self.skill_source_infos.items():
+            if not isinstance(info, dict):
+                continue
+            if info.get("row") is None:
+                continue
+            source_key_text = str(source_key or "")
+            display_name = str(info.get("display_name", "") or "")
+            ui_name = str(info.get("ui_name", "") or "")
+            cache_name = str(info.get("cache_name", "") or "")
+            skill_id = str(info.get("skill_id", "") or "")
+            skill_name = str(info.get("skill_name", "") or "")
+
+            search_fields = [display_name, ui_name, cache_name, skill_id, source_key_text, skill_name]
+            if not any(is_initiative_match(v) for v in search_fields):
+                continue
+
+            category_id = str(info.get("category_id", "") or "").strip().lower()
+            source_key_norm = source_key_text.strip().lower()
+            skill_id_norm = skill_id.strip().lower()
+            display_norm = display_name.strip().lower()
+            score = (
+                0 if category_id == "allgemein" else 1,
+                0 if ("klettern_athletik_ini_wurf" in source_key_norm or "klettern_athletik_ini_wurf" in skill_id_norm) else 1,
+                0 if ("klettern" in display_norm or "athletik" in display_norm) else 1,
+                source_key_norm,
+            )
+            matches.append((score, source_key_text, info))
+
+        if not matches:
+            print("[CHARACTER INITIATIVE SOURCE] not found")
+            return None
+        matches.sort(key=lambda it: it[0])
+        _, found, found_info = matches[0]
         print(
-            "[SKILLS VISIBLE SOURCE]",
-            source_key,
-            f"visible_source={info.get('visible_source')}",
-            f"match={info.get('match_type')}",
-            f'display="{info.get("display_name")}"',
+            "[CHARACTER INITIATIVE SOURCE]",
+            f"found source_key={found}",
+            f'display_name="{found_info.get("display_name", "")}"',
+            f'value={found_info.get("display_value", "-")}',
         )
-        return info
+        return found
+
+    def open_character_initiative_roll(self):
+        initiative_info = self.get_character_initiative_data()
+        if not initiative_info or initiative_info.get("roll_value") is None:
+            print("[CHARACTER INITIATIVE ERROR] initiative value not found")
+            QMessageBox.information(
+                self,
+                "Initiative",
+                "Initiative-Wert nicht gefunden. Prüfe Charakterbogen-Initiative-Feld.",
+            )
+            return
+        print(
+            "[CHARACTER INITIATIVE ROLL]",
+            f'source={initiative_info.get("source", "-")}',
+            f'roll={initiative_info.get("roll_value", "-")}',
+            "dialog=character_initiative",
+        )
+        self.open_character_value_roll_dialog("Initiative", initiative_info)
+
+    def _parse_cell_ref(self, cell_ref):
+        match = re.fullmatch(r"([A-Z]+)([0-9]+)", str(cell_ref or "").strip().upper())
+        if not match:
+            return None, None
+        return match.group(1), int(match.group(2))
+
+    def _get_neighbor_value_cell(self, sheet_name, base_col, row, max_offset=4):
+        col_index = self._col_letters_to_index(base_col)
+        if col_index < 0:
+            return ""
+        fallback_cell = ""
+        for offset in range(1, max_offset + 1):
+            candidate_col = self._col_index_to_letters(col_index + offset)
+            candidate_cell = f"{candidate_col}{row}"
+            if not fallback_cell:
+                fallback_cell = candidate_cell
+            candidate_value = str(self.get_cache_cell_value(sheet_name, candidate_cell, "") or "").strip()
+            if candidate_value:
+                return candidate_cell
+        return fallback_cell
+
+    def _get_character_initiative_panel_data_cfg(self):
+        character_screen = self.main_ui_layout_config.get("character_screen", {})
+        if not isinstance(character_screen, dict):
+            return {}
+        panel_cfg = character_screen.get("initiative_panel", {})
+        if not isinstance(panel_cfg, dict):
+            return {}
+        data_cfg = panel_cfg.get("data", {})
+        return data_cfg if isinstance(data_cfg, dict) else {}
+
+    def _to_float_or_none(self, value):
+        text = str(value if value is not None else "").strip()
+        if not text:
+            return None
+        cleaned = text.replace(" ", "").replace(",", ".")
+        try:
+            return float(cleaned)
+        except Exception:
+            return None
+
+    def _round_half_up(self, number):
+        try:
+            numeric = float(number)
+        except Exception:
+            return 0
+        if numeric >= 0:
+            return int(math.floor(numeric + 0.5))
+        return int(math.ceil(numeric - 0.5))
+
+    def _is_initiative_text(self, value):
+        normalized = self._norm_match_text(value)
+        if not normalized:
+            return False
+        compact = normalized.replace("-", " ").replace("_", " ")
+        return ("ini wurf" in compact) or ("initiative" in compact)
+
+    def _extract_numeric_value(self, raw_value):
+        number = self._to_float_or_none(raw_value)
+        if number is None:
+            return None
+        return number
+
+    def _initiative_data_from_skill_sources(self):
+        self.ensure_skill_source_infos_ready()
+        if not isinstance(self.skill_source_infos, dict):
+            return None
+        for source_key, info in self.skill_source_infos.items():
+            if not isinstance(info, dict):
+                continue
+            candidates = [
+                info.get("display_name", ""),
+                info.get("skill_name", ""),
+                info.get("ui_name", ""),
+                info.get("cache_name", ""),
+            ]
+            if not any(self._is_initiative_text(item) for item in candidates):
+                continue
+            raw_number = self._extract_numeric_value(info.get("calculated_value", None))
+            raw_text = info.get("calculated_value", None)
+            if raw_number is None:
+                raw_text = str(info.get("display_value", "") or "").strip()
+                raw_number = self._extract_numeric_value(raw_text)
+            if raw_number is None:
+                continue
+            roll_value = self._round_half_up(raw_number)
+            return {
+                "source": f"skills:{source_key}",
+                "raw_value": str(raw_text if raw_text is not None else raw_number),
+                "value": raw_number,
+                "bonus": 0,
+                "roll_value": roll_value,
+                "debug": f"skill_source_key={source_key}",
+            }
+        return None
+
+    def _initiative_data_from_fertigkeiten_cache(self):
+        mapping = self.get_skill_sheet_mapping_config()
+        sheet_name = str(mapping.get("sheet", "Fertigkeiten"))
+        name_col = str(mapping.get("name_col", "D")).strip().upper() or "D"
+        value_col = str(mapping.get("value_formula_col", "AH")).strip().upper() or "AH"
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        if not isinstance(sheet_cache, dict) or not sheet_cache:
+            return None
+
+        row = None
+        matched_name = ""
+        for cell_ref in sorted(sheet_cache.keys()):
+            match = re.fullmatch(rf"{name_col}([0-9]+)", str(cell_ref), flags=re.IGNORECASE)
+            if not match:
+                continue
+            current_name = str(self.get_cache_cell_value(sheet_name, cell_ref, "") or "")
+            if self._is_initiative_text(current_name):
+                row = int(match.group(1))
+                matched_name = current_name
+                break
+        if row is None:
+            return None
+
+        raw_text = self.get_cache_cell_value(sheet_name, f"{value_col}{row}", "")
+        raw_number = self._extract_numeric_value(raw_text)
+        if raw_number is None:
+            base_index = self._col_letters_to_index(name_col)
+            for offset in range(1, 12):
+                col = self._col_index_to_letters(base_index + offset)
+                candidate_cell = f"{col}{row}"
+                candidate_raw = self.get_cache_cell_value(sheet_name, candidate_cell, "")
+                candidate_number = self._extract_numeric_value(candidate_raw)
+                if candidate_number is None:
+                    continue
+                raw_text = candidate_raw
+                raw_number = candidate_number
+                break
+        if raw_number is None:
+            return None
+        roll_value = self._round_half_up(raw_number)
+        return {
+            "source": f"sheet:{sheet_name}:{name_col}{row}",
+            "raw_value": str(raw_text if raw_text is not None else raw_number),
+            "value": raw_number,
+            "bonus": 0,
+            "roll_value": roll_value,
+            "debug": f'matched_name="{matched_name}"',
+        }
+
+    def _build_initiative_data_result(self, source, raw_value, raw_bonus, debug_text=""):
+        value_number = self._extract_numeric_value(raw_value)
+        if value_number is None:
+            return None
+        bonus_number = self._extract_numeric_value(raw_bonus)
+        rounded_bonus = self._round_half_up(bonus_number) if bonus_number is not None else 0
+        roll_value = self._round_half_up(value_number + rounded_bonus)
+        return {
+            "source": source,
+            "raw_value": str(raw_value if raw_value is not None else ""),
+            "value": value_number,
+            "bonus": rounded_bonus,
+            "raw_bonus": str(raw_bonus if raw_bonus is not None else ""),
+            "roll_value": roll_value,
+            "debug": debug_text,
+        }
+
+    def _initiative_data_from_config_cells(self):
+        data_cfg = self._get_character_initiative_panel_data_cfg()
+        sheet_name = str(data_cfg.get("sheet", "Charakterbogen") or "Charakterbogen")
+        value_cell = str(data_cfg.get("value_cell", "") or "").strip().upper()
+        bonus_cell = str(data_cfg.get("bonus_cell", "") or "").strip().upper()
+        if not value_cell:
+            return None
+        raw_value = self.get_cache_cell_value(sheet_name, value_cell, "")
+        raw_bonus = self.get_cache_cell_value(sheet_name, bonus_cell, "") if bonus_cell else ""
+        return self._build_initiative_data_result(
+            f"character:{value_cell}",
+            raw_value,
+            raw_bonus,
+            debug_text=f"config_cells value_cell={value_cell} bonus_cell={bonus_cell or '-'}",
+        )
+
+    def find_character_initiative_cells(self):
+        data_cfg = self._get_character_initiative_panel_data_cfg()
+        sheet_name = str(data_cfg.get("sheet", "Charakterbogen") or "Charakterbogen")
+        if not bool(data_cfg.get("scan_enabled", True)):
+            return None
+        initiative_label = self._norm_match_text(data_cfg.get("label_text", "Initiative")).replace(":", "")
+        bonus_label = self._norm_match_text(data_cfg.get("bonus_label_text", "Bonus")).replace(":", "")
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        if not isinstance(sheet_cache, dict) or not sheet_cache:
+            return None
+
+        candidates = []
+        for cell_ref in sheet_cache.keys():
+            col, row = self._parse_cell_ref(cell_ref)
+            if not col or not row:
+                continue
+            cell_value = str(self.get_cache_cell_value(sheet_name, cell_ref, "") or "")
+            normalized = self._norm_match_text(cell_value).replace(":", "")
+            if initiative_label and normalized == initiative_label:
+                candidates.append((str(cell_ref).strip().upper(), col, row))
+            elif "initiative" in normalized and "ini-wurf" not in normalized and "athletik" not in normalized and "klettern" not in normalized:
+                candidates.append((str(cell_ref).strip().upper(), col, row))
+
+        best = None
+        for label_cell, label_col, label_row in candidates:
+            base_col_index = self._col_letters_to_index(label_col)
+            found_value_cell = ""
+            found_value = None
+            for offset in range(1, 7):
+                candidate_col = self._col_index_to_letters(base_col_index + offset)
+                candidate_cell = f"{candidate_col}{label_row}"
+                candidate_raw = self.get_cache_cell_value(sheet_name, candidate_cell, "")
+                candidate_num = self._extract_numeric_value(candidate_raw)
+                if candidate_num is None:
+                    continue
+                found_value_cell = candidate_cell
+                found_value = candidate_num
+                break
+            if not found_value_cell:
+                continue
+
+            bonus_label_cell = ""
+            bonus_cell = ""
+            bonus_value = None
+            for row_offset in range(0, 3):
+                row = label_row + row_offset
+                for col_offset in range(0, 3):
+                    candidate_label_col = self._col_index_to_letters(base_col_index + col_offset)
+                    candidate_label_cell = f"{candidate_label_col}{row}"
+                    candidate_label_text = str(self.get_cache_cell_value(sheet_name, candidate_label_cell, "") or "")
+                    normalized_bonus_label = self._norm_match_text(candidate_label_text).replace(":", "")
+                    if normalized_bonus_label != bonus_label:
+                        continue
+                    bonus_label_cell = candidate_label_cell
+                    bonus_col_index = self._col_letters_to_index(candidate_label_col)
+                    for scan_offset in range(1, 7):
+                        c_col = self._col_index_to_letters(bonus_col_index + scan_offset)
+                        c_cell = f"{c_col}{row}"
+                        c_raw = self.get_cache_cell_value(sheet_name, c_cell, "")
+                        c_num = self._extract_numeric_value(c_raw)
+                        if c_num is None:
+                            continue
+                        bonus_cell = c_cell
+                        bonus_value = c_num
+                        break
+                    if bonus_cell:
+                        break
+                if bonus_cell:
+                    break
+
+            value_score = 1 if found_value is not None and 0 <= float(found_value) <= 50 else 0
+            bonus_score = 1 if bonus_value is not None and 0 <= float(bonus_value) <= 50 else 0
+            score = value_score * 2 + bonus_score
+            print(
+                "[CHARACTER INITIATIVE SCAN]",
+                f"candidate label={label_cell}",
+                f"value_cell={found_value_cell}",
+                f"value={found_value}",
+                f"bonus_cell={bonus_cell or '-'}",
+                f"bonus={bonus_value if bonus_value is not None else '-'}",
+                f"score={score}",
+            )
+            candidate = {
+                "sheet": sheet_name,
+                "label_cell": label_cell,
+                "value_cell": found_value_cell,
+                "bonus_label_cell": bonus_label_cell,
+                "bonus_cell": bonus_cell,
+                "_score": score,
+            }
+            if best is None or score > best["_score"]:
+                best = candidate
+
+        if best is None:
+            return None
+        best.pop("_score", None)
+        return best
+
+    def get_character_initiative_roll_value(self):
+        return self.get_character_initiative_data()
+
+    def get_character_initiative_data(self):
+        result = self._initiative_data_from_config_cells()
+        if result is None:
+            cell_info = self.find_character_initiative_cells()
+            if isinstance(cell_info, dict):
+                sheet_name = str(cell_info.get("sheet", "Charakterbogen"))
+                value_cell = str(cell_info.get("value_cell", "") or "").strip().upper()
+                bonus_cell = str(cell_info.get("bonus_cell", "") or "").strip().upper()
+                if value_cell:
+                    raw_value = self.get_cache_cell_value(sheet_name, value_cell, "")
+                    raw_bonus = self.get_cache_cell_value(sheet_name, bonus_cell, "") if bonus_cell else ""
+                    result = self._build_initiative_data_result(
+                        f"character:{value_cell}",
+                        raw_value,
+                        raw_bonus,
+                        debug_text=f"label_cell={cell_info.get('label_cell', '')}",
+                    )
+        if result is None:
+            result = self._initiative_data_from_skill_sources()
+            if result is None:
+                result = self._initiative_data_from_fertigkeiten_cache()
+            if result is not None:
+                print("[CHARACTER INITIATIVE WARNING] using skills fallback, character initiative field not found")
+
+        if result is None:
+            print("[CHARACTER INITIATIVE DATA] source=none raw=- value=- bonus=0 roll=-")
+            return {
+                "source": "none",
+                "raw_value": "-",
+                "value": None,
+                "bonus": 0,
+                "roll_value": None,
+                "debug": "not_found",
+            }
+
+        print(
+            "[CHARACTER INITIATIVE DATA]",
+            f"source={result.get('source', '-')}",
+            f"raw={result.get('raw_value', '-')}",
+            f"bonus={result.get('bonus', 0)}",
+            f"roll={result.get('roll_value', '-')}",
+        )
+        if str(result.get("source", "")).startswith("character:"):
+            fallback_skill = self._initiative_data_from_skill_sources()
+            if isinstance(fallback_skill, dict):
+                print(
+                    "[CHARACTER INITIATIVE NOTE]",
+                    f"skill_ini_wurf={fallback_skill.get('raw_value', '-')}",
+                    "ignored because character initiative field exists",
+                )
+        if "raw_bonus" not in result:
+            result["raw_bonus"] = str(result.get("bonus", 0))
+        return result
+
+    def open_character_value_roll_dialog(self, title, roll_info):
+        # Character-initiative dialog using direct character initiative value (not skill-source based).
+        if not isinstance(roll_info, dict):
+            return
+        base_value = self._safe_int(roll_info.get("roll_value", roll_info.get("value", 0)), 0)
+        display_title = str(title or "Wurf")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"{display_title} - Roll20")
+        dialog.setModal(True)
+        dialog.resize(620, 520)
+
+        layout = QVBoxLayout(dialog)
+        header = QLabel(display_title)
+        header.setStyleSheet("font-size: 20px; font-weight: 700;")
+        layout.addWidget(header)
+
+        raw_value_text = str(roll_info.get("raw_value", "-"))
+        raw_bonus_text = str(roll_info.get("raw_bonus", "0"))
+        info_label = QLabel(f"Wert: {raw_value_text}    Bonus: {raw_bonus_text}    Rollwert: {base_value}")
+        layout.addWidget(info_label)
+
+        counters_row = QHBoxLayout()
+        advantage_spin = QSpinBox(dialog)
+        advantage_spin.setRange(0, 10)
+        disadvantage_spin = QSpinBox(dialog)
+        disadvantage_spin.setRange(0, 10)
+        manual_bonus_spin = QSpinBox(dialog)
+        manual_bonus_spin.setRange(-100, 100)
+        counters_row.addWidget(QLabel("Vorteile:"))
+        counters_row.addWidget(advantage_spin)
+        counters_row.addSpacing(16)
+        counters_row.addWidget(QLabel("Nachteile:"))
+        counters_row.addWidget(disadvantage_spin)
+        counters_row.addSpacing(16)
+        counters_row.addWidget(QLabel("Manueller Bonus:"))
+        counters_row.addWidget(manual_bonus_spin)
+        counters_row.addStretch(1)
+        layout.addLayout(counters_row)
+
+        wellbeing_box = QGroupBox("Wohlbefinden-Vorschläge", dialog)
+        wellbeing_layout = QVBoxLayout(wellbeing_box)
+        wellbeing_checks = []
+        try:
+            wellbeing_suggestions = self.get_active_wellbeing_roll_suggestions(
+                {
+                    "display_name": "Initiative",
+                    "display_specialization": "",
+                    "display_attribute_slots": ["R", "I"],
+                }
+            )
+        except Exception as exc:
+            wellbeing_suggestions = []
+            print("[ROLL WELLBEING SUGGESTIONS ERROR]", str(exc))
+        if not isinstance(wellbeing_suggestions, list):
+            wellbeing_suggestions = []
+
+        if wellbeing_suggestions:
+            for suggestion in wellbeing_suggestions:
+                label = str(suggestion.get("label", "Wohlbefinden"))
+                checkbox = QCheckBox(label, wellbeing_box)
+                wellbeing_layout.addWidget(checkbox)
+                wellbeing_checks.append((checkbox, suggestion))
+        else:
+            wellbeing_layout.addWidget(QLabel("Keine aktiven Vorschläge"))
+        layout.addWidget(wellbeing_box)
+
+        preview_title = QLabel("Roll20-Befehl:")
+        layout.addWidget(preview_title)
+        preview = QLineEdit(dialog)
+        preview.setReadOnly(True)
+        layout.addWidget(preview)
+
+        def compute_effective_roll_parts():
+            total_advantage = self._safe_int(advantage_spin.value(), 0)
+            total_disadvantage = self._safe_int(disadvantage_spin.value(), 0)
+            extra_bonuses = []
+            for checkbox, suggestion in wellbeing_checks:
+                if not checkbox.isChecked():
+                    continue
+                effect = suggestion.get("suggested_effect", {})
+                if not isinstance(effect, dict):
+                    continue
+                total_advantage += self._safe_int(effect.get("advantage", 0), 0)
+                total_disadvantage += self._safe_int(effect.get("disadvantage", 0), 0)
+                bonus = self._safe_int(effect.get("bonus", 0), 0)
+                if bonus:
+                    extra_bonuses.append(bonus)
+
+            delta = total_advantage - total_disadvantage
+            if delta > 0:
+                dice_count = 1 + delta
+                keep_mode = "kh1"
+            elif delta < 0:
+                dice_count = 1 + abs(delta)
+                keep_mode = "kl1"
+            else:
+                dice_count = 1
+                keep_mode = ""
+            return dice_count, keep_mode, extra_bonuses
+
+        def refresh_preview():
+            dice_count, keep_mode, extra_bonuses = compute_effective_roll_parts()
+            command = self.build_roll20_command(
+                dice_count,
+                keep_mode,
+                base_value,
+                manual_bonus_spin.value(),
+                extra_bonuses=extra_bonuses,
+            )
+            preview.setText(command)
+
+        refresh_preview()
+        advantage_spin.valueChanged.connect(refresh_preview)
+        disadvantage_spin.valueChanged.connect(refresh_preview)
+        manual_bonus_spin.valueChanged.connect(refresh_preview)
+        for checkbox, _ in wellbeing_checks:
+            checkbox.toggled.connect(refresh_preview)
+
+        button_row = QHBoxLayout()
+        copy_button = QPushButton("Kopieren", dialog)
+        close_button = QPushButton("Schließen", dialog)
+        button_row.addStretch(1)
+        button_row.addWidget(copy_button)
+        button_row.addWidget(close_button)
+        layout.addLayout(button_row)
+
+        def copy_command():
+            command_text = preview.text().strip()
+            if not command_text:
+                return
+            QApplication.clipboard().setText(command_text)
+
+        copy_button.clicked.connect(copy_command)
+        close_button.clicked.connect(dialog.accept)
+        dialog.exec()
 
     def log_skill_source_info(self, source_key, info):
         if not self.skills_debug_sources:
@@ -2987,6 +3561,107 @@ class MainWindow(QMainWindow):
             print("[PERK MATCH]", f'skill="{skill_name}"', "none")
         return matches
 
+    def filter_roll_suggestions_for_context(self, suggestions, roll_context=None):
+        if not isinstance(suggestions, list):
+            return []
+        context = str(roll_context or "").strip().lower()
+        if context != "initiative":
+            return suggestions
+
+        kept = []
+        dropped = 0
+        for suggestion in suggestions:
+            if not isinstance(suggestion, dict):
+                dropped += 1
+                continue
+            rule_id = self._norm_match_text(suggestion.get("rule_id", ""))
+            label = self._norm_match_text(suggestion.get("label", ""))
+            effect = self._norm_match_text(suggestion.get("source_effect", ""))
+            source_name = self._norm_match_text(suggestion.get("source_name", ""))
+            reason = None
+            if source_name == "flink":
+                reason = "flink_handled_as_fixed_bonus"
+            elif "balance" in rule_id:
+                reason = "balance_not_for_initiative"
+            elif rule_id == "flink_initiative_bonus":
+                reason = "flink_rule_fixed_bonus"
+            elif any(word in label for word in ("mobilität", "athletik", "bewegung", "parcour")):
+                reason = "athletic_mobility_only"
+            else:
+                combined = " ".join([rule_id, label])
+                if "initiative" in combined or "ini-wurf" in combined or "ini wurf" in combined:
+                    kept.append(suggestion)
+                else:
+                    reason = "not_explicit_initiative"
+            if reason is not None:
+                dropped += 1
+                print(
+                    "[ROLL SUGGESTION FILTER]",
+                    "context=initiative",
+                    f"drop rule={rule_id or '-'}",
+                    f"reason={reason}",
+                )
+        print(
+            "[ROLL SUGGESTION FILTER]",
+            "context=initiative",
+            f"kept={len(kept)}",
+            f"dropped={dropped}",
+        )
+        return kept
+
+    def get_fixed_roll_bonuses_for_context(self, skill_info, roll_context=None):
+        result = {"extra_bonuses": [], "lines": []}
+        context = str(roll_context or "").strip().lower()
+        if context != "initiative":
+            return result
+        try:
+            perk_rules_config = self.load_perk_rules_config()
+            rules = perk_rules_config.get("rules", [])
+            character_entries = self.collect_character_perk_entries()
+        except Exception:
+            return result
+        if not isinstance(rules, list) or not isinstance(character_entries, list):
+            return result
+
+        flink_rule = None
+        for rule in rules:
+            if not isinstance(rule, dict):
+                continue
+            rule_id = self._norm_match_text(rule.get("id", ""))
+            label = self._norm_match_text(rule.get("label", ""))
+            if rule_id == "flink_initiative_bonus" or ("flink" in label and "initiative" in label):
+                flink_rule = rule
+                break
+        if not isinstance(flink_rule, dict):
+            return result
+
+        has_flink = False
+        for entry in character_entries:
+            if not isinstance(entry, dict):
+                continue
+            if self._norm_match_text(entry.get("type", "")) != "perk":
+                continue
+            if "flink" in self._norm_match_text(entry.get("name", "")):
+                has_flink = True
+                break
+        if not has_flink:
+            return result
+
+        effect = flink_rule.get("suggested_effect", {})
+        if not isinstance(effect, dict):
+            effect = {}
+        try:
+            flat_bonus = int(effect.get("flat_bonus", effect.get("bonus", 0)) or 0)
+        except Exception:
+            flat_bonus = 0
+        if flat_bonus == 0:
+            return result
+
+        result["extra_bonuses"].append(flat_bonus)
+        result["lines"].append(f"Flink: Initiative +{flat_bonus} aktiv")
+        print(f"[ROLL FIXED BONUS] context=initiative source=Flink bonus={flat_bonus} auto=True")
+        return result
+
     def build_specialization_preview_text(self, full_text, max_chars):
         text = str(full_text or "").strip()
         if not text:
@@ -3152,10 +3827,12 @@ class MainWindow(QMainWindow):
         )
         self.open_skill_roll_dialog(source_key)
 
-    def open_skill_roll_dialog(self, source_key):
+    def open_skill_roll_dialog(self, source_key, roll_context=None):
         source_info = self.skill_source_infos.get(source_key)
         if not isinstance(source_info, dict) or source_info.get("row") is None:
             return
+        roll_context = str(roll_context or "").strip().lower() or None
+        is_initiative_context = roll_context == "initiative"
 
         display_name = str(source_info.get("display_name", ""))
         specialization_text = str(source_info.get("display_specialization", "") or "")
@@ -3250,10 +3927,13 @@ class MainWindow(QMainWindow):
         )
 
         specialization_items = self.split_specialization_text(specialization_text)
+        if is_initiative_context:
+            specialization_items = []
         skill_info_for_perks = {
             "display_name": display_name,
             "display_specialization": specialization_text,
             "source_key": source_key,
+            "display_value": source_info.get("display_value", "0"),
         }
         try:
             perk_rules_config = self.load_perk_rules_config()
@@ -3269,6 +3949,21 @@ class MainWindow(QMainWindow):
             print("[ROLL PERK SUGGESTIONS ERROR]", str(exc))
         if not isinstance(perk_suggestions, list):
             perk_suggestions = []
+        perk_suggestions = self.filter_roll_suggestions_for_context(perk_suggestions, roll_context=roll_context)
+        fixed_bonus_data = self.get_fixed_roll_bonuses_for_context(skill_info_for_perks, roll_context=roll_context)
+        if not isinstance(fixed_bonus_data, dict):
+            fixed_bonus_data = {"extra_bonuses": [], "lines": []}
+        fixed_bonus_lines = fixed_bonus_data.get("lines", [])
+        fixed_extra_bonuses = fixed_bonus_data.get("extra_bonuses", [])
+        if not isinstance(fixed_bonus_lines, list):
+            fixed_bonus_lines = []
+        if not isinstance(fixed_extra_bonuses, list):
+            fixed_extra_bonuses = []
+        if is_initiative_context:
+            perk_suggestions = [
+                s for s in perk_suggestions
+                if self._norm_match_text(s.get("rule_id", "")) != "flink_initiative_bonus"
+            ]
         try:
             wellbeing_suggestions = self.get_active_wellbeing_roll_suggestions(
                 {
@@ -3345,7 +4040,10 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(dialog)
         layout.setSpacing(spacing)
 
-        header = QLabel(f"Fertigkeit: {display_name}")
+        header_text = f"Fertigkeit: {display_name}"
+        if is_initiative_context:
+            header_text = f"Initiative - {display_name}"
+        header = QLabel(header_text)
         header.setStyleSheet(f"font-size: {title_font_size}px; font-weight: 700; color: {accent_color};")
         layout.addWidget(header)
         value_label = QLabel(f"Wert: {skill_value}")
@@ -3355,11 +4053,13 @@ class MainWindow(QMainWindow):
         attrs_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
         layout.addWidget(attrs_label)
 
-        spec_title = QLabel("Spezialisierung:")
-        spec_title.setStyleSheet(
-            f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
-        )
-        layout.addWidget(spec_title)
+        show_specialization = not is_initiative_context
+        if show_specialization:
+            spec_title = QLabel("Spezialisierung:")
+            spec_title.setStyleSheet(
+                f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
+            )
+            layout.addWidget(spec_title)
         spec_options_max_rows_per_column = self._safe_int(
             spec_options_cfg.get("max_rows_per_column", 6), 6
         )
@@ -3373,16 +4073,17 @@ class MainWindow(QMainWindow):
             spec_preview_max_chars,
         )
 
-        spec_value = QLabel(specialization_preview_text)
-        spec_value.setWordWrap(True)
-        spec_value.setStyleSheet(
-            f"background: {str(spec_cfg.get('background', '#141618'))}; "
-            f"border: 1px solid {str(spec_cfg.get('border_color', '#3a3a3a'))}; "
-            f"padding: 8px; color: {str(spec_cfg.get('text_color', '#ffffff'))}; "
-            f"font-size: {spec_font_size}px;"
-        )
-        spec_value.setMinimumHeight(spec_height)
-        layout.addWidget(spec_value)
+        if show_specialization:
+            spec_value = QLabel(specialization_preview_text)
+            spec_value.setWordWrap(True)
+            spec_value.setStyleSheet(
+                f"background: {str(spec_cfg.get('background', '#141618'))}; "
+                f"border: 1px solid {str(spec_cfg.get('border_color', '#3a3a3a'))}; "
+                f"padding: 8px; color: {str(spec_cfg.get('text_color', '#ffffff'))}; "
+                f"font-size: {spec_font_size}px;"
+            )
+            spec_value.setMinimumHeight(spec_height)
+            layout.addWidget(spec_value)
 
         spec_options_title = str(spec_options_cfg.get("title", "Spezialisierungen:"))
         spec_options_hint = str(
@@ -3395,40 +4096,51 @@ class MainWindow(QMainWindow):
         spec_options_hint_color = str(spec_options_cfg.get("hint_color", muted_text_color))
         spec_options_font_size = self._safe_int(spec_options_cfg.get("font_size", base_font_size), base_font_size)
 
-        spec_options_title_label = QLabel(spec_options_title)
-        spec_options_title_label.setStyleSheet(
-            f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
-        )
-        layout.addWidget(spec_options_title_label)
-
         specialization_checkboxes = []
-        if specialization_items:
-            checkboxes_grid_widget = QWidget(dialog)
-            checkboxes_grid_layout = QGridLayout(checkboxes_grid_widget)
-            checkboxes_grid_layout.setContentsMargins(0, 0, 0, 0)
-            checkboxes_grid_layout.setHorizontalSpacing(spec_options_column_spacing)
-            checkboxes_grid_layout.setVerticalSpacing(spec_options_row_spacing)
-            for index, item in enumerate(specialization_items):
-                checkbox = QCheckBox(item, dialog)
-                checkbox.setChecked(False)
-                checkbox.setStyleSheet(checkbox_style)
-                row = index % spec_options_max_rows_per_column
-                col = index // spec_options_max_rows_per_column
-                checkboxes_grid_layout.addWidget(checkbox, row, col)
-                specialization_checkboxes.append(checkbox)
-            checkboxes_grid_layout.setColumnStretch(99, 1)
-            layout.addWidget(checkboxes_grid_widget)
-            spec_hint_label = QLabel(spec_options_hint)
-            spec_hint_label.setStyleSheet(
-                f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
+        if show_specialization:
+            spec_options_title_label = QLabel(spec_options_title)
+            spec_options_title_label.setStyleSheet(
+                f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
             )
-            layout.addWidget(spec_hint_label)
-        else:
-            spec_empty_label = QLabel(spec_options_empty_text)
-            spec_empty_label.setStyleSheet(
-                f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
+            layout.addWidget(spec_options_title_label)
+            if specialization_items:
+                checkboxes_grid_widget = QWidget(dialog)
+                checkboxes_grid_layout = QGridLayout(checkboxes_grid_widget)
+                checkboxes_grid_layout.setContentsMargins(0, 0, 0, 0)
+                checkboxes_grid_layout.setHorizontalSpacing(spec_options_column_spacing)
+                checkboxes_grid_layout.setVerticalSpacing(spec_options_row_spacing)
+                for index, item in enumerate(specialization_items):
+                    checkbox = QCheckBox(item, dialog)
+                    checkbox.setChecked(False)
+                    checkbox.setStyleSheet(checkbox_style)
+                    row = index % spec_options_max_rows_per_column
+                    col = index // spec_options_max_rows_per_column
+                    checkboxes_grid_layout.addWidget(checkbox, row, col)
+                    specialization_checkboxes.append(checkbox)
+                checkboxes_grid_layout.setColumnStretch(99, 1)
+                layout.addWidget(checkboxes_grid_widget)
+                spec_hint_label = QLabel(spec_options_hint)
+                spec_hint_label.setStyleSheet(
+                    f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
+                )
+                layout.addWidget(spec_hint_label)
+            else:
+                spec_empty_label = QLabel(spec_options_empty_text)
+                spec_empty_label.setStyleSheet(
+                    f"color: {hint_text_color}; font-size: {hint_text_font_size}px;"
+                )
+                layout.addWidget(spec_empty_label)
+
+        if fixed_bonus_lines:
+            fixed_title = QLabel("Feste Boni:")
+            fixed_title.setStyleSheet(
+                f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;"
             )
-            layout.addWidget(spec_empty_label)
+            layout.addWidget(fixed_title)
+            for line in fixed_bonus_lines:
+                row_label = QLabel(str(line))
+                row_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
+                layout.addWidget(row_label)
 
         perk_suggestion_checkboxes = []
         if perk_suggestions:
@@ -3505,16 +4217,17 @@ class MainWindow(QMainWindow):
                 layout.addWidget(source_row)
                 wellbeing_suggestion_checkboxes.append(checkbox)
 
-        skill_usage_text = (
-            f"Skillwert wird verwendet: Ja (+{skill_value})"
-            if skill_value_allowed
-            else "Skillwert wird verwendet: Nein (keine Attribute/Spezialisierung)"
-        )
-        skill_usage_label = QLabel(skill_usage_text)
-        skill_usage_label.setStyleSheet(
-            f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;"
-        )
-        layout.addWidget(skill_usage_label)
+        if not is_initiative_context:
+            skill_usage_text = (
+                f"Skillwert wird verwendet: Ja (+{skill_value})"
+                if skill_value_allowed
+                else "Skillwert wird verwendet: Nein (keine Attribute/Spezialisierung)"
+            )
+            skill_usage_label = QLabel(skill_usage_text)
+            skill_usage_label.setStyleSheet(
+                f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;"
+            )
+            layout.addWidget(skill_usage_label)
 
         controls = QHBoxLayout()
         advantages_spin = QSpinBox(dialog)
@@ -3596,11 +4309,13 @@ class MainWindow(QMainWindow):
         keep_layout.addStretch()
         layout.addLayout(keep_layout)
 
-        paradigm_checkbox = QCheckBox(paradigm_text, dialog)
-        paradigm_checkbox.setChecked(False)
-        paradigm_checkbox.setToolTip(paradigm_tooltip)
-        paradigm_checkbox.setStyleSheet(checkbox_style)
-        layout.addWidget(paradigm_checkbox)
+        paradigm_checkbox = None
+        if not is_initiative_context:
+            paradigm_checkbox = QCheckBox(paradigm_text, dialog)
+            paradigm_checkbox.setChecked(False)
+            paradigm_checkbox.setToolTip(paradigm_tooltip)
+            paradigm_checkbox.setStyleSheet(checkbox_style)
+            layout.addWidget(paradigm_checkbox)
 
         preview_title = QLabel(preview_label_text)
         preview_title.setStyleSheet(
@@ -3681,7 +4396,7 @@ class MainWindow(QMainWindow):
                 except Exception:
                     disadvantage = 0
                 try:
-                    flat_bonus = int(effect.get("flat_bonus", 0) or 0)
+                    flat_bonus = int(effect.get("flat_bonus", effect.get("bonus", 0)) or 0)
                 except Exception:
                     flat_bonus = 0
                 try:
@@ -3725,10 +4440,11 @@ class MainWindow(QMainWindow):
             skill_bonus = skill_value if skill_value_allowed else 0
             manual_bonus = manual_bonus_spin.value()
             extra_bonuses = []
-            if paradigm_checkbox.isChecked():
+            if paradigm_checkbox is not None and paradigm_checkbox.isChecked():
                 extra_bonuses.append(paradigm_bonus)
                 if debug_paradigm_enabled:
                     print(f"[ROLL PARADIGM] active=True bonus={paradigm_bonus}")
+            extra_bonuses.extend(fixed_extra_bonuses)
             extra_bonuses.extend(perk_effects["extra_bonuses"])
             extra_bonuses.extend(wellbeing_effects["extra_bonuses"])
             command = self.build_roll20_command(
@@ -3790,7 +4506,8 @@ class MainWindow(QMainWindow):
         manual_bonus_spin.valueChanged.connect(update_roll_preview)
         keep_high.toggled.connect(update_roll_preview)
         keep_low.toggled.connect(update_roll_preview)
-        paradigm_checkbox.toggled.connect(update_roll_preview)
+        if paradigm_checkbox is not None:
+            paradigm_checkbox.toggled.connect(update_roll_preview)
         adv_minus.clicked.connect(lambda: adjust_spin(advantages_spin, -1))
         adv_plus.clicked.connect(lambda: adjust_spin(advantages_spin, 1))
         dis_minus.clicked.connect(lambda: adjust_spin(disadvantages_spin, -1))
@@ -9325,6 +10042,71 @@ class MainWindow(QMainWindow):
         panel_edit = bool(edit_cfg.get("enabled", False)) if isinstance(edit_cfg, dict) else False
         return self._character_edit_allowed("basic_fields") and panel_edit
 
+    def _render_character_initiative_panel(self, character_screen, character_panel, attribute_panel, default_color):
+        panel_cfg = character_screen.get("initiative_panel", {})
+        if not isinstance(panel_cfg, dict) or not bool(panel_cfg.get("enabled", False)):
+            return
+
+        data = self.get_character_initiative_data()
+        roll_value = data.get("roll_value") if isinstance(data, dict) else None
+        panel = QFrame(self.content_layer)
+        panel_x = self._safe_int(panel_cfg.get("x", character_panel.x() + character_panel.width() + 20), character_panel.x() + character_panel.width() + 20)
+        panel_y = self._safe_int(panel_cfg.get("y", attribute_panel.y() + attribute_panel.height() + 6), attribute_panel.y() + attribute_panel.height() + 6)
+        panel_w = self._safe_int(panel_cfg.get("w", 260), 260)
+        panel_h = self._safe_int(panel_cfg.get("h", 125), 125)
+        panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            "border-radius: 6px;"
+            "}"
+        )
+        panel.show()
+
+        title = str(panel_cfg.get("title", "Initiative"))
+        title_size = self._safe_int(panel_cfg.get("title_font_size", 18), 18)
+        font_size = self._safe_int(panel_cfg.get("font_size", 16), 16)
+        label_color = str(panel_cfg.get("color", default_color))
+        value_color = str(panel_cfg.get("value_color", "#7fd0ff"))
+        self.create_panel_text(
+            panel,
+            {"x": 10, "y": 8, "w": panel_w - 20, "h": 26},
+            title,
+            title_size,
+            label_color,
+            bold=True,
+            align="left",
+        )
+        raw_text = str(data.get("raw_value", "-")) if isinstance(data, dict) else "-"
+        bonus_text = str(data.get("bonus", 0)) if isinstance(data, dict) else "0"
+        roll_text = str(roll_value) if roll_value is not None else "-"
+        self.create_panel_text(panel, {"x": 12, "y": 36, "w": 96, "h": 22}, "Wert:", font_size, label_color, bold=True)
+        self.create_panel_text(panel, {"x": 100, "y": 36, "w": panel_w - 112, "h": 22}, raw_text, font_size, value_color, bold=True)
+        self.create_panel_text(panel, {"x": 12, "y": 59, "w": 96, "h": 22}, "Bonus:", font_size, label_color, bold=True)
+        self.create_panel_text(panel, {"x": 100, "y": 59, "w": panel_w - 112, "h": 22}, bonus_text, font_size, value_color, bold=True)
+        self.create_panel_text(panel, {"x": 12, "y": 82, "w": 96, "h": 22}, "Rollwert:", font_size, label_color, bold=True)
+        self.create_panel_text(panel, {"x": 100, "y": 82, "w": panel_w - 112, "h": 22}, roll_text, font_size, value_color, bold=True)
+
+        button_cfg = {
+            "x": self._safe_int(panel_cfg.get("button_x", 12), 12),
+            "y": self._safe_int(panel_cfg.get("button_y", panel_h - 38), panel_h - 38),
+            "w": self._safe_int(panel_cfg.get("button_w", panel_w - 24), panel_w - 24),
+            "h": self._safe_int(panel_cfg.get("button_h", 28), 28),
+            "asset": str(panel_cfg.get("button_asset", "buttons/menu_button_medium.png")),
+            "font_size": self._safe_int(panel_cfg.get("button_font_size", 16), 16),
+            "color": str(panel_cfg.get("color", label_color)),
+        }
+        btn = self.create_asset_text_button(
+            panel,
+            button_cfg,
+            str(panel_cfg.get("button_text", "Ini-Wurf")),
+            self.open_character_initiative_roll,
+        )
+        btn_widget = btn.get("button") if isinstance(btn, dict) else btn
+        if btn_widget is not None:
+            btn_widget.setEnabled(roll_value is not None)
+
     def _render_character_paradigm_panel(self, character_screen, attribute_panel, default_color):
         panel_cfg = character_screen.get("paradigm_panel", {})
         if not isinstance(panel_cfg, dict) or not bool(panel_cfg.get("enabled", False)):
@@ -10655,6 +11437,7 @@ class MainWindow(QMainWindow):
             panel.raise_()
 
         render_wellbeing_block()
+        self._render_character_initiative_panel(character_screen, character_panel, attribute_panel, default_color)
         self._render_character_paradigm_panel(character_screen, attribute_panel, default_color)
 
         perks_layout = text_layout.get("perk_panel", text_layout.get("perks", {}))

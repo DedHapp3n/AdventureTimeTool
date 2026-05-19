@@ -10,6 +10,7 @@ from typing import Any
 DEFAULT_SETTINGS: dict[str, Any] = {
     "version": 1,
     "theme": "diablo",
+    "themes": [],
     "last_character": "",
     "window": {
         "width": 1500,
@@ -93,6 +94,11 @@ def load_settings() -> tuple[dict[str, Any], bool]:
     settings["version"] = int(loaded.get("version", 1)) if str(loaded.get("version", "")).isdigit() else 1
     theme = loaded.get("theme", DEFAULT_SETTINGS["theme"])
     settings["theme"] = str(theme) if str(theme).strip() else DEFAULT_SETTINGS["theme"]
+    loaded_themes = loaded.get("themes", [])
+    if isinstance(loaded_themes, list):
+        settings["themes"] = [str(item) for item in loaded_themes if str(item).strip()]
+    else:
+        settings["themes"] = []
     settings["last_character"] = str(loaded.get("last_character", "") or "")
 
     window_loaded = loaded.get("window", {})
@@ -112,9 +118,13 @@ def load_settings() -> tuple[dict[str, Any], bool]:
 
 
 def save_settings(settings: dict[str, Any]) -> None:
+    themes = settings.get("themes", [])
+    if not isinstance(themes, list):
+        themes = []
     payload = {
         "version": int(settings.get("version", 1)),
         "theme": str(settings.get("theme", DEFAULT_SETTINGS["theme"]) or DEFAULT_SETTINGS["theme"]),
+        "themes": [str(item) for item in themes if str(item).strip()],
         "last_character": str(settings.get("last_character", "") or ""),
         "window": {
             "width": int(settings.get("window", {}).get("width", DEFAULT_SETTINGS["window"]["width"])),
