@@ -8550,7 +8550,7 @@ class MainWindow(QMainWindow):
 
         upgrade_cfg = {}
         if isinstance(se_cfg, dict):
-            upgrade_cfg = se_cfg.get("skill_upgrade_info", se_cfg.get("upgrade_info", {}))
+            upgrade_cfg = se_cfg.get("skill_upgrade_info", {})
         if not isinstance(upgrade_cfg, dict):
             upgrade_cfg = {}
         if bool(upgrade_cfg.get("enabled", True)):

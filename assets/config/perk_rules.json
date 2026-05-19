@@ -37,7 +37,6 @@
       "suggested_effect": {
         "advantage": 1
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -65,7 +64,6 @@
       "suggested_effect": {
         "flat_bonus": 4
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -101,7 +99,6 @@
       "suggested_effect": {
         "advantage": 1
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -134,7 +131,6 @@
       "suggested_effect": {
         "advantage": 1
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -175,7 +171,6 @@
       "suggested_effect": {
         "advantage": 1
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -219,7 +214,6 @@
       "suggested_effect": {
         "advantage": 1
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -243,7 +237,6 @@
       "suggested_effect": {
         "flat_bonus": 10
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Verbrauch/Negativeffekt nicht automatisch verwalten."
     },
     {
@@ -267,7 +260,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Keine automatische Wirkung."
     },
     {
@@ -295,7 +287,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -321,7 +312,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -347,7 +337,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -374,7 +363,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -401,7 +389,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -425,7 +412,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
@@ -449,7 +435,6 @@
       "suggested_effect": {
         "info_only": true
       },
-      "manual_confirm": true,
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     }
   ]

@@ -106,22 +106,6 @@
           }
         }
       },
-      "upgrade_info": {
-        "enabled": true,
-        "x": 410,
-        "y": 272,
-        "w": 260,
-        "h": 90,
-        "title": "Skill Upgrade",
-        "text": "Theoretisch möglich",
-        "font_size": 15,
-        "title_font_size": 18,
-        "label_color": "#f2d28b",
-        "text_color": "#ffffff",
-        "border_color": "rgba(242, 210, 139, 90)",
-        "background": "rgba(5, 5, 5, 95)",
-        "readonly": true
-      },
       "skill_upgrade_info": {
         "enabled": true,
         "x": 420,
