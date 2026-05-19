@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     },
     "debug": DEFAULT_DEBUG_SETTINGS,
 }
+
+DEFAULT_OVERRIDES: dict[str, Any] = {"version": 1, "overrides": {}}
+
 
 def resource_base_dir() -> Path:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
@@ -144,10 +148,24 @@ def save_settings(settings: dict[str, Any]) -> None:
     _write_json_atomic(data_path("settings.json"), payload)
 
 
+def ensure_calculation_overrides_default() -> Path:
+    target = config_path("calculation_overrides.json")
+    if target.exists():
+        return target
+    source = resource_path("assets/config/calculation_overrides.json")
+    if source.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    else:
+        _write_json_atomic(target, DEFAULT_OVERRIDES)
+    return target
+
+
 def ensure_runtime_defaults() -> None:
     user_data_dir()
     (user_data_dir() / "cache").mkdir(parents=True, exist_ok=True)
     load_settings()
+    ensure_calculation_overrides_default()
 
     current_character = data_path("current_character.json")
     if not current_character.exists():

@@ -47,7 +47,7 @@ def main() -> int:
 
 
 def _discover_themes(base: Path) -> list[str]:
-    themes_dir = base / "assets" / "themes"
+    themes_dir = _assets_dir(base) / "themes"
     if not themes_dir.exists():
         return []
     names: list[str] = []
@@ -55,6 +55,13 @@ def _discover_themes(base: Path) -> list[str]:
         if child.is_dir() and (child / "ui_layout.json").exists():
             names.append(child.name)
     return sorted(set(names))
+
+
+def _assets_dir(base: Path) -> Path:
+    direct = base / "assets"
+    if direct.exists():
+        return direct
+    return base / "_internal" / "assets"
 
 
 def _post_build_theme_check(root: Path) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -25,13 +26,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app_paths import resource_path
+from app_paths import config_path, ensure_calculation_overrides_default, resource_path
 from app_logger import log_debug, log_warning
 
 
 OVERRIDE_DEFAULT = {"version": 1, "overrides": {}}
 RULES_DEFAULT = {"version": 1, "rules": {}}
-CONFIG_READ_ONLY_MESSAGE = "Rules/Overrides sind aktuell read-only und werden aus assets/config gelesen."
+RULES_READ_ONLY_MESSAGE = "Rules werden aus assets/config gelesen und sind im Tool read-only."
 RULE_TYPES = [
     "manual_label",
     "manual_formula",
@@ -43,7 +44,7 @@ RULE_TYPES = [
 
 
 def _override_file_path() -> Path:
-    return resource_path("assets/config/calculation_overrides.json")
+    return config_path("calculation_overrides.json")
 
 
 def _rules_file_path() -> Path:
@@ -64,9 +65,10 @@ def _default_override_entry(sheet: str, cell: str) -> dict[str, Any]:
 
 
 def load_calculation_overrides() -> dict[str, Any]:
+    ensure_calculation_overrides_default()
     path = _override_file_path()
     if not path.exists():
-        log_warning("calculation", f"override config missing, using defaults: {path}")
+        log_warning("calculation", f"override runtime config missing, using defaults: {path}")
         return dict(OVERRIDE_DEFAULT)
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -87,8 +89,23 @@ def load_calculation_overrides() -> dict[str, Any]:
 
 
 def save_calculation_overrides(data: dict[str, Any]) -> bool:
-    log_warning("calculation", CONFIG_READ_ONLY_MESSAGE)
-    return False
+    path = _override_file_path()
+    payload = dict(OVERRIDE_DEFAULT)
+    if isinstance(data, dict):
+        payload["version"] = int(data.get("version", 1))
+        overrides = data.get("overrides", {})
+        payload["overrides"] = overrides if isinstance(overrides, dict) else {}
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+        log_debug("calculation", f"override saved count={len(payload['overrides'])}")
+        return True
+    except Exception as exc:
+        log_warning("calculation", f"override save failed: {path} ({exc})")
+        return False
 
 
 def load_calculation_rules() -> dict[str, Any]:
@@ -115,7 +132,7 @@ def load_calculation_rules() -> dict[str, Any]:
 
 
 def save_calculation_rules(data: dict[str, Any]) -> bool:
-    log_warning("calculation", CONFIG_READ_ONLY_MESSAGE)
+    log_warning("calculation", RULES_READ_ONLY_MESSAGE)
     return False
 
 
@@ -326,7 +343,7 @@ class CalculationCenterDialog(QDialog):
         form.addRow("Notizen", self.override_notes_edit)
         override_layout.addLayout(form)
         self.override_info_label = QLabel(
-            "Rules/Overrides werden aus assets/config gelesen und sind im Tool read-only."
+            "Override ist gespeichert. Automatische Anwendung ist derzeit deaktiviert."
         )
         self.override_info_label.setWordWrap(True)
         self.override_info_label.setStyleSheet("color: #d18a26;")
@@ -334,8 +351,6 @@ class CalculationCenterDialog(QDialog):
         row = QHBoxLayout()
         self.override_save_button = QPushButton("Override speichern")
         self.override_delete_button = QPushButton("Override löschen")
-        self.override_save_button.setToolTip(CONFIG_READ_ONLY_MESSAGE)
-        self.override_delete_button.setToolTip(CONFIG_READ_ONLY_MESSAGE)
         self.override_save_button.clicked.connect(self.save_override_from_panel)
         self.override_delete_button.clicked.connect(self.delete_override_from_panel)
         row.addWidget(self.override_save_button)
@@ -358,7 +373,6 @@ class CalculationCenterDialog(QDialog):
         self.status_label = QLabel("0 Einträge")
         self.override_button = QPushButton("Override speichern")
         self.override_button.setEnabled(False)
-        self.override_button.setToolTip(CONFIG_READ_ONLY_MESSAGE)
         self.override_button.clicked.connect(self.save_override_from_panel)
         self.refresh_button = QPushButton("Aktualisieren")
         self.refresh_button.clicked.connect(self.refresh_data)
@@ -379,7 +393,7 @@ class CalculationCenterDialog(QDialog):
         )
         self.rule_store = safe_store
         if changed:
-            log_debug("calculation", "default character rules backfilled in memory; config is read-only")
+            log_debug("calculation", "default character rules backfilled in memory; rules config is read-only")
         self.items = collect_calculation_entries(
             self.loader, self.parser, self.override_store, self.rule_store
         )
@@ -431,22 +445,55 @@ class CalculationCenterDialog(QDialog):
         self.override_notes_edit.setPlainText(str(data.get("notes", "")))
         self.override_status_label.setText("")
         if bool(data.get("enabled", False)):
-            self.override_info_label.setText(
-                "Override ist aktiv markiert. Config ist read-only; automatische Anwendung ist derzeit deaktiviert."
-            )
+            self.override_info_label.setText("Override ist aktiv markiert. Automatische Anwendung ist derzeit deaktiviert.")
         else:
-            self.override_info_label.setText(
-                "Override ist gespeichert. Config ist read-only; automatische Anwendung ist derzeit deaktiviert."
-            )
-        self._set_override_editor_enabled(False, f"Ziel: {target_key} - {CONFIG_READ_ONLY_MESSAGE}")
+            self.override_info_label.setText("Override ist gespeichert. Automatische Anwendung ist derzeit deaktiviert.")
+        self._set_override_editor_enabled(True, f"Ziel: {target_key}")
+        self.override_delete_button.setEnabled(bool(existing))
 
     def save_override_from_panel(self):
-        self.override_status_label.setText(CONFIG_READ_ONLY_MESSAGE)
-        QMessageBox.information(self, "Config read-only", CONFIG_READ_ONLY_MESSAGE)
+        target_key = self.current_target_key.strip()
+        if not target_key:
+            return
+        sheet, cell = _split_target_key(target_key)
+        payload = self.override_store if isinstance(self.override_store, dict) else dict(OVERRIDE_DEFAULT)
+        overrides = payload.get("overrides")
+        if not isinstance(overrides, dict):
+            overrides = {}
+            payload["overrides"] = overrides
+        overrides[target_key] = {
+            "target": {"sheet": sheet, "cell": cell},
+            "display_name": self.override_display_name_edit.text().strip(),
+            "category": self.override_category_edit.text().strip(),
+            "description": self.override_description_edit.toPlainText().strip(),
+            "rule_type": self.override_rule_type_combo.currentText().strip() or "note_only",
+            "formula": self.override_formula_edit.toPlainText().strip(),
+            "enabled": self.override_enabled_check.isChecked(),
+            "notes": self.override_notes_edit.toPlainText().strip(),
+        }
+        if save_calculation_overrides(payload):
+            log_debug("calculation", f"override save target={target_key}")
+            self.override_status_label.setText("Override gespeichert")
+            self.refresh_data()
 
     def delete_override_from_panel(self):
-        self.override_status_label.setText(CONFIG_READ_ONLY_MESSAGE)
-        QMessageBox.information(self, "Config read-only", CONFIG_READ_ONLY_MESSAGE)
+        target_key = self.current_target_key.strip()
+        if not target_key:
+            return
+        payload = self.override_store if isinstance(self.override_store, dict) else dict(OVERRIDE_DEFAULT)
+        overrides = payload.get("overrides")
+        if not isinstance(overrides, dict) or target_key not in overrides:
+            self.override_status_label.setText("Kein Override vorhanden")
+            return
+        sheet, cell = _split_target_key(target_key)
+        msg = f"Override für {sheet}!{cell} löschen?"
+        res = QMessageBox.question(self, "Override löschen", msg, QMessageBox.Yes | QMessageBox.No)
+        if res != QMessageBox.Yes:
+            return
+        overrides.pop(target_key, None)
+        if save_calculation_overrides(payload):
+            self.override_status_label.setText("Override gelöscht")
+            self.refresh_data()
 
     def populate_tree(self):
         query = self.search_edit.text().strip().lower()
