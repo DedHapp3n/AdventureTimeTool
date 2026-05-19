@@ -204,7 +204,6 @@
         "durability_current": "rgba(165, 165, 180, 220)",
         "durability_max": "rgba(165, 165, 180, 220)"
       },
-      "colored_cell_text_color": "#000000",
       "cell_text_colors": {
         "phys_head": "#000000",
         "phys_chest": "#000000",
@@ -257,7 +256,6 @@
       "header_color": "#f2d28b",
       "text_color": "#ffffff",
       "value_color": "#7fd0ff",
-      "colored_cell_text_color": "#000000",
       "border_color": "rgba(242, 210, 139, 90)",
       "background": "rgba(5, 5, 5, 95)",
       "min_row_h": 32,

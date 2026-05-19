@@ -64,8 +64,7 @@
       "use_asset_buttons": true,
       "asset": "buttons/menu_button_small.png",
       "active_asset": "buttons/menu_button_small.png",
-      "inactive_asset": "buttons/menu_button_small.png",
-      "rename_on_double_click": true
+      "inactive_asset": "buttons/menu_button_small.png"
     },
     "table": {
       "x": 20,
@@ -76,7 +75,6 @@
       "min_row_h": 34,
       "max_row_h": 180,
       "min_rows": 20,
-      "empty_rows_editable": true,
       "font_size": 15,
       "header_font_size": 18,
       "header_color": "#bde6c8",

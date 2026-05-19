@@ -65,11 +65,6 @@
     "w": 1087,
     "h": 179
   },
-  "menu_button_wide": {
-    "asset": "buttons/menu_button_wide.png",
-    "w": 1377,
-    "h": 179
-  },
   "main_nav_buttons": [
     {
       "id": "character",

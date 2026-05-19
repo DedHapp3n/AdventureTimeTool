@@ -48,7 +48,7 @@
     "height": 58
   },
   "direct_send": {
-    "enabled": true,
+    "enabled": false,
     "text": "Direkt an Roll20 senden",
     "tooltip": "Noch nicht implementiert. Aktuell wird nur kopiert."
   },
