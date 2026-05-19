@@ -129,13 +129,6 @@ class DataLoader:
             return None
         return self.workbook[sheet_name]
 
-    def get_cell(self, sheet, cell):
-        sheet_cache = self.cell_cache.get(sheet, {})
-        cell_data = sheet_cache.get(cell)
-        if not cell_data:
-            return None
-        return cell_data.get("value")
-
     def save_cache_to_json(self, path=None):
         if path is None:
             character_name = self._get_character_name_from_cache()
@@ -174,9 +167,6 @@ class DataLoader:
         log_debug("cache", f"active: {path}")
         log_debug("save", f"active character saved: {path}")
         return True
-
-    def save_character_json(self, path=None):
-        return self.save_active_character_json(path)
 
     def load_cache_from_json(self, path=None):
         metadata_source_file = ""

@@ -134,9 +134,7 @@ class MainWindow(QMainWindow):
         self.skill_sheet_mapping_config = None
         self.settings_debug_on_start = False
         self.nav_buttons = {}
-        self.settings_dialog = None
         self.debug_dialog = None
-        self.theme_name_value_label = None
         self.content_layer = None
         self.settings_theme_label = None
         self.settings_checkbox_icon_label = None
@@ -582,62 +580,6 @@ class MainWindow(QMainWindow):
         self.show_main_section("settings")
         log_debug("render", "section changed: settings")
 
-    def open_settings_dialog(self):
-        if self.settings_dialog is not None and self.settings_dialog.isVisible():
-            self.settings_dialog.raise_()
-            self.settings_dialog.activateWindow()
-            return
-
-        if self.settings_dialog is None:
-            self.settings_dialog = QDialog(self)
-            self.settings_dialog.setWindowTitle("Settings")
-            self.settings_dialog.resize(500, 420)
-            dialog_layout = QVBoxLayout(self.settings_dialog)
-            dialog_layout.setContentsMargins(8, 8, 8, 8)
-            dialog_layout.setSpacing(8)
-            header = QLabel("Adventure Time Tool - Settings")
-            header.setStyleSheet("font-size: 16px; font-weight: 700;")
-            dialog_layout.addWidget(header)
-
-            theme_row = QWidget()
-            theme_row_layout = QHBoxLayout(theme_row)
-            theme_row_layout.setContentsMargins(0, 0, 0, 0)
-            theme_row_layout.addWidget(QLabel("Aktuelles Theme:"))
-            self.theme_name_value_label = QLabel(self.get_active_theme())
-            theme_row_layout.addWidget(self.theme_name_value_label)
-            theme_row_layout.addStretch()
-            dialog_layout.addWidget(theme_row)
-
-            theme_switch_button = QPushButton("Theme wechseln (F3)")
-            theme_switch_button.clicked.connect(self.on_settings_switch_theme_clicked)
-            dialog_layout.addWidget(theme_switch_button)
-
-            cache_reload_button = QPushButton("Cache neu laden")
-            cache_reload_button.clicked.connect(self.on_settings_cache_reload_clicked)
-            dialog_layout.addWidget(cache_reload_button)
-
-            excel_import_button = QPushButton("Excel / Charakterbogen laden")
-            excel_import_button.clicked.connect(self.on_settings_excel_import_clicked)
-            dialog_layout.addWidget(excel_import_button)
-
-            debug_open_button = QPushButton("Debug öffnen")
-            debug_open_button.clicked.connect(self.open_debug_dialog)
-            dialog_layout.addWidget(debug_open_button)
-
-            close_button = QPushButton("Schließen")
-            close_button.clicked.connect(self.settings_dialog.close)
-            dialog_layout.addWidget(close_button)
-            dialog_layout.addStretch()
-        else:
-            self.settings_dialog.show()
-            self.settings_dialog.raise_()
-            self.settings_dialog.activateWindow()
-            return
-
-        self.settings_dialog.show()
-        self.settings_dialog.raise_()
-        self.settings_dialog.activateWindow()
-
     def open_debug_dialog(self):
         if self.debug_dialog is not None and self.debug_dialog.isVisible():
             self.debug_dialog.raise_()
@@ -671,8 +613,6 @@ class MainWindow(QMainWindow):
         self.theme_config["active_theme"] = next_theme
         self.save_theme_config()
         self.reload_theme()
-        if self.theme_name_value_label is not None:
-            self.theme_name_value_label.setText(self.get_active_theme())
         if hasattr(self, "settings_theme_value_label") and self.settings_theme_value_label is not None and self.current_main_section == "settings":
             self.settings_theme_value_label.setText(self.get_active_theme())
         log_info("theme", f"switched to: {next_theme}")
@@ -2480,56 +2420,6 @@ class MainWindow(QMainWindow):
             attribute_map = {}
         self.build_skill_source_infos(categories, attribute_map)
 
-    def find_initiative_skill_source_key(self):
-        self.ensure_skill_source_infos_ready()
-        if not isinstance(self.skill_source_infos, dict) or not self.skill_source_infos:
-            log_debug("character", "CHARACTER INITIATIVE SOURCE not found")
-            return None
-
-        def is_initiative_match(value):
-            text = str(value or "").strip().lower()
-            if not text:
-                return False
-            compact = text.replace("-", " ").replace("_", " ")
-            return ("ini wurf" in compact) or ("initiative" in compact)
-
-        matches = []
-        for source_key, info in self.skill_source_infos.items():
-            if not isinstance(info, dict):
-                continue
-            if info.get("row") is None:
-                continue
-            source_key_text = str(source_key or "")
-            display_name = str(info.get("display_name", "") or "")
-            ui_name = str(info.get("ui_name", "") or "")
-            cache_name = str(info.get("cache_name", "") or "")
-            skill_id = str(info.get("skill_id", "") or "")
-            skill_name = str(info.get("skill_name", "") or "")
-
-            search_fields = [display_name, ui_name, cache_name, skill_id, source_key_text, skill_name]
-            if not any(is_initiative_match(v) for v in search_fields):
-                continue
-
-            category_id = str(info.get("category_id", "") or "").strip().lower()
-            source_key_norm = source_key_text.strip().lower()
-            skill_id_norm = skill_id.strip().lower()
-            display_norm = display_name.strip().lower()
-            score = (
-                0 if category_id == "allgemein" else 1,
-                0 if ("klettern_athletik_ini_wurf" in source_key_norm or "klettern_athletik_ini_wurf" in skill_id_norm) else 1,
-                0 if ("klettern" in display_norm or "athletik" in display_norm) else 1,
-                source_key_norm,
-            )
-            matches.append((score, source_key_text, info))
-
-        if not matches:
-            log_debug("character", "CHARACTER INITIATIVE SOURCE not found")
-            return None
-        matches.sort(key=lambda it: it[0])
-        _, found, found_info = matches[0]
-        log_debug("character", f'CHARACTER INITIATIVE SOURCE found source_key={found} display_name="{found_info.get("display_name", "")}" value={found_info.get("display_value", "-")}')
-        return found
-
     def open_character_initiative_roll(self):
         initiative_info = self.get_character_initiative_data()
         if not initiative_info or initiative_info.get("roll_value") is None:
@@ -2568,21 +2458,6 @@ class MainWindow(QMainWindow):
         if not match:
             return None, None
         return match.group(1), int(match.group(2))
-
-    def _get_neighbor_value_cell(self, sheet_name, base_col, row, max_offset=4):
-        col_index = self._col_letters_to_index(base_col)
-        if col_index < 0:
-            return ""
-        fallback_cell = ""
-        for offset in range(1, max_offset + 1):
-            candidate_col = self._col_index_to_letters(col_index + offset)
-            candidate_cell = f"{candidate_col}{row}"
-            if not fallback_cell:
-                fallback_cell = candidate_cell
-            candidate_value = str(self.get_cache_cell_value(sheet_name, candidate_cell, "") or "").strip()
-            if candidate_value:
-                return candidate_cell
-        return fallback_cell
 
     def _get_character_initiative_panel_data_cfg(self):
         character_screen = self.main_ui_layout_config.get("character_screen", {})
@@ -2843,9 +2718,6 @@ class MainWindow(QMainWindow):
         best.pop("_score", None)
         return best
 
-    def get_character_initiative_roll_value(self):
-        return self.get_character_initiative_data()
-
     def get_character_initiative_data(self):
         result = self._initiative_data_from_config_cells()
         if result is None:
@@ -2899,26 +2771,6 @@ class MainWindow(QMainWindow):
         if "raw_bonus" not in result:
             result["raw_bonus"] = str(result.get("bonus", 0))
         return result
-
-    def open_character_value_roll_dialog(self, title, roll_info):
-        if not isinstance(roll_info, dict):
-            return
-        forwarded = dict(roll_info)
-        forwarded.setdefault("source", "character_initiative")
-        forwarded.setdefault("display_name", str(title or "Initiative"))
-        forwarded.setdefault("display_value", self._safe_int(roll_info.get("roll_value", 0), 0))
-        forwarded.setdefault("slot_values", ["R", "I"])
-        forwarded.setdefault("specialization_text", "")
-        forwarded.setdefault("specializations_enabled", False)
-        forwarded.setdefault("perk_suggestions_enabled", False)
-        forwarded.setdefault("paradigm_enabled", False)
-        forwarded.setdefault("skill_value_allowed", True)
-        forwarded.setdefault("roll_context", "character_initiative")
-        forwarded.setdefault(
-            "wellbeing_context",
-            {"display_name": "Initiative", "display_specialization": "", "display_attribute_slots": ["R", "I"]},
-        )
-        self.open_skill_roll_dialog(roll_info=forwarded)
 
     def log_skill_source_info(self, source_key, info):
         if not self.skills_debug_sources:
@@ -4496,73 +4348,6 @@ class MainWindow(QMainWindow):
             return False
         return pl == "pl" and count == "anzahl"
 
-    def build_inventory_categories(self, sections):
-        ordered_categories = []
-        by_id = {}
-
-        def ensure_category(cat_id, title, header_title, always_show=False):
-            existing = by_id.get(cat_id)
-            if existing is not None:
-                return existing
-            category = {
-                "id": cat_id,
-                "title": title,
-                "header_title": header_title,
-                "rows": [],
-                "always_show": bool(always_show),
-            }
-            by_id[cat_id] = category
-            ordered_categories.append(category)
-            return category
-
-        section_title_map = {
-            "inventory_left": ("Inventar 01", "Inventar", True),
-            "inventory_middle": ("Inventar 02", "Inventar", True),
-            "books": ("Bücher", "Bücher", False),
-        }
-
-        for section in sections:
-            if not isinstance(section, dict):
-                continue
-            section_id = str(section.get("id", "") or "")
-            default = section_title_map.get(
-                section_id,
-                (str(section.get("title", "Inventar")), str(section.get("title", "Inventar")), False),
-            )
-            category = ensure_category(section_id, default[0], default[1], always_show=default[2])
-            rows = section.get("rows", [])
-            if not isinstance(rows, list):
-                rows = []
-
-            dynamic_category = None
-            for row in rows:
-                if not isinstance(row, dict):
-                    continue
-                if self._is_inventory_subsection_header_row(row):
-                    subsection_title = str(row.get("name", "") or "").strip()
-                    dynamic_id = f"sub_{self._sanitize_inventory_category_id(subsection_title)}"
-                    dynamic_category = ensure_category(
-                        dynamic_id,
-                        subsection_title.title(),
-                        subsection_title.title(),
-                        always_show=False,
-                    )
-                    continue
-                if dynamic_category is not None:
-                    dynamic_category["rows"].append(row)
-                else:
-                    category["rows"].append(row)
-
-        visible_categories = []
-        for category in ordered_categories:
-            if category.get("always_show"):
-                visible_categories.append(category)
-                continue
-            rows = category.get("rows", [])
-            if isinstance(rows, list) and rows:
-                visible_categories.append(category)
-        return visible_categories
-
     def get_inventory_tab_label(self, slot_id, default_label):
         try:
             labels = self.loader.get_inventory_tab_labels()
@@ -5157,21 +4942,6 @@ class MainWindow(QMainWindow):
         if slot_col is None or name_col is None or pl_col is None:
             return None
         return {"slot_col": slot_col, "name_col": name_col, "pl_col": pl_col}
-
-    def _find_equipment_slash_column(self, sheet_cache, base_col, data_start_row):
-        if not isinstance(sheet_cache, dict) or base_col <= 0:
-            return None
-        counts = {}
-        for row_index in range(data_start_row, data_start_row + 30):
-            for col in range(base_col + 1, base_col + 5):
-                value = self._equipment_cache_text(
-                    sheet_cache, f"{self._col_index_to_letters(col)}{row_index}"
-                )
-                if value == "/":
-                    counts[col] = counts.get(col, 0) + 1
-        if not counts:
-            return None
-        return max(counts.items(), key=lambda item: item[1])[0]
 
     def _build_armor_mapping(self, header_entries, anchor_row, sheet_cache):
         if anchor_row <= 0:
@@ -7911,243 +7681,6 @@ class MainWindow(QMainWindow):
             table.blockSignals(True)
             item.setText(old_value)
             table.blockSignals(False)
-
-    def render_inventory_tables(self, parent, tables_cfg, sections):
-        section_by_id = {
-            str(section.get("id", "")): section
-            for section in sections
-            if isinstance(section, dict)
-        }
-        table_y = self._safe_int(tables_cfg.get("y", 200), 200)
-        row_mode = str(tables_cfg.get("row_mode", "")).strip().lower()
-        if row_mode == "table_widget":
-            self.render_inventory_table_widget_tables(parent, tables_cfg, sections)
-            return
-        if row_mode == "text_block":
-            self.render_inventory_text_block_tables(parent, tables_cfg, sections)
-            return
-        stacked_mode = row_mode in ("stacked", "stacked_compact", "stacked_dynamic")
-        compact_mode = row_mode == "stacked_compact"
-        dynamic_mode = row_mode == "stacked_dynamic"
-        row_h = self._safe_int(tables_cfg.get("row_h", 34), 34)
-        min_row_h = self._safe_int(tables_cfg.get("min_row_h", row_h), row_h)
-        name_line_h = self._safe_int(tables_cfg.get("name_line_h", max(20, row_h - 22)), max(20, row_h - 22))
-        name_max_lines = self._safe_int(tables_cfg.get("name_max_lines", 0), 0)
-        meta_line_h = self._safe_int(tables_cfg.get("meta_line_h", 18), 18)
-        row_gap = self._safe_int(tables_cfg.get("row_gap", 0), 0) if stacked_mode else 0
-        item_padding_x = self._safe_int(tables_cfg.get("item_padding_x", 8), 8)
-        item_padding_y = self._safe_int(tables_cfg.get("item_padding_y", 3), 3)
-        header_h = self._safe_int(tables_cfg.get("header_h", 38), 38)
-        font_size = self._safe_int(tables_cfg.get("font_size", 14), 14)
-        meta_font_size = self._safe_int(tables_cfg.get("meta_font_size", 12), 12)
-        header_font_size = self._safe_int(tables_cfg.get("header_font_size", 16), 16)
-        max_rows = self._safe_int(tables_cfg.get("max_visible_rows", 16), 16)
-        wrap_text = bool(tables_cfg.get("wrap_text", False))
-        meta_format = str(tables_cfg.get("meta_format", "PL: {pl}    Anzahl: {count}"))
-        header_color = str(tables_cfg.get("header_color", "#f2d28b"))
-        text_color = str(tables_cfg.get("text_color", "#ffffff"))
-        muted_text_color = str(tables_cfg.get("muted_text_color", "#c8c0aa"))
-        value_color = str(tables_cfg.get("value_color", "#7fd0ff"))
-        meta_text_color = str(tables_cfg.get("meta_text_color", value_color))
-        border_color = str(tables_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
-        row_background = str(tables_cfg.get("row_background", "rgba(0, 0, 0, 45)"))
-        separator_color = str(tables_cfg.get("separator_color", "rgba(255, 255, 255, 22)"))
-        item_border_enabled = bool(tables_cfg.get("item_border_enabled", not compact_mode))
-        separator_enabled = bool(tables_cfg.get("separator_enabled", True))
-
-        sections_cfg = tables_cfg.get("sections", [])
-        if not isinstance(sections_cfg, list):
-            sections_cfg = []
-        for section_cfg in sections_cfg:
-            if not isinstance(section_cfg, dict):
-                continue
-            section_id = str(section_cfg.get("id", ""))
-            section_data = section_by_id.get(section_id, {"rows": [], "title": section_id})
-            table_w = self._safe_int(section_cfg.get("w", 430), 430)
-            base_row_h = min_row_h if dynamic_mode else row_h
-            table_h = header_h + base_row_h * max_rows + max(0, max_rows - 1) * row_gap
-            table = QFrame(parent)
-            table.setGeometry(
-                self._safe_int(section_cfg.get("x", 20), 20),
-                table_y,
-                table_w,
-                table_h,
-            )
-            table.setStyleSheet(
-                f"background: rgba(5, 5, 5, 95); border: 1px solid {border_color}; border-radius: 4px;"
-            )
-            table.show()
-
-            header_bg = QFrame(table)
-            header_bg.setGeometry(0, 0, table_w, header_h)
-            header_bg.setStyleSheet(
-                "background: rgba(24, 16, 8, 175);"
-                f"border-bottom: 1px solid {border_color};"
-            )
-            header_bg.show()
-
-            columns = section_cfg.get("columns", {})
-            if not isinstance(columns, dict):
-                columns = {}
-            if stacked_mode:
-                name_col = columns.get("name", {})
-                if not isinstance(name_col, dict):
-                    name_col = {}
-                self.create_panel_text(
-                    table,
-                    {
-                        "x": 8,
-                        "y": 0,
-                        "w": max(1, table_w - 16),
-                        "h": header_h,
-                    },
-                    str(name_col.get("title", section_cfg.get("title", section_data.get("title", "Inventar")))),
-                    header_font_size,
-                    header_color,
-                    bold=True,
-                    align="left",
-                )
-            else:
-                for column_id, default_title, align in (
-                    ("name", str(section_cfg.get("title", section_data.get("title", "Inventar"))), "left"),
-                    ("pl", "PL", "center"),
-                    ("count", "Anzahl", "center"),
-                ):
-                    col_cfg = columns.get(column_id, {})
-                    if not isinstance(col_cfg, dict):
-                        col_cfg = {}
-                    self.create_panel_text(
-                        table,
-                        {
-                            "x": self._safe_int(col_cfg.get("x", 0), 0) + (8 if align == "left" else 0),
-                            "y": 0,
-                            "w": max(1, self._safe_int(col_cfg.get("w", 80), 80) - (12 if align == "left" else 0)),
-                            "h": header_h,
-                        },
-                        str(col_cfg.get("title", default_title)),
-                        header_font_size,
-                        header_color,
-                        bold=True,
-                        align=align,
-                    )
-
-            rows = section_data.get("rows", [])
-            if not isinstance(rows, list):
-                rows = []
-            current_y = header_h
-            rendered_rows = 0
-            content_bottom = table_h
-            for row in rows:
-                if not isinstance(row, dict):
-                    continue
-                if rendered_rows >= max_rows:
-                    break
-                y = current_y
-                item_h = row_h
-                name_text = str(row.get("name", ""))
-                name_h = name_line_h
-                if stacked_mode and dynamic_mode:
-                    text_w = max(1, table_w - item_padding_x * 2)
-                    name_h = self.get_inventory_wrapped_text_height(
-                        name_text,
-                        text_w,
-                        font_size,
-                        name_max_lines,
-                    )
-                    item_h = max(
-                        min_row_h,
-                        name_h + meta_line_h + item_padding_y * 2,
-                    )
-                if y + item_h > content_bottom:
-                    remaining_count = len(rows) - rendered_rows
-                    if remaining_count > 0 and y + 24 <= content_bottom:
-                        self.create_panel_text(
-                            table,
-                            {"x": 8, "y": y, "w": max(1, table_w - 16), "h": 22},
-                            "... weitere Einträge",
-                            meta_font_size,
-                            muted_text_color,
-                            bold=False,
-                            align="left",
-                        )
-                    break
-                row_bg = QFrame(table)
-                row_bg.setGeometry(0, y, table_w, item_h)
-                row_border = f"border-bottom: 1px solid {separator_color};" if item_border_enabled else "border: none;"
-                row_bg.setStyleSheet(f"background: {row_background}; {row_border}")
-                row_bg.lower()
-                row_bg.show()
-
-                if stacked_mode:
-                    name_label = self.create_panel_text(
-                        table,
-                        {
-                            "x": item_padding_x,
-                            "y": y + item_padding_y,
-                            "w": max(1, table_w - item_padding_x * 2),
-                            "h": max(1, name_h),
-                        },
-                        name_text,
-                        font_size,
-                        text_color if name_text.strip() else muted_text_color,
-                        bold=False,
-                        align="left",
-                    )
-                    name_label.setWordWrap(wrap_text)
-                    name_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                    pl_text = str(row.get("pl", ""))
-                    count_text = str(row.get("count", ""))
-                    meta_text = meta_format.format(pl=pl_text, count=count_text)
-                    meta_label = self.create_panel_text(
-                        table,
-                        {
-                            "x": item_padding_x,
-                            "y": y + item_padding_y + name_h,
-                            "w": max(1, table_w - item_padding_x * 2),
-                            "h": meta_line_h,
-                        },
-                        meta_text,
-                        meta_font_size,
-                        meta_text_color,
-                        bold=False,
-                        align="left",
-                    )
-                    meta_label.setWordWrap(False)
-                    if separator_enabled:
-                        separator = QFrame(table)
-                        separator.setGeometry(0, y + item_h - 1, table_w, 1)
-                        separator.setStyleSheet(f"background: {separator_color}; border: none;")
-                        separator.show()
-                    current_y += item_h + row_gap
-                    rendered_rows += 1
-                    continue
-
-                for column_id, key, color, align in (
-                    ("name", "name", text_color, "left"),
-                    ("pl", "pl", value_color, "center"),
-                    ("count", "count", value_color, "center"),
-                ):
-                    col_cfg = columns.get(column_id, {})
-                    if not isinstance(col_cfg, dict):
-                        col_cfg = {}
-                    left_pad = 8 if align == "left" else 0
-                    label = self.create_panel_text(
-                        table,
-                        {
-                            "x": self._safe_int(col_cfg.get("x", 0), 0) + left_pad,
-                            "y": y,
-                            "w": max(1, self._safe_int(col_cfg.get("w", 80), 80) - left_pad - 4),
-                            "h": item_h,
-                        },
-                        str(row.get(key, "")),
-                        font_size,
-                        color if str(row.get(key, "")).strip() else muted_text_color,
-                        bold=False,
-                        align=align,
-                    )
-                    label.setWordWrap(False)
-                current_y += item_h + row_gap
-                rendered_rows += 1
 
     def render_skills_screen(self):
         if self.content_layer is None:

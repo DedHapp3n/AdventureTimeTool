@@ -509,16 +509,6 @@ class CalculationCenterDialog(QDialog):
             self.override_status_label.setText("Override gelöscht")
             self.refresh_data()
 
-    def _current_entry(self) -> dict[str, Any] | None:
-        item = self.tree.currentItem()
-        if item is None:
-            return None
-        item_id = item.data(0, Qt.UserRole)
-        if not item_id:
-            return None
-        entry = self.item_by_id.get(str(item_id))
-        return entry if isinstance(entry, dict) else None
-
     def populate_tree(self):
         query = self.search_edit.text().strip().lower()
         errors_only = self.errors_only_check.isChecked()
