@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from app_paths import data_path, ensure_runtime_defaults
+from app_logger import log_debug, log_warning
 
 try:
     from openpyxl import load_workbook
@@ -89,7 +90,7 @@ class DataLoader:
         self._build_cache()
         FormulaParser().recalculate_cache(self.cell_cache)
         self.save_cache_to_json()
-        print("[CACHE] built:", len(self.cell_cache))
+        log_debug("cache", f"built: {len(self.cell_cache)}")
 
     def get_sheets(self):
         if self.cell_cache:
@@ -168,10 +169,10 @@ class DataLoader:
         self.current_character_name = character_name
         self._write_current_character_metadata(path, character_name, saved=True)
         self._remember_clean_snapshot()
-        print("[CACHE] character:", character_name)
-        print("[CACHE] saved character cache:", path)
-        print("[CACHE] active:", path)
-        print("[CHARACTER SAVE] active character saved:", path)
+        log_debug("cache", f"character: {character_name}")
+        log_debug("cache", f"saved character cache: {path}")
+        log_debug("cache", f"active: {path}")
+        log_debug("save", f"active character saved: {path}")
         return True
 
     def save_character_json(self, path=None):
@@ -201,7 +202,7 @@ class DataLoader:
             self.current_character_name = "unknown_character"
             self.source_file_path = ""
             self._remember_clean_snapshot()
-            print("[CHARACTER LOAD] no active character configured")
+            log_debug("cache", "no active character configured")
             return False
         if not os.path.exists(path):
             self.cell_cache = {}
@@ -210,7 +211,7 @@ class DataLoader:
             self.current_character_name = "unknown_character"
             self.source_file_path = ""
             self._remember_clean_snapshot()
-            print("[CHARACTER LOAD] active character file missing:", path)
+            log_warning("cache", f"active character file missing: {path}")
             return False
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -225,8 +226,8 @@ class DataLoader:
             )
             self.source_file_path = metadata_source_file or self.source_file_path
             self._remember_clean_snapshot()
-            print("[CACHE] active:", path)
-            print("[CHARACTER LOAD] active character loaded:", path)
+            log_debug("cache", f"active: {path}")
+            log_debug("cache", f"active character loaded: {path}")
             return True
         except Exception:
             self.cell_cache = {}
@@ -234,7 +235,7 @@ class DataLoader:
             self.active_cache_path = ""
             self.current_character_name = "unknown_character"
             self._remember_clean_snapshot()
-            print("[CHARACTER LOAD] active character file missing:", path)
+            log_warning("cache", f"active character file missing: {path}")
             return False
 
     def make_character_slug(self, name: str) -> str:
@@ -293,8 +294,8 @@ class DataLoader:
             self.current_character_name = self._get_character_name_from_cache()
             self._write_current_character_metadata(cache_path, self.current_character_name)
             self._remember_clean_snapshot()
-            print("[CACHE] active:", cache_path)
-            print("[CHARACTER LOAD] active character loaded:", cache_path)
+            log_debug("cache", f"active: {cache_path}")
+            log_debug("cache", f"active character loaded: {cache_path}")
             return True
         except Exception:
             return False
@@ -302,7 +303,7 @@ class DataLoader:
     def mark_dirty(self, reason=""):
         self.is_dirty = True
         self.dirty_reason = str(reason or "")
-        print("[CHARACTER DIRTY]", self.dirty_reason)
+        log_debug("save", f"character dirty: {self.dirty_reason}")
 
     def has_unsaved_changes(self):
         if self.is_dirty:
@@ -329,7 +330,7 @@ class DataLoader:
         cell_data.setdefault("formula", None)
         cell_data.setdefault("references", [])
         cell_data.setdefault("error", None)
-        print(f"[CHARACTER CELL SET] {sheet_name}!{cell_ref} = {value}")
+        log_debug("save", f"{sheet_name}!{cell_ref} = {value}")
         if mark_dirty:
             self.mark_dirty(f"{sheet_name}!{cell_ref}")
         return True
@@ -395,7 +396,7 @@ class DataLoader:
 
         if not sheets:
             raise ValueError("ODS-Datei enthält keine Tabellen.")
-        print("[LOAD] ODS loaded:", file_path)
+        log_debug("cache", f"ODS loaded: {file_path}")
         return SimpleWorkbook(sheets)
 
     def _parse_ods_row(self, row_element, row_index: int) -> tuple[list[SimpleCell], bool]:

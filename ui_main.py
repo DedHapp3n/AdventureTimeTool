@@ -22,6 +22,7 @@ from app_paths import (
     resource_path,
     save_settings,
 )
+from app_logger import log_debug, log_error, log_info, log_warning, set_debug_settings
 from data_loader import DataLoader
 from formula_parser import FormulaParser
 from ui_tabs.sheet_tab import SheetTab
@@ -92,6 +93,7 @@ class MainWindow(QMainWindow):
         ensure_runtime_defaults()
         self.setWindowTitle("Adventure Time Tool")
         self.settings, _ = load_settings()
+        set_debug_settings(self.settings.get("debug", {}) if isinstance(self.settings, dict) else {})
         window_settings = self.settings.get("window", {}) if isinstance(self.settings, dict) else {}
         self.resize(int(window_settings.get("width", 1500)), int(window_settings.get("height", 900)))
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
@@ -232,7 +234,7 @@ class MainWindow(QMainWindow):
         fallback = self.assets_dir / "themes" / "diablo" / "ui" / filename
         if fallback.exists():
             return fallback
-        print(f"[THEME] missing asset: {primary}")
+        log_warning("theme", f"missing asset: {primary}")
         return primary
 
     def load_ui_pixmap(self, filename):
@@ -241,14 +243,14 @@ class MainWindow(QMainWindow):
         asset_path = self.resolve_ui_asset_path(filename)
         if asset_path is not None and asset_path.exists():
             pixmap = QPixmap(str(asset_path))
-            print(f"[UI_ASSET] pixmap null: {pixmap.isNull()} {pixmap.size()}")
+            log_debug("theme", f"pixmap null: {pixmap.isNull()} {pixmap.size()}")
             if not pixmap.isNull():
                 return pixmap
         return None
 
     def load_main_ui_layout_config(self):
         layout_path = self.get_theme_layout_path()
-        print(f"[UI_LAYOUT] layout: {layout_path} {layout_path.exists()}")
+        log_debug("theme", f"layout: {layout_path} {layout_path.exists()}")
         try:
             if not layout_path.exists():
                 return {}
@@ -263,6 +265,7 @@ class MainWindow(QMainWindow):
     def load_theme_config(self):
         loaded, _ = load_settings()
         self.settings = loaded
+        set_debug_settings(loaded.get("debug", {}) if isinstance(loaded, dict) else {})
         discovered_themes = self.discover_available_themes()
 
         saved_theme = str(loaded.get("theme", "") or "").strip()
@@ -278,8 +281,8 @@ class MainWindow(QMainWindow):
             self.settings["theme"] = active_theme
             save_settings(self.settings)
 
-        print(f"[THEME] discovered themes: {discovered_themes}")
-        print(f"[THEME] active theme: {active_theme}")
+        log_debug("theme", f"discovered themes: {discovered_themes}")
+        log_debug("theme", f"active theme: {active_theme}")
         return {"active_theme": active_theme, "themes": discovered_themes}
 
     def discover_available_themes(self):
@@ -321,7 +324,7 @@ class MainWindow(QMainWindow):
         if layout_path.exists():
             return layout_path
         fallback = self.assets_dir / "themes" / "diablo" / "ui_layout.json"
-        print(f"[THEME] missing layout: {layout_path}, fallback: {fallback}")
+        log_warning("theme", f"missing layout: {layout_path}, fallback: {fallback}")
         return fallback
 
     def get_theme_asset_base_path(self):
@@ -330,7 +333,7 @@ class MainWindow(QMainWindow):
         if base.exists():
             return base
         fallback = self.assets_dir / "themes" / "diablo" / "ui"
-        print(f"[THEME] missing asset base: {base}, fallback: {fallback}")
+        log_warning("theme", f"missing asset base: {base}, fallback: {fallback}")
         return fallback
 
     def reload_theme(self):
@@ -348,8 +351,8 @@ class MainWindow(QMainWindow):
         canvas_cfg = self.main_ui_layout_config.get("canvas", {})
         canvas_width = int(canvas_cfg.get("width", 1024))
         canvas_height = int(canvas_cfg.get("height", 768))
-        print(f"[UI_LAYOUT] canvas: {canvas_width}x{canvas_height}")
-        print(f"[UI] canvas size: {canvas_width} {canvas_height}")
+        log_debug("render", f"canvas: {canvas_width}x{canvas_height}")
+        log_debug("render", f"canvas size: {canvas_width} {canvas_height}")
         self.setFixedSize(canvas_width, canvas_height)
         self.game_canvas.setFixedSize(canvas_width, canvas_height)
 
@@ -359,11 +362,12 @@ class MainWindow(QMainWindow):
         frame_w = int(frame_cfg.get("w", canvas_width))
         frame_h = int(frame_cfg.get("h", canvas_height))
         frame_asset = frame_cfg.get("asset", "")
-        print(f"[UI] main_frame geometry: {frame_x} {frame_y} {frame_w} {frame_h}")
+        log_debug("render", f"main_frame geometry: {frame_x} {frame_y} {frame_w} {frame_h}")
         frame_asset_path = self.resolve_ui_asset_path(frame_asset) if frame_asset else None
-        print(
-            f"[UI_ASSET] main_frame: {frame_asset_path} "
-            f"{frame_asset_path.exists() if frame_asset_path else False}"
+        log_debug(
+            "theme",
+            f"main_frame: {frame_asset_path} "
+            f"{frame_asset_path.exists() if frame_asset_path else False}",
         )
 
         self.main_frame_label = QLabel(self.game_canvas)
@@ -576,7 +580,7 @@ class MainWindow(QMainWindow):
 
     def on_settings_button_clicked(self):
         self.show_main_section("settings")
-        print("[UI] section changed: settings")
+        log_debug("render", "section changed: settings")
 
     def open_settings_dialog(self):
         if self.settings_dialog is not None and self.settings_dialog.isVisible():
@@ -671,7 +675,7 @@ class MainWindow(QMainWindow):
             self.theme_name_value_label.setText(self.get_active_theme())
         if hasattr(self, "settings_theme_value_label") and self.settings_theme_value_label is not None and self.current_main_section == "settings":
             self.settings_theme_value_label.setText(self.get_active_theme())
-        print("[THEME] switched to:", next_theme)
+        log_info("theme", f"switched to: {next_theme}")
 
     def on_settings_switch_theme_clicked(self):
         self.switch_to_next_theme()
@@ -679,7 +683,7 @@ class MainWindow(QMainWindow):
     def on_settings_cache_reload_clicked(self):
         if hasattr(self.loader, "load_cache_from_json"):
             if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
-                print("[CHARACTER WARNING] unsaved changes before switching character")
+                log_warning("character", "unsaved changes before switching character")
             if self.loader.load_cache_from_json():
                 self.reset_character_runtime_state()
                 self.create_tabs_from_cache()
@@ -697,19 +701,19 @@ class MainWindow(QMainWindow):
                     self.show_main_section("magic")
                 elif self.current_main_section == "notes":
                     self.show_main_section("notes")
-            print("[SETTINGS] Cache reload clicked")
+            log_debug("cache", "settings cache reload clicked")
             return
-        print("[SETTINGS] Cache reload clicked")
+        log_debug("cache", "settings cache reload clicked")
 
     def on_settings_excel_import_clicked(self):
         try:
             self.load_excel()
         except Exception:
-            print("[SETTINGS] Excel import clicked")
+            log_debug("render", "settings excel import clicked")
 
     def on_main_nav_clicked(self, section_id):
         self.show_main_section(section_id)
-        print("[UI] section changed:", section_id)
+        log_debug("render", f"section changed: {section_id}")
 
     def clear_content_layer(self):
         if self.content_layer is None:
@@ -1164,20 +1168,20 @@ class MainWindow(QMainWindow):
         empty = {"attribute_map": {}, "categories": []}
         try:
             if not definitions_path.exists():
-                print("[SKILLS] missing/invalid skill_definitions.json")
+                log_warning("skills", "missing/invalid skill_definitions.json")
                 return empty
             with open(definitions_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict):
-                print("[SKILLS] missing/invalid skill_definitions.json")
+                log_warning("skills", "missing/invalid skill_definitions.json")
                 return empty
             if not isinstance(data.get("attribute_map"), dict):
                 data["attribute_map"] = {}
             if not isinstance(data.get("categories"), list):
                 data["categories"] = []
             return data
-        except Exception:
-            print("[SKILLS] missing/invalid skill_definitions.json")
+        except Exception as exc:
+            log_warning("skills", f"missing/invalid skill_definitions.json: {exc}")
             return empty
 
     def get_default_skills_layout_config(self):
@@ -1386,11 +1390,11 @@ class MainWindow(QMainWindow):
                 with open(layout_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, dict) and isinstance(data.get("inventory_screen"), dict):
-                    print(f"[INVENTORY LAYOUT] loaded: {layout_path}")
+                    log_debug("inventory", f"layout loaded: {layout_path}")
                     return data
             except Exception:
                 continue
-        print("[INVENTORY LAYOUT] fallback: internal default")
+        log_debug("inventory", "layout fallback: internal default")
         return self.get_default_inventory_layout_config()
 
     def get_default_equipment_layout_config(self):
@@ -1442,11 +1446,11 @@ class MainWindow(QMainWindow):
                     data = json.load(f)
                 if isinstance(data, dict) and isinstance(data.get("equipment_screen"), dict):
                     self.equipment_layout_config = data
-                    print(f"[EQUIPMENT LAYOUT] loaded: {layout_path}")
+                    log_debug("equipment", f"layout loaded: {layout_path}")
                     return data
             except Exception:
                 continue
-        print("[EQUIPMENT LAYOUT] fallback: internal default")
+        log_debug("equipment", "layout fallback: internal default")
         self.equipment_layout_config = self.get_default_equipment_layout_config()
         return self.equipment_layout_config
 
@@ -1523,11 +1527,11 @@ class MainWindow(QMainWindow):
                 if isinstance(data, dict) and isinstance(data.get("notes_screen"), dict):
                     debug_cfg = data.get("notes_screen", {}).get("debug", {})
                     if isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False)):
-                        print(f"[NOTES LAYOUT] loaded: {layout_path}")
+                        log_debug("notes", f"layout loaded: {layout_path}")
                     return data
             except Exception:
                 continue
-        print("[NOTES LAYOUT] fallback: internal default")
+        log_debug("notes", "layout fallback: internal default")
         return self.get_default_notes_layout_config()
 
     def get_default_magic_layout_config(self):
@@ -1616,12 +1620,12 @@ class MainWindow(QMainWindow):
                 if isinstance(data, dict) and isinstance(data.get("magic_screen"), dict):
                     debug_cfg = data.get("magic_screen", {}).get("debug", {})
                     if isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False)):
-                        print(f"[MAGIC LAYOUT] loaded: {layout_path}")
+                        log_debug("magic", f"layout loaded: {layout_path}")
                     self.magic_layout_config = data
                     return data
             except Exception:
                 continue
-        print("[MAGIC LAYOUT] fallback: internal default")
+        log_debug("magic", "layout fallback: internal default")
         self.magic_layout_config = self.get_default_magic_layout_config()
         return self.magic_layout_config
 
@@ -1657,7 +1661,7 @@ class MainWindow(QMainWindow):
             self.loader.save_active_character_json()
             return True
         except Exception as exc:
-            print("[NOTES SAVE ERROR]", str(exc))
+            log_error("notes", f"save failed: {exc}")
             return False
 
     def _get_equipment_debug_config(self):
@@ -1780,11 +1784,11 @@ class MainWindow(QMainWindow):
                 with open(layout_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, dict) and isinstance(data.get("dialog"), dict):
-                    print(f"[ROLL LAYOUT] loaded: {layout_path}")
+                    log_debug("roll20", f"layout loaded: {layout_path}")
                     return data
             except Exception:
                 continue
-        print("[ROLL LAYOUT] fallback: internal defaults")
+        log_debug("roll20", "layout fallback: internal defaults")
         return default_config
 
     def load_perk_rules_config(self):
@@ -1792,12 +1796,12 @@ class MainWindow(QMainWindow):
         empty = {"version": 1, "description": "", "rules": []}
         try:
             if not rules_path.exists():
-                print("[PERK RULES] missing, using empty rules")
+                log_warning("roll20", "perk rules missing, using empty rules")
                 return empty
             with open(rules_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict):
-                print("[PERK RULES] missing, using empty rules")
+                log_warning("roll20", "perk rules invalid, using empty rules")
                 return empty
             rules = data.get("rules", [])
             if not isinstance(rules, list):
@@ -1810,10 +1814,10 @@ class MainWindow(QMainWindow):
                     continue
                 enabled_rules.append(rule)
             data["rules"] = enabled_rules
-            print(f"[PERK RULES] loaded: {rules_path} rules={len(enabled_rules)}")
+            log_debug("roll20", f"perk rules loaded: {rules_path} rules={len(enabled_rules)}")
             return data
         except Exception:
-            print("[PERK RULES] missing, using empty rules")
+            log_warning("roll20", "perk rules load failed, using empty rules")
             return empty
 
     def get_default_skill_sheet_mapping_config(self):
@@ -1997,7 +2001,7 @@ class MainWindow(QMainWindow):
         tail = normalized[last_paren + 1 :]
         candidates = re.findall(r"\+([A-Z]{1,3}[0-9]+)", tail)
         if len(candidates) > 1:
-            print("[SKILLS FORMULA BONUS AMBIGUOUS]", source_key, f'formula="{formula_text}"')
+            log_debug("skills", f'SKILLS FORMULA BONUS AMBIGUOUS {source_key} formula="{formula_text}"')
             return None
         return candidates[0] if candidates else None
 
@@ -2113,31 +2117,14 @@ class MainWindow(QMainWindow):
             matches.append((row, str(cached_name).strip(), match_quality))
 
         if len(matches) > 1:
-            print(
-                "[SKILLS MAP AMBIGUOUS]",
-                f"{category_id}/{skill_id}",
-                f'"{skill_name}"',
-                "matches:",
-                [m[0] for m in matches],
-            )
+            log_debug("skills", f'SKILLS MAP AMBIGUOUS {category_id}/{skill_id} "{skill_name}" matches: {[m[0] for m in matches]}')
             result = (None, "ambiguous_row", matches)
             return result if return_info else None
         if len(matches) == 1:
-            print(
-                "[SKILLS MAP ROW]",
-                f"{category_id}/{skill_id}",
-                f'"{skill_name}"',
-                "->",
-                f"{sheet_name}!{name_col}{matches[0][0]}",
-            )
+            log_debug("skills", f'SKILLS MAP ROW {category_id}/{skill_id} "{skill_name}" -> {sheet_name}!{name_col}{matches[0][0]}')
             result = (matches[0][0], "ok", matches)
             return result if return_info else matches[0][0]
-        print(
-            "[SKILLS MAP MISSING]",
-            f"{category_id}/{skill_id}",
-            f'"{skill_name}"',
-            "no row found",
-        )
+        log_debug("skills", f'SKILLS MAP MISSING {category_id}/{skill_id} "{skill_name}" no row found')
         result = (None, "missing_row", [])
         return result if return_info else None
 
@@ -2240,33 +2227,14 @@ class MainWindow(QMainWindow):
         if len(candidates) == 1:
             bonus_key = next(iter(candidates))
             bonus_value = self.get_skill_bonus_value_for_key(block, bonus_key)
-            print(
-                "[SKILLS MAP BONUS RESOLVED]",
-                source_key,
-                "freie_wahl",
-                f"attrs={attribute_letters}",
-                "->",
-                bonus_key,
-                f"value={bonus_value if bonus_value is not None else 0}",
-            )
+            log_debug("skills", f"SKILLS MAP BONUS RESOLVED {source_key} freie_wahl attrs={attribute_letters} -> {bonus_key} value={bonus_value if bonus_value is not None else 0}")
             return bonus_key, "attribute_group"
         if len(candidates) > 1:
             sorted_candidates = sorted(candidates)
-            print(
-                "[SKILLS MAP BONUS AMBIGUOUS]",
-                source_key,
-                "freie_wahl",
-                f"attrs={attribute_letters}",
-                f"candidates={sorted_candidates}",
-            )
+            log_debug("skills", f"SKILLS MAP BONUS AMBIGUOUS {source_key} freie_wahl attrs={attribute_letters} candidates={sorted_candidates}")
             return None, "ambiguous"
 
-        print(
-            "[SKILLS MAP BONUS UNKNOWN]",
-            source_key,
-            "freie_wahl",
-            f"attrs={attribute_letters}",
-        )
+        log_debug("skills", f"SKILLS MAP BONUS UNKNOWN {source_key} freie_wahl attrs={attribute_letters}")
         return None, "unknown"
 
     def get_skill_base_bonus_from_row_or_note(self, row, skill, block=None, note_text=None, source_key=""):
@@ -2377,28 +2345,13 @@ class MainWindow(QMainWindow):
             info["source_status"] = row_status
             info["match_type"] = "ambiguous" if row_status == "ambiguous_row" else "missing"
             if row_status == "ambiguous_row":
-                print(
-                    "[SKILLS MATCH AMBIGUOUS]",
-                    source_key,
-                    f'ui="{ui_name}"',
-                    f"matches={[m[0] for m in matches]}",
-                )
+                log_debug("skills", f'SKILLS MATCH AMBIGUOUS {source_key} ui="{ui_name}" matches={[m[0] for m in matches]}')
             else:
-                print("[SKILLS MATCH MISSING]", source_key, f'ui="{ui_name}"')
-            print(
-                "[SKILLS STRUCTURE ONLY]",
-                source_key,
-                "no cache row, visible fields blank",
-            )
+                log_debug("skills", f'SKILLS MATCH MISSING {source_key} ui="{ui_name}"')
+            log_debug("skills", f"SKILLS STRUCTURE ONLY {source_key} no cache row, visible fields blank")
             self.skill_source_infos[source_key] = info
             self.log_skill_source_info(source_key, info)
-            print(
-                "[SKILLS VISIBLE SOURCE]",
-                source_key,
-                f"visible_source={info.get('visible_source')}",
-                f"match={info.get('match_type')}",
-                f'display="{info.get("display_name")}"',
-            )
+            log_debug("skills", f'SKILLS VISIBLE SOURCE {source_key} visible_source={info.get("visible_source")} match={info.get("match_type")} display="{info.get("display_name")}"')
             return info
 
         cache_name = matches[0][1] if matches else ""
@@ -2409,16 +2362,9 @@ class MainWindow(QMainWindow):
         use_cache_display_fields = match_quality in ("exact", "legacy")
         field_fallback_used = False
         if match_quality == "legacy":
-            print(
-                "[SKILLS LEGACY MATCH]",
-                source_key,
-                f'ui="{ui_name}"',
-                f'cache="{cache_name}"',
-                f"row={row}",
-                "using cache-visible data",
-            )
+            log_debug("skills", f'SKILLS LEGACY MATCH {source_key} ui="{ui_name}" cache="{cache_name}" row={row} using cache-visible data')
         elif match_quality == "exact":
-            print("[SKILLS EXACT MATCH]", source_key, f"row={row}", "using cache-visible data")
+            log_debug("skills", f"SKILLS EXACT MATCH {source_key} row={row} using cache-visible data")
 
         block = self.get_skill_block_config_for_row(row, category_id)
         info["row"] = row
@@ -2450,16 +2396,10 @@ class MainWindow(QMainWindow):
                 info["visible_source"] = "mixed_field_fallback" if field_fallback_used else "cache"
             info["source_status"] = "missing_block"
             info["display_value"] = "0"
-            print("[SKILLS FALLBACK]", ui_name, "missing block, using attribute_sum:", attribute_sum)
+            log_debug("skills", f"SKILLS FALLBACK {ui_name} missing block, using attribute_sum: {attribute_sum}")
             self.skill_source_infos[source_key] = info
             self.log_skill_source_info(source_key, info)
-            print(
-                "[SKILLS VISIBLE SOURCE]",
-                source_key,
-                f"visible_source={info.get('visible_source')}",
-                f"match={info.get('match_type')}",
-                f'display="{info.get("display_name")}"',
-            )
+            log_debug("skills", f'SKILLS VISIBLE SOURCE {source_key} visible_source={info.get("visible_source")} match={info.get("match_type")} display="{info.get("display_name")}"')
             return info
 
         lookup_start = self._safe_int(block.get("lookup_start_row", 0), 0)
@@ -2484,7 +2424,7 @@ class MainWindow(QMainWindow):
         for letter in letters:
             lookup_value = self.get_skill_lookup_value(block, letter)
             if lookup_value is None:
-                print("[SKILLS MAP LOOKUP MISSING]", source_key, letter, info["lookup_key_range"])
+                log_debug("skills", f"SKILLS MAP LOOKUP MISSING {source_key} {letter} {info['lookup_key_range']}")
                 status = "missing_lookup"
                 continue
             info["resolved_attribute_values"].append(lookup_value)
@@ -2514,18 +2454,11 @@ class MainWindow(QMainWindow):
                     bonus_value = 0
                 bonus_key = formula_bonus_cell
                 info["formula_bonus_cell"] = formula_bonus_cell
-                print(
-                    "[SKILLS FORMULA BONUS]",
-                    source_key,
-                    formula_cell,
-                    "->",
-                    formula_bonus_cell,
-                    f"value={bonus_value}",
-                )
+                log_debug("skills", f"SKILLS FORMULA BONUS {source_key} {formula_cell} -> {formula_bonus_cell} value={bonus_value}")
             else:
-                print("[SKILLS FORMULA BONUS]", source_key, formula_cell, "->", "none")
+                log_debug("skills", f"SKILLS FORMULA BONUS {source_key} {formula_cell} -> none")
         else:
-            print("[SKILLS BONUS FALLBACK]", source_key, "no formula text, using note fallback")
+            log_debug("skills", f"SKILLS BONUS FALLBACK {source_key} no formula text, using note fallback")
             bonus_key, bonus_value, bonus_status = self.get_skill_base_bonus_from_row_or_note(
                 row,
                 skill,
@@ -2566,7 +2499,7 @@ class MainWindow(QMainWindow):
     def find_initiative_skill_source_key(self):
         self.ensure_skill_source_infos_ready()
         if not isinstance(self.skill_source_infos, dict) or not self.skill_source_infos:
-            print("[CHARACTER INITIATIVE SOURCE] not found")
+            log_debug("character", "CHARACTER INITIATIVE SOURCE not found")
             return None
 
         def is_initiative_match(value):
@@ -2606,34 +2539,24 @@ class MainWindow(QMainWindow):
             matches.append((score, source_key_text, info))
 
         if not matches:
-            print("[CHARACTER INITIATIVE SOURCE] not found")
+            log_debug("character", "CHARACTER INITIATIVE SOURCE not found")
             return None
         matches.sort(key=lambda it: it[0])
         _, found, found_info = matches[0]
-        print(
-            "[CHARACTER INITIATIVE SOURCE]",
-            f"found source_key={found}",
-            f'display_name="{found_info.get("display_name", "")}"',
-            f'value={found_info.get("display_value", "-")}',
-        )
+        log_debug("character", f'CHARACTER INITIATIVE SOURCE found source_key={found} display_name="{found_info.get("display_name", "")}" value={found_info.get("display_value", "-")}')
         return found
 
     def open_character_initiative_roll(self):
         initiative_info = self.get_character_initiative_data()
         if not initiative_info or initiative_info.get("roll_value") is None:
-            print("[CHARACTER INITIATIVE ERROR] initiative value not found")
+            log_warning("character", "initiative value not found")
             QMessageBox.information(
                 self,
                 "Initiative",
                 "Initiative-Wert nicht gefunden. Prüfe Charakterbogen-Initiative-Feld.",
             )
             return
-        print(
-            "[CHARACTER INITIATIVE ROLL]",
-            f'source={initiative_info.get("source", "-")}',
-            f'roll={initiative_info.get("roll_value", "-")}',
-            "dialog=roll_dialog_layout",
-        )
+        log_debug("roll20", f'CHARACTER INITIATIVE ROLL source={initiative_info.get("source", "-")} roll={initiative_info.get("roll_value", "-")} dialog=roll_dialog_layout')
         roll_info = {
             "source": "character_initiative",
             "display_name": "Initiative",
@@ -2653,7 +2576,7 @@ class MainWindow(QMainWindow):
                 "display_attribute_slots": ["R", "I"],
             },
         }
-        print("[ROLL DIALOG] source=character_initiative layout=roll_dialog_layout")
+        log_debug("roll20", "ROLL DIALOG source=character_initiative layout=roll_dialog_layout")
         self.open_skill_roll_dialog(roll_info=roll_info)
 
     def _parse_cell_ref(self, cell_ref):
@@ -2913,13 +2836,11 @@ class MainWindow(QMainWindow):
             value_score = 1 if found_value is not None and 0 <= float(found_value) <= 50 else 0
             bonus_score = 1 if bonus_value is not None and 0 <= float(bonus_value) <= 50 else 0
             score = value_score * 2 + bonus_score
-            print(
-                "[CHARACTER INITIATIVE SCAN]",
-                f"candidate label={label_cell}",
-                f"value_cell={found_value_cell}",
-                f"value={found_value}",
-                f"bonus_cell={bonus_cell or '-'}",
-                f"bonus={bonus_value if bonus_value is not None else '-'}",
+            log_debug(
+                "character",
+                f"CHARACTER INITIATIVE SCAN candidate label={label_cell} "
+                f"value_cell={found_value_cell} value={found_value} "
+                f"bonus_cell={bonus_cell or '-'} bonus={bonus_value if bonus_value is not None else '-'} "
                 f"score={score}",
             )
             candidate = {
@@ -2966,10 +2887,10 @@ class MainWindow(QMainWindow):
             if result is None:
                 result = self._initiative_data_from_fertigkeiten_cache()
             if result is not None:
-                print("[CHARACTER INITIATIVE WARNING] using skills fallback, character initiative field not found")
+                log_debug("character", "CHARACTER INITIATIVE using skills fallback, character initiative field not found")
 
         if result is None:
-            print("[CHARACTER INITIATIVE DATA] source=none raw=- value=- bonus=0 roll=-")
+            log_debug("character", "CHARACTER INITIATIVE DATA source=none raw=- value=- bonus=0 roll=-")
             return {
                 "source": "none",
                 "raw_value": "-",
@@ -2979,23 +2900,18 @@ class MainWindow(QMainWindow):
                 "debug": "not_found",
             }
 
-        print(
-            "[CHARACTER INITIATIVE DATA]",
-            f"source={result.get('source', '-')}",
-            f"value_cell={result.get('value_cell', '-') or '-'}",
-            f"bonus_cell={result.get('bonus_cell', '-') or '-'}",
-            f"raw={result.get('raw_value', '-')}",
-            f"bonus={result.get('bonus', 0)}",
+        log_debug(
+            "character",
+            f"CHARACTER INITIATIVE DATA source={result.get('source', '-')} "
+            f"value_cell={result.get('value_cell', '-') or '-'} "
+            f"bonus_cell={result.get('bonus_cell', '-') or '-'} "
+            f"raw={result.get('raw_value', '-')} bonus={result.get('bonus', 0)} "
             f"roll={result.get('roll_value', '-')}",
         )
         if str(result.get("source", "")).startswith("character:"):
             fallback_skill = self._initiative_data_from_skill_sources()
             if isinstance(fallback_skill, dict):
-                print(
-                    "[CHARACTER INITIATIVE NOTE]",
-                    f"skill_ini_wurf={fallback_skill.get('raw_value', '-')}",
-                    "ignored because character initiative field exists",
-                )
+                log_debug("character", f"CHARACTER INITIATIVE NOTE skill_ini_wurf={fallback_skill.get('raw_value', '-')} ignored because character initiative field exists")
         if "raw_bonus" not in result:
             result["raw_bonus"] = str(result.get("bonus", 0))
         return result
@@ -3023,15 +2939,13 @@ class MainWindow(QMainWindow):
     def log_skill_source_info(self, source_key, info):
         if not self.skills_debug_sources:
             return
-        print(
-            "[SKILLS SOURCE]",
-            source_key,
-            f"row={info.get('row')}",
-            f"attrs={info.get('resolved_attribute_letters')}",
-            f"attr_values={info.get('resolved_attribute_values')}",
-            f"bonus={info.get('resolved_bonus_key')}:{info.get('resolved_bonus_value')}",
-            f"raw={info.get('calculated_value')}",
-            f"display={info.get('display_value')}",
+        log_debug(
+            "skills",
+            f"SKILLS SOURCE {source_key} row={info.get('row')} "
+            f"attrs={info.get('resolved_attribute_letters')} "
+            f"attr_values={info.get('resolved_attribute_values')} "
+            f"bonus={info.get('resolved_bonus_key')}:{info.get('resolved_bonus_value')} "
+            f"raw={info.get('calculated_value')} display={info.get('display_value')} "
             f"status={info.get('source_status')}",
         )
 
@@ -3109,7 +3023,7 @@ class MainWindow(QMainWindow):
         selected_value = str(chosen_action.data() or "").strip().upper()
         if selected_value not in valid_values:
             selected_value = ""
-        print(f'[SKILLS EDIT ATTR MENU] {sheet_name}!{cell_ref} selected="{selected_value}"')
+        log_debug("skills", f'SKILLS EDIT ATTR MENU {sheet_name}!{cell_ref} selected="{selected_value}"')
         self.save_skill_attribute_slot_value(source_key, slot_index, selected_value)
 
     def save_skill_attribute_slot_value(self, source_key, slot_index, new_value):
@@ -3139,7 +3053,7 @@ class MainWindow(QMainWindow):
         before_snapshot = [before_values.get(str(ref or "").strip().upper(), "") for ref in attribute_cells[:4]]
 
         try:
-            print(f'[SKILLS EDIT ATTR] {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
+            log_debug("skills", f'SKILLS EDIT ATTR {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
             self.loader.set_cell_value(sheet_name, cell_ref, normalized_new_value)
             after_snapshot = []
             for other_cell_ref in attribute_cells[:4]:
@@ -3151,23 +3065,14 @@ class MainWindow(QMainWindow):
                 if normalized_ref == cell_ref:
                     continue
                 if after_value != before_values.get(normalized_ref, ""):
-                    print(
-                        "[SKILLS EDIT ERROR]",
-                        f"unexpected slot change {sheet_name}!{normalized_ref}",
-                        f'"{before_values.get(normalized_ref, "")}" -> "{after_value}"',
-                    )
-            print(
-                "[SKILLS EDIT SLOT SNAPSHOT]",
-                f"row={source_info.get('row')}",
-                f"before={before_snapshot}",
-                f"after={after_snapshot}",
-            )
+                    log_warning("skills", f'unexpected slot change {sheet_name}!{normalized_ref} "{before_values.get(normalized_ref, "")}" -> "{after_value}"')
+            log_debug("skills", f"SKILLS EDIT SLOT SNAPSHOT row={source_info.get('row')} before={before_snapshot} after={after_snapshot}")
             self.loader.save_active_character_json()
-            print("[SKILLS EDIT SAVE] active character saved")
+            log_debug("save", "SKILLS EDIT SAVE active character saved")
             self.create_tabs_from_cache()
             self.show_main_section("skills")
         except Exception as exc:
-            print("[SKILLS EDIT ERROR]", str(exc))
+            log_error("skills", f"edit attribute failed: {exc}")
 
     def is_skill_specialization_editable(self, source_info):
         if not isinstance(source_info, dict):
@@ -3201,14 +3106,14 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            print(f'[SKILLS EDIT SPEC] {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
+            log_debug("skills", f'SKILLS EDIT SPEC {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
             self.loader.set_cell_value(sheet_name, cell_ref, normalized_new_value)
             self.loader.save_active_character_json()
-            print("[SKILLS EDIT SAVE] active character saved")
+            log_debug("save", "SKILLS EDIT SAVE active character saved")
             self.create_tabs_from_cache()
             self.show_main_section("skills")
         except Exception as exc:
-            print("[SKILLS EDIT ERROR]", str(exc))
+            log_error("skills", f"edit specialization failed: {exc}")
 
     def is_skill_note_editable(self, source_info):
         if not isinstance(source_info, dict):
@@ -3242,14 +3147,14 @@ class MainWindow(QMainWindow):
             return
         try:
             tag = "SPEC" if field_type == "specialization" else "NOTE"
-            print(f'[SKILLS EDIT {tag}] {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
+            log_debug("skills", f'SKILLS EDIT {tag} {sheet_name}!{cell_ref} "{old_value}" -> "{normalized_new_value}"')
             self.loader.set_cell_value(sheet_name, cell_ref, normalized_new_value)
             self.loader.save_active_character_json()
-            print("[SKILLS EDIT SAVE] active character saved")
+            log_debug("save", "SKILLS EDIT SAVE active character saved")
             self.create_tabs_from_cache()
             self.show_main_section("skills")
         except Exception as exc:
-            print("[SKILLS EDIT ERROR]", str(exc))
+            log_error("skills", f"edit text failed: {exc}")
 
     def _estimate_skill_text_height(self, text, width, font_size, min_row_h, max_row_h=0, max_lines=0):
         safe_width = max(20, int(width) - 8)
@@ -3362,13 +3267,7 @@ class MainWindow(QMainWindow):
                     "row": row,
                 }
                 entries.append(entry)
-                print(
-                    "[PERK DATA]",
-                    entry_type,
-                    f"row={row}",
-                    f'name="{name}"',
-                    f'effect="{effect}"',
-                )
+                log_debug("character", f'PERK DATA {entry_type} row={row} name="{name}" effect="{effect}"')
 
         collect_section("perks", "perk")
         collect_section("disadvantages", "disadvantage")
@@ -3440,13 +3339,7 @@ class MainWindow(QMainWindow):
                     "suggested_effect": rule.get("suggested_effect", {}),
                 }
                 matches.append(suggestion)
-                print(
-                    "[PERK MATCH]",
-                    f'skill="{skill_name}"',
-                    f"rule={rule_id}",
-                    f'source="{entry_name}"',
-                    f'label="{suggestion["label"]}"',
-                )
+                log_debug("roll20", f'PERK MATCH skill="{skill_name}" rule={rule_id} source="{entry_name}" label="{suggestion["label"]}"')
 
         grouped = {}
         for suggestion in matches:
@@ -3472,7 +3365,7 @@ class MainWindow(QMainWindow):
 
         matches = deduped
         if not matches:
-            print("[PERK MATCH]", f'skill="{skill_name}"', "none")
+            log_debug("roll20", f'PERK MATCH skill="{skill_name}" none')
         return matches
 
     def filter_roll_suggestions_for_context(self, suggestions, roll_context=None):
@@ -3509,18 +3402,8 @@ class MainWindow(QMainWindow):
                     reason = "not_explicit_initiative"
             if reason is not None:
                 dropped += 1
-                print(
-                    "[ROLL SUGGESTION FILTER]",
-                    "context=initiative",
-                    f"drop rule={rule_id or '-'}",
-                    f"reason={reason}",
-                )
-        print(
-            "[ROLL SUGGESTION FILTER]",
-            "context=initiative",
-            f"kept={len(kept)}",
-            f"dropped={dropped}",
-        )
+                log_debug("roll20", f"ROLL SUGGESTION FILTER context=initiative drop rule={rule_id or '-'} reason={reason}")
+        log_debug("roll20", f"ROLL SUGGESTION FILTER context=initiative kept={len(kept)} dropped={dropped}")
         return kept
 
     def get_fixed_roll_bonuses_for_context(self, skill_info, roll_context=None):
@@ -3573,7 +3456,7 @@ class MainWindow(QMainWindow):
 
         result["extra_bonuses"].append(flat_bonus)
         result["lines"].append(f"Flink: Initiative +{flat_bonus} aktiv")
-        print(f"[ROLL FIXED BONUS] context=initiative source=Flink bonus={flat_bonus} auto=True")
+        log_debug("roll20", f"ROLL FIXED BONUS context=initiative source=Flink bonus={flat_bonus} auto=True")
         return result
 
     def build_specialization_preview_text(self, full_text, max_chars):
@@ -3598,7 +3481,7 @@ class MainWindow(QMainWindow):
     def get_active_wellbeing_roll_suggestions(self, skill_info):
         suggestions = []
         if not isinstance(skill_info, dict):
-            print("[WELLBEING ROLL SUGGESTION] none")
+            log_debug("roll20", "WELLBEING ROLL SUGGESTION none")
             return suggestions
 
         entries = self.get_wellbeing_entries(
@@ -3611,7 +3494,7 @@ class MainWindow(QMainWindow):
             }
         )
         if not isinstance(entries, list):
-            print("[WELLBEING ROLL SUGGESTION] none")
+            log_debug("roll20", "WELLBEING ROLL SUGGESTION none")
             return suggestions
 
         skill_name = self._norm_match_text(skill_info.get("display_name", ""))
@@ -3641,7 +3524,7 @@ class MainWindow(QMainWindow):
                 continue
             normalized = self._norm_match_text(raw_label)
             if "bewegung" in normalized:
-                print(f'[WELLBEING ROLL SKIP] movement label="{raw_label}"')
+                log_debug("roll20", f'WELLBEING ROLL SKIP movement label="{raw_label}"')
                 continue
             if normalized in {"+/- 0", "+ / - 0", "+- 0", "+ - 0"}:
                 continue
@@ -3704,12 +3587,10 @@ class MainWindow(QMainWindow):
                 continue
             suggestions.append(suggestion)
             compact_effect = json.dumps(suggestion.get("suggested_effect", {}), ensure_ascii=False, separators=(",", ":"))
-            print(
-                f'[WELLBEING ROLL SUGGESTION] label="{raw_label}" effect={compact_effect}'
-            )
+            log_debug("roll20", f'WELLBEING ROLL SUGGESTION label="{raw_label}" effect={compact_effect}')
 
         if not suggestions:
-            print("[WELLBEING ROLL SUGGESTION] none")
+            log_debug("roll20", "WELLBEING ROLL SUGGESTION none")
         return suggestions
 
     def on_skill_row_roll_clicked(self, source_key):
@@ -3730,23 +3611,11 @@ class MainWindow(QMainWindow):
             value_number = int(display_value) if display_value else 0
         except Exception:
             value_number = 0
-        print(
-            "[ROLL SELECT]",
-            source_key,
-            f"row={source_info.get('row')}",
-            f'name="{display_name}"',
-            f"value={value_number}",
-            f"attrs={attribute_letters}",
-            f'specialization="{specialization_text}"',
-        )
+        log_debug("roll20", f'ROLL SELECT {source_key} row={source_info.get("row")} name="{display_name}" value={value_number} attrs={attribute_letters} specialization="{specialization_text}"')
         self.open_skill_roll_dialog(source_key)
 
     def open_skill_roll_dialog(self, source_key=None, roll_context=None, roll_info=None):
-        print(
-            "[ROLL DIALOG]",
-            f"source={'character_initiative' if isinstance(roll_info, dict) else 'skill'}",
-            "layout=roll_dialog_layout",
-        )
+        log_debug("roll20", f"ROLL DIALOG source={'character_initiative' if isinstance(roll_info, dict) else 'skill'} layout=roll_dialog_layout")
         source_info = None
         if isinstance(roll_info, dict):
             display_name = str(roll_info.get("display_name", ""))
@@ -3882,7 +3751,7 @@ class MainWindow(QMainWindow):
                 )
             except Exception as exc:
                 perk_suggestions = []
-                print("[ROLL PERK SUGGESTIONS ERROR]", str(exc))
+                log_warning("roll20", f"perk suggestions failed: {exc}")
             if not isinstance(perk_suggestions, list):
                 perk_suggestions = []
             perk_suggestions = self.filter_roll_suggestions_for_context(perk_suggestions, roll_context=roll_context)
@@ -3911,7 +3780,7 @@ class MainWindow(QMainWindow):
             wellbeing_suggestions = self.get_active_wellbeing_roll_suggestions(wellbeing_context)
         except Exception as exc:
             wellbeing_suggestions = []
-            print("[ROLL WELLBEING SUGGESTIONS ERROR]", str(exc))
+            log_warning("roll20", f"wellbeing suggestions failed: {exc}")
         if not isinstance(wellbeing_suggestions, list):
             wellbeing_suggestions = []
 
@@ -3967,7 +3836,7 @@ class MainWindow(QMainWindow):
                     )
                 else:
                     if not bool(getattr(self, "_roll_checkbox_asset_warning_shown", False)):
-                        print("[ROLL CHECKBOX ASSET WARNING] missing checked/unchecked asset, using native checkbox")
+                        log_warning("roll20", "missing checked/unchecked asset, using native checkbox")
                         self._roll_checkbox_asset_warning_shown = True
             return style
 
@@ -4364,7 +4233,7 @@ class MainWindow(QMainWindow):
 
             if debug_info_only_enabled:
                 for info_label in collected["info_only"]:
-                    print(f'[ROLL EFFECT INFO_ONLY] source={source_label} label="{info_label}"')
+                    log_debug("roll20", f'ROLL EFFECT INFO_ONLY source={source_label} label="{info_label}"')
             return collected
 
         def update_roll_preview():
@@ -4394,7 +4263,7 @@ class MainWindow(QMainWindow):
             if paradigm_checkbox is not None and paradigm_checkbox.isChecked():
                 extra_bonuses.append(paradigm_bonus)
                 if debug_paradigm_enabled:
-                    print(f"[ROLL PARADIGM] active=True bonus={paradigm_bonus}")
+                    log_debug("roll20", f"ROLL PARADIGM active=True bonus={paradigm_bonus}")
             extra_bonuses.extend(fixed_extra_bonuses)
             extra_bonuses.extend(perk_effects["extra_bonuses"])
             extra_bonuses.extend(wellbeing_effects["extra_bonuses"])
@@ -4407,21 +4276,14 @@ class MainWindow(QMainWindow):
             )
             roll_command_edit.setText(command)
             if debug_preview_enabled:
-                print(
-                    "[ROLL PREVIEW]",
-                    f"dice={dice_count}",
-                    f"skill={skill_bonus}",
-                    f"manual={manual_bonus}",
-                    f"extras={extra_bonuses}",
-                    f'command="{command}"',
-                )
+                log_debug("roll20", f'ROLL PREVIEW dice={dice_count} skill={skill_bonus} manual={manual_bonus} extras={extra_bonuses} command="{command}"')
 
         def copy_roll_command():
             command = roll_command_edit.text().strip()
             QApplication.clipboard().setText(command)
-            print("[ROLL COPY]", command)
+            log_debug("roll20", f"ROLL COPY {command}")
             if direct_send_checkbox is not None and direct_send_checkbox.isChecked():
-                print("[ROLL SEND PLACEHOLDER] direct Roll20 send requested but not implemented")
+                log_info("roll20", "ROLL SEND PLACEHOLDER direct Roll20 send requested but not implemented")
             dialog.accept()
 
         def on_perk_suggestion_toggled(checkbox, checked):
@@ -4433,9 +4295,7 @@ class MainWindow(QMainWindow):
                 effect = {}
             compact_effect = json.dumps(effect, ensure_ascii=False, separators=(",", ":"))
             if debug_toggles_enabled:
-                print(
-                    f"[PERK SUGGESTION TOGGLE] rule={rule_id} checked={bool(checked)} effect={compact_effect}"
-                )
+                log_debug("roll20", f"PERK SUGGESTION TOGGLE rule={rule_id} checked={bool(checked)} effect={compact_effect}")
             update_roll_preview()
 
         def on_wellbeing_suggestion_toggled(checkbox, checked):
@@ -4447,9 +4307,7 @@ class MainWindow(QMainWindow):
                 effect = {}
             compact_effect = json.dumps(effect, ensure_ascii=False, separators=(",", ":"))
             if debug_toggles_enabled:
-                print(
-                    f'[WELLBEING SUGGESTION TOGGLE] label="{label}" checked={bool(checked)} effect={compact_effect}'
-                )
+                log_debug("roll20", f'WELLBEING SUGGESTION TOGGLE label="{label}" checked={bool(checked)} effect={compact_effect}')
             update_roll_preview()
 
         advantages_spin.valueChanged.connect(update_roll_preview)
@@ -4583,10 +4441,10 @@ class MainWindow(QMainWindow):
                 self.get_cache_cell_value("Inventar", "K9", None), "auto"
             ),
         }
-        print(
-            "[INVENTORY] money "
-            f"Gulden={money['gulden']} Schilling={money['schilling']} "
-            f"Heller={money['heller']} Pfifferling={money['pfifferling']}"
+        log_debug(
+            "inventory",
+            f"INVENTORY money Gulden={money['gulden']} Schilling={money['schilling']} "
+            f"Heller={money['heller']} Pfifferling={money['pfifferling']}",
         )
 
         row_values = {}
@@ -4638,7 +4496,7 @@ class MainWindow(QMainWindow):
         ]
         for section_id, title, pair in expected:
             if not pair or pair.get("name_col") is None:
-                print(f"[INVENTORY MAP] block not found: {section_id}")
+                log_debug("inventory", f"INVENTORY MAP block not found: {section_id}")
                 sections.append({"id": section_id, "title": title, "header": "-", "range": "-", "rows": []})
                 continue
             section = self._build_inventory_section_from_columns(
@@ -4651,10 +4509,7 @@ class MainWindow(QMainWindow):
                 pair["count_col"],
             )
             sections.append(section)
-            print(
-                f"[INVENTORY MAP] section {section_id} "
-                f"header={section['header']} rows={len(section['rows'])}"
-            )
+            log_debug("inventory", f"INVENTORY MAP section {section_id} header={section['header']} rows={len(section['rows'])}")
         return {"money": money, "sections": sections}
 
     def _sanitize_inventory_category_id(self, text):
@@ -4876,7 +4731,7 @@ class MainWindow(QMainWindow):
                 base_rows_map.setdefault(section_id, []).append(row)
 
         if len(dynamic_sections) > 2:
-            print("[INVENTORY WARNING] more dynamic sections found than slots")
+            log_warning("inventory", "more dynamic sections found than slots")
         dynamic_sections = dynamic_sections[:2]
 
         slots = [
@@ -4963,24 +4818,24 @@ class MainWindow(QMainWindow):
         exact_candidates = {"magie", "magic"}
         cache = self.loader.cell_cache
         if not isinstance(cache, dict):
-            print("[MAGIC ERROR] sheet not found")
+            log_warning("magic", "sheet not found")
             return "", {}
 
         for sheet_name, sheet_cache in cache.items():
             normalized = self._normalize_magic_text(sheet_name)
             if normalized in exact_candidates and isinstance(sheet_cache, dict):
                 if self._magic_print_mapping_enabled():
-                    print(f"[MAGIC] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                    log_debug("magic", f"sheet found: {sheet_name} cells={len(sheet_cache)}")
                 return sheet_name, sheet_cache
 
         for sheet_name, sheet_cache in cache.items():
             normalized = self._normalize_magic_text(sheet_name)
             if ("magie" in normalized or "magic" in normalized) and isinstance(sheet_cache, dict):
                 if self._magic_print_mapping_enabled():
-                    print(f"[MAGIC] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                    log_debug("magic", f"sheet found: {sheet_name} cells={len(sheet_cache)}")
                 return sheet_name, sheet_cache
 
-        print("[MAGIC ERROR] sheet not found")
+        log_warning("magic", "sheet not found")
         return "", {}
 
     def _find_magic_row_with_label(self, entries, labels):
@@ -5024,7 +4879,7 @@ class MainWindow(QMainWindow):
         upgrade_rows = []
         if upgrade_anchor_row > 0:
             if self._magic_print_mapping_enabled():
-                print(f"[MAGIC UPGRADE TABLE] start={upgrade_anchor_row}")
+                log_debug("magic", f"MAGIC UPGRADE TABLE start={upgrade_anchor_row}")
             expected_labels = [
                 "Base",
                 "Dice Up I",
@@ -5068,7 +4923,7 @@ class MainWindow(QMainWindow):
                             data_cols.append(col_index)
                     upgrade_rows.append({"label": label, "row": row_index, "values": row_values, "cells": row_cells})
                     if self._magic_print_rows_enabled():
-                        print(f'[MAGIC UPGRADE ROW] label="{label}" values={row_values}')
+                        log_debug("magic", f'MAGIC UPGRADE ROW label="{label}" values={row_values}')
                 if data_cols:
                     unique_cols = sorted(set(data_cols))
                     upgrade_mapping = {"start_row": upgrade_anchor_row, "value_columns": [self._col_index_to_letters(c) for c in unique_cols]}
@@ -5101,9 +4956,9 @@ class MainWindow(QMainWindow):
                     },
                 }
                 if self._magic_print_mapping_enabled():
-                    print(f"[MAGIC SPELL MAP] start_row={magic_anchor_row} data_start_row={data_start_row}")
+                    log_debug("magic", f"MAGIC SPELL MAP start_row={magic_anchor_row} data_start_row={data_start_row}")
                     for key, col_letters in spell_mapping["columns"].items():
-                        print(f"[MAGIC SPELL COLUMN] {key}={col_letters}")
+                        log_debug("magic", f"MAGIC SPELL COLUMN {key}={col_letters}")
                 max_scan_rows = 25
                 try:
                     max_scan_rows = max(1, min(50, int(self.magic_layout_config.get("magic_screen", {}).get("spell_table", {}).get("max_scan_rows", 25))))
@@ -5124,11 +4979,7 @@ class MainWindow(QMainWindow):
                             has_value = True
                     spell_rows.append(row_data)
                     if self._magic_print_rows_enabled() and (has_value or offset < 3):
-                        print(
-                            f'[MAGIC SPELL ROW] row={row_index} school="{row_data["values"].get("school", "")}" '
-                            f'prepared_spell="{row_data["values"].get("prepared_spell", "")}" '
-                            f'charge="{row_data["values"].get("charge", "")}" duration="{row_data["values"].get("duration", "")}"'
-                        )
+                        log_debug("magic", f'MAGIC SPELL ROW row={row_index} school="{row_data["values"].get("school", "")}" prepared_spell="{row_data["values"].get("prepared_spell", "")}" charge="{row_data["values"].get("charge", "")}" duration="{row_data["values"].get("duration", "")}"')
 
         self.magic_analysis = {"sheet": sheet_name, "upgrade_table": {"mapping": upgrade_mapping, "rows": upgrade_rows}, "spells": {"mapping": spell_mapping, "rows": spell_rows}}
         return self.magic_analysis
@@ -5138,25 +4989,25 @@ class MainWindow(QMainWindow):
         cache = self.loader.cell_cache
         if not isinstance(cache, dict):
             if self._equipment_print_mapping_enabled():
-                print("[EQUIPMENT ERROR] sheet not found")
+                log_warning("equipment", "sheet not found")
             return "", {}
 
         for sheet_name, sheet_cache in cache.items():
             normalized = self._normalize_equipment_text(sheet_name)
             if normalized in exact_candidates and isinstance(sheet_cache, dict):
                 if self._equipment_print_mapping_enabled():
-                    print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                    log_debug("equipment", f"sheet found: {sheet_name} cells={len(sheet_cache)}")
                 return sheet_name, sheet_cache
 
         for sheet_name, sheet_cache in cache.items():
             normalized = self._normalize_equipment_text(sheet_name)
             if "ausruestung" in normalized and isinstance(sheet_cache, dict):
                 if self._equipment_print_mapping_enabled():
-                    print(f"[EQUIPMENT] sheet found: {sheet_name} cells={len(sheet_cache)}")
+                    log_debug("equipment", f"sheet found: {sheet_name} cells={len(sheet_cache)}")
                 return sheet_name, sheet_cache
 
         if self._equipment_print_mapping_enabled():
-            print("[EQUIPMENT ERROR] sheet not found")
+            log_warning("equipment", "sheet not found")
         return "", {}
 
     def _find_equipment_column(
@@ -5430,10 +5281,7 @@ class MainWindow(QMainWindow):
             f"{self._col_index_to_letters(slash_col)}{data_start_row}",
         )
         if self._equipment_print_mapping_enabled():
-            print(
-                f"[EQUIPMENT ARMOR COLUMN CHECK] durability_slash="
-                f"{self._col_index_to_letters(slash_col)}{data_start_row} sample={slash_value}"
-            )
+            log_debug("equipment", f"EQUIPMENT ARMOR COLUMN CHECK durability_slash={self._col_index_to_letters(slash_col)}{data_start_row} sample={slash_value}")
         return mapping
 
     def _build_weapon_mapping(self, header_entries, anchor_row):
@@ -5498,12 +5346,7 @@ class MainWindow(QMainWindow):
         }
         if self._equipment_print_mapping_enabled():
             # The visible "/" separator between current and max is intentionally skipped.
-            print(
-                f"[EQUIPMENT WEAPON COLUMN CHECK] durability_current="
-                f"{self._col_index_to_letters(durability_current_col)}{data_start_row} "
-                f"slash={self._col_index_to_letters(slash_col)}{data_start_row} "
-                f"durability_max={self._col_index_to_letters(durability_max_col)}{data_start_row}"
-            )
+            log_debug("equipment", f"EQUIPMENT WEAPON COLUMN CHECK durability_current={self._col_index_to_letters(durability_current_col)}{data_start_row} slash={self._col_index_to_letters(slash_col)}{data_start_row} durability_max={self._col_index_to_letters(durability_max_col)}{data_start_row}")
         return mapping
 
     def analyze_equipment_sheet(self):
@@ -5550,7 +5393,7 @@ class MainWindow(QMainWindow):
         }
         for entry in entries:
             if print_mapping and entry["norm"] in target_headers:
-                print(f'[EQUIPMENT HEADER] text="{entry["text"]}" cell={entry["cell"]}')
+                log_debug("equipment", f'EQUIPMENT HEADER text="{entry["text"]}" cell={entry["cell"]}')
 
         armor_anchor = 0
         weapon_anchor = 0
@@ -5560,25 +5403,22 @@ class MainWindow(QMainWindow):
             if entry["norm"] == "waffe" and weapon_anchor == 0:
                 weapon_anchor = entry["row"]
         if print_mapping and armor_anchor > 0:
-            print(f"[EQUIPMENT TABLE] armor start_row={armor_anchor}")
+            log_debug("equipment", f"EQUIPMENT TABLE armor start_row={armor_anchor}")
         elif print_mapping:
-            print("[EQUIPMENT TABLE] armor not found")
+            log_debug("equipment", "EQUIPMENT TABLE armor not found")
         if print_mapping and weapon_anchor > 0:
-            print(f"[EQUIPMENT TABLE] weapon start_row={weapon_anchor}")
+            log_debug("equipment", f"EQUIPMENT TABLE weapon start_row={weapon_anchor}")
         elif print_mapping:
-            print("[EQUIPMENT TABLE] weapon not found")
+            log_debug("equipment", "EQUIPMENT TABLE weapon not found")
 
         armor_mapping = self._build_armor_mapping(entries, armor_anchor, sheet_cache)
         weapon_mapping = self._build_weapon_mapping(entries, weapon_anchor)
 
         if print_mapping and armor_mapping:
-            print(
-                f"[EQUIPMENT ARMOR MAP] start_row={armor_mapping['start_row']} "
-                f"data_start_row={armor_mapping['data_start_row']}"
-            )
+            log_debug("equipment", f"EQUIPMENT ARMOR MAP start_row={armor_mapping['start_row']} data_start_row={armor_mapping['data_start_row']}")
             for key, col_letters in armor_mapping.get("columns", {}).items():
                 if col_letters:
-                    print(f"[EQUIPMENT ARMOR COLUMN] {key}={col_letters}")
+                    log_debug("equipment", f"EQUIPMENT ARMOR COLUMN {key}={col_letters}")
             sample_row = int(armor_mapping.get("data_start_row", 0) or 0)
             if sample_row > 0:
                 for check_key in ("phys_chest", "durability_current", "durability_max"):
@@ -5586,18 +5426,12 @@ class MainWindow(QMainWindow):
                     if not col_letters:
                         continue
                     sample_value = self._equipment_cache_text(sheet_cache, f"{col_letters}{sample_row}")
-                    print(
-                        f"[EQUIPMENT ARMOR COLUMN CHECK] {check_key}="
-                        f"{col_letters}{sample_row} sample={sample_value}"
-                    )
+                    log_debug("equipment", f"EQUIPMENT ARMOR COLUMN CHECK {check_key}={col_letters}{sample_row} sample={sample_value}")
         if print_mapping and weapon_mapping:
-            print(
-                f"[EQUIPMENT WEAPON MAP] start_row={weapon_mapping['start_row']} "
-                f"data_start_row={weapon_mapping['data_start_row']}"
-            )
+            log_debug("equipment", f"EQUIPMENT WEAPON MAP start_row={weapon_mapping['start_row']} data_start_row={weapon_mapping['data_start_row']}")
             for key, col_letters in weapon_mapping.get("columns", {}).items():
                 if col_letters:
-                    print(f"[EQUIPMENT WEAPON COLUMN] {key}={col_letters}")
+                    log_debug("equipment", f"EQUIPMENT WEAPON COLUMN {key}={col_letters}")
 
         armor_rows = self._extract_equipment_rows(sheet_cache, armor_mapping, "armor", max_rows=12)
         weapon_rows = self._extract_equipment_rows(sheet_cache, weapon_mapping, "weapon", max_rows=10)
@@ -5621,10 +5455,7 @@ class MainWindow(QMainWindow):
                         continue
                     cell_ref = f"{col_letters}{row_index}"
                     value = self._equipment_cache_text(sheet_cache, cell_ref)
-                    print(
-                        f"[EQUIPMENT ARMOR DEBUG CELL] row={row_index} field={label} "
-                        f"cell={cell_ref} value={value}"
-                    )
+                    log_debug("equipment", f"EQUIPMENT ARMOR DEBUG CELL row={row_index} field={label} cell={cell_ref} value={value}")
 
         expected_found = False
         for row_data in armor_rows:
@@ -5634,20 +5465,16 @@ class MainWindow(QMainWindow):
                 expected_found = True
                 break
         if print_mapping and not expected_found and armor_rows:
-            print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
+            log_debug("equipment", "EQUIPMENT ARMOR ERROR expected armor row not found")
         elif print_mapping and not armor_rows:
-            print("[EQUIPMENT ARMOR ERROR] expected armor row not found")
+            log_debug("equipment", "EQUIPMENT ARMOR ERROR expected armor row not found")
 
         has_weapon_data_rows = any(bool(row.get("is_data_row")) for row in weapon_rows if isinstance(row, dict))
         if print_rows:
             for row_data in armor_rows:
                 if not row_data.get("is_data_row"):
                     continue
-                print(
-                    f'[EQUIPMENT ARMOR ROW] row={row_data["row"]} '
-                    f'slot="{row_data.get("slot", "")}" name="{row_data.get("name", "")}" '
-                    f'pl="{row_data.get("pl", "")}"'
-                )
+                log_debug("equipment", f'EQUIPMENT ARMOR ROW row={row_data["row"]} slot="{row_data.get("slot", "")}" name="{row_data.get("name", "")}" pl="{row_data.get("pl", "")}"')
             for row_data in weapon_rows:
                 if not row_data.get("is_data_row"):
                     continue
@@ -5656,14 +5483,9 @@ class MainWindow(QMainWindow):
                 max_value = str(row_data.get("durability_max", "") or "").strip()
                 if current_value or max_value:
                     durability_summary = f"{current_value}/{max_value}".strip("/")
-                print(
-                    f'[EQUIPMENT WEAPON ROW] row={row_data["row"]} '
-                    f'name="{row_data.get("name", "")}" type="{row_data.get("weapon_type", "")}" '
-                    f'pl="{row_data.get("pl", "")}" phys_dice="{row_data.get("physical_dice", "")}" '
-                    f'phys_bonus="{row_data.get("physical_bonus", "")}" durability="{durability_summary}"'
-                )
+                log_debug("equipment", f'EQUIPMENT WEAPON ROW row={row_data["row"]} name="{row_data.get("name", "")}" type="{row_data.get("weapon_type", "")}" pl="{row_data.get("pl", "")}" phys_dice="{row_data.get("physical_dice", "")}" phys_bonus="{row_data.get("physical_bonus", "")}" durability="{durability_summary}"')
         if print_rows and not has_weapon_data_rows:
-            print("[EQUIPMENT WEAPON] no rows found")
+            log_debug("equipment", "EQUIPMENT WEAPON no rows found")
 
         self.equipment_analysis = {
             "sheet": sheet_name,
@@ -5719,10 +5541,7 @@ class MainWindow(QMainWindow):
                     total += self._equipment_summary_int(row_data.get(field_key, ""))
             summary_row[field_key] = str(total)
         if self._equipment_print_rows_enabled():
-            print(
-                "[EQUIPMENT ARMOR SUMMARY] "
-                + " ".join(f"{field}={summary_row.get(field, '0')}" for field in summary_fields)
-            )
+            log_debug("equipment", "EQUIPMENT ARMOR SUMMARY " + " ".join(f"{field}={summary_row.get(field, '0')}" for field in summary_fields))
         return summary_row
 
     def _get_equipment_table_edit_settings(self, table_cfg):
@@ -5799,10 +5618,7 @@ class MainWindow(QMainWindow):
         cell_ref = str(cells.get(field_key, "") or "").strip()
         if not cell_ref:
             if binding.get("debug"):
-                print(
-                    f"[EQUIPMENT EDIT SKIP] no cell_ref table={binding.get('table_type')} "
-                    f"row={row_index} column={field_key}"
-                )
+                log_debug("equipment", f"EQUIPMENT EDIT SKIP no cell_ref table={binding.get('table_type')} row={row_index} column={field_key}")
             return
 
         new_value = str(item.text() or "")
@@ -5814,17 +5630,14 @@ class MainWindow(QMainWindow):
         table_type = str(binding.get("table_type", ""))
         source_row = row_data.get("row_index", row_data.get("row", row_index))
         if binding.get("debug"):
-            print(
-                f"[EQUIPMENT EDIT] table={table_type} ui_row={row_index} source_row={source_row} "
-                f"column={field_key} cell={cell_ref} old={old_value!r} new={new_value!r}"
-            )
+            log_debug("equipment", f"EQUIPMENT EDIT table={table_type} ui_row={row_index} source_row={source_row} column={field_key} cell={cell_ref} old={old_value!r} new={new_value!r}")
 
         self.loader.set_cell_value(sheet_name, cell_ref, new_value)
         self.loader.save_active_character_json()
         row_data[field_key] = new_value
         item.setData(Qt.UserRole, new_value)
         if binding.get("debug"):
-            print("[EQUIPMENT SAVE] active character saved")
+            log_debug("equipment", "EQUIPMENT SAVE active character saved")
 
         if table_type == "armor":
             self._refresh_armor_summary_table_row(table)
@@ -6050,21 +5863,18 @@ class MainWindow(QMainWindow):
             header_background_brushes[field_key] = QBrush(header_color_parsed)
 
             if self._equipment_print_mapping_enabled():
-                print(
-                    f"[EQUIPMENT ARMOR STYLE TEST] column={field_key} "
-                    f"cell_bg={col_bg_raw} header_bg={header_bg_raw}"
-                )
+                log_debug("equipment", f"EQUIPMENT ARMOR STYLE TEST column={field_key} cell_bg={col_bg_raw} header_bg={header_bg_raw}")
                 if field_key == "durability_current":
                     title_text_current = header_labels[field_to_col_index[field_key]]
-                    print(f"[EQUIPMENT ARMOR STYLE TEST] column=durability_current title={title_text_current}")
-                if not col_ok:
-                    print(
-                        f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={col_bg_raw} parsed=False"
-                    )
-                if not header_ok:
-                    print(
-                        f"[EQUIPMENT ARMOR STYLE ERROR] column={field_key} value={header_bg_raw} parsed=False"
-                    )
+                    log_debug("equipment", f"EQUIPMENT ARMOR STYLE TEST column=durability_current title={title_text_current}")
+                if not col_ok and str(col_bg_raw or "").strip() not in {"", "-"}:
+                    log_warning("equipment", f"EQUIPMENT ARMOR STYLE ERROR column={field_key} value={col_bg_raw} parsed=False")
+                elif not col_ok:
+                    log_debug("equipment", f"EQUIPMENT ARMOR STYLE empty column value skipped column={field_key}")
+                if not header_ok and str(header_bg_raw or "").strip() not in {"", "-"}:
+                    log_warning("equipment", f"EQUIPMENT ARMOR STYLE ERROR column={field_key} value={header_bg_raw} parsed=False")
+                elif not header_ok:
+                    log_debug("equipment", f"EQUIPMENT ARMOR STYLE empty header value skipped column={field_key}")
 
         for field_key, _ in column_order:
             col_index = field_to_col_index.get(field_key)
@@ -6155,7 +5965,7 @@ class MainWindow(QMainWindow):
             if edit_debug and row_index < len(armor_rows):
                 cell_ref = str(row_data.get("cells", {}).get("name", "") or "").strip()
                 if cell_ref:
-                    print(f"[EQUIPMENT EDIT MAP] armor row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
+                    log_debug("equipment", f"EQUIPMENT EDIT MAP armor row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
 
         table.resizeRowsToContents()
         for row_index in range(table_row_count):
@@ -6386,7 +6196,7 @@ class MainWindow(QMainWindow):
             if edit_debug and row_index < len(weapon_rows):
                 cell_ref = str(row_data.get("cells", {}).get("name", "") or "").strip()
                 if cell_ref:
-                    print(f"[EQUIPMENT EDIT MAP] weapons row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
+                    log_debug("equipment", f"EQUIPMENT EDIT MAP weapons row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
 
         table.resizeRowsToContents()
         for row_index in range(table_row_count):
@@ -6471,7 +6281,7 @@ class MainWindow(QMainWindow):
         try:
             self.render_equipment_armor_table(screen, screen_cfg.get("armor", {}), armor_rows)
         except Exception as exc:
-            print(f"[EQUIPMENT ARMOR RENDER ERROR] {exc}")
+            log_error("equipment", f"armor render failed: {exc}")
             self.create_panel_text(
                 screen,
                 {"x": 20, "y": 150, "w": 760, "h": 32},
@@ -6495,7 +6305,7 @@ class MainWindow(QMainWindow):
         try:
             self.render_equipment_weapons_table(screen, screen_cfg.get("weapons", {}), weapon_rows)
         except Exception as exc:
-            print(f"[EQUIPMENT WEAPON RENDER ERROR] {exc}")
+            log_error("equipment", f"weapon render failed: {exc}")
             self.create_panel_text(
                 screen,
                 {"x": 20, "y": 470, "w": 760, "h": 32},
@@ -6649,7 +6459,7 @@ class MainWindow(QMainWindow):
             self._notes_loading_text = False
         self._notes_last_saved_text = str(notes_text)
         if notes_debug:
-            print(f"[NOTES LOAD] chars={len(notes_text)}")
+            log_debug("notes", f"NOTES LOAD chars={len(notes_text)}")
 
         if status_label is not None:
             status_label.setText("Automatisch gespeichert")
@@ -6668,12 +6478,12 @@ class MainWindow(QMainWindow):
                     status_label.setText("Automatisch gespeichert")
                 return
             if notes_debug:
-                print(f"[NOTES AUTOSAVE] chars={len(text_value)}")
+                log_debug("notes", f"NOTES AUTOSAVE chars={len(text_value)}")
             ok = self._save_notes_text_to_meta(text_value)
             if ok:
                 self._notes_last_saved_text = text_value
                 if notes_debug:
-                    print("[NOTES SAVE] active character saved")
+                    log_debug("notes", "NOTES SAVE active character saved")
                 if status_label is not None:
                     status_label.setText("Automatisch gespeichert")
             else:
@@ -6691,7 +6501,7 @@ class MainWindow(QMainWindow):
             if status_label is not None:
                 status_label.setText("Speichert...")
             if notes_debug:
-                print(f"[NOTES AUTOSAVE QUEUED] chars={len(text_value)}")
+                log_debug("notes", f"NOTES AUTOSAVE QUEUED chars={len(text_value)}")
             if autosave_enabled:
                 autosave_timer.start()
 
@@ -6724,12 +6534,12 @@ class MainWindow(QMainWindow):
             def on_save_clicked():
                 text_value = editor.toPlainText()
                 if notes_debug:
-                    print(f"[NOTES SAVE] chars={len(text_value)}")
+                    log_debug("notes", f"NOTES SAVE chars={len(text_value)}")
                 ok = self._save_notes_text_to_meta(text_value)
                 if ok:
                     self._notes_last_saved_text = text_value
                     if notes_debug:
-                        print("[NOTES SAVE] active character saved")
+                        log_debug("notes", "NOTES SAVE active character saved")
                     if status_label is not None:
                         status_label.setText("Automatisch gespeichert")
                 else:
@@ -6762,7 +6572,7 @@ class MainWindow(QMainWindow):
         if not cell_ref:
             if self._magic_print_mapping_enabled():
                 source_row = row_data.get("row_index", row_data.get("row", row_index))
-                print(f"[MAGIC EDIT SKIP] no cell_ref row={source_row} column={key}")
+                log_debug("magic", f"MAGIC EDIT SKIP no cell_ref row={source_row} column={key}")
             return
         item = table.item(row_index, column_index)
         if item is None:
@@ -6773,17 +6583,14 @@ class MainWindow(QMainWindow):
             return
         source_row = row_data.get("row_index", row_data.get("row", row_index))
         if self._magic_print_mapping_enabled():
-            print(
-                f'[MAGIC EDIT] row={source_row} column={key} cell={cell_ref} '
-                f'old="{old_value}" new="{new_value}"'
-            )
+            log_debug("magic", f'MAGIC EDIT row={source_row} column={key} cell={cell_ref} old="{old_value}" new="{new_value}"')
         self.loader.set_cell_value(str(binding.get("sheet", "Magie") or "Magie"), cell_ref, new_value)
         self.loader.save_active_character_json()
         row_data[key] = new_value
         row_data.setdefault("values", {})[key] = new_value
         item.setData(Qt.UserRole, new_value)
         if self._magic_print_mapping_enabled():
-            print("[MAGIC SAVE] active character saved")
+            log_debug("magic", "MAGIC SAVE active character saved")
 
     def _render_magic_upgrade_table(self, parent, table_cfg, upgrade_rows):
         if not isinstance(table_cfg, dict) or not bool(table_cfg.get("enabled", True)):
@@ -7116,10 +6923,10 @@ class MainWindow(QMainWindow):
         try:
             self.loader.set_inventory_tab_label(slot_id, normalized_label)
             self.loader.save_active_character_json()
-            print(f'[INVENTORY TAB RENAME] {slot_id} = "{normalized_label}"')
+            log_debug("inventory", f'INVENTORY TAB RENAME {slot_id} = "{normalized_label}"')
             self.show_main_section("inventory")
         except Exception as exc:
-            print("[INVENTORY TAB RENAME ERROR]", str(exc))
+            log_error("inventory", f"tab rename failed: {exc}")
 
     def render_inventory_category_tabs(self, parent, screen_cfg, categories):
         tabs_cfg = screen_cfg.get("category_tabs", {})
@@ -7554,10 +7361,10 @@ class MainWindow(QMainWindow):
         try:
             self.loader.set_cell_value("Inventar", cell_ref, new_value)
             self.loader.save_active_character_json()
-            print(f'[INVENTORY MONEY EDIT] Inventar!{cell_ref} = "{new_value}"')
-            print("[INVENTORY SAVE] active character saved")
+            log_debug("inventory", f'INVENTORY MONEY EDIT Inventar!{cell_ref} = "{new_value}"')
+            log_debug("inventory", "INVENTORY SAVE active character saved")
         except Exception as exc:
-            print("[INVENTORY EDIT ERROR]", str(exc))
+            log_error("inventory", f"edit failed: {exc}")
 
     def _inventory_parse_non_negative_int(self, value):
         text = str(value or "").strip()
@@ -7645,19 +7452,19 @@ class MainWindow(QMainWindow):
                     field.setText(value)
                     field.blockSignals(False)
             self.loader.save_active_character_json()
-            print(
-                "[INVENTORY MONEY DELTA] "
-                f"op={op} input={delta['gulden']}/{delta['schilling']}/{delta['heller']}/{delta['pfifferling']} "
+            log_debug(
+                "inventory",
+                f"INVENTORY MONEY DELTA op={op} input={delta['gulden']}/{delta['schilling']}/{delta['heller']}/{delta['pfifferling']} "
                 f"result={result_money.get('gulden', 0)}/{result_money.get('schilling', 0)}/"
-                f"{result_money.get('heller', 0)}/{result_money.get('pfifferling', 0)}"
+                f"{result_money.get('heller', 0)}/{result_money.get('pfifferling', 0)}",
             )
-            print("[INVENTORY SAVE] active character saved")
+            log_debug("inventory", "INVENTORY SAVE active character saved")
             for field in self._inventory_money_delta_fields.values():
                 if field is None:
                     continue
                 field.setText("0")
         except Exception as exc:
-            print("[INVENTORY MONEY DELTA ERROR]", str(exc))
+            log_error("inventory", f"money delta failed: {exc}")
 
     def get_inventory_wrapped_text_height(self, text, width, font_size, max_lines=0):
         font = QFont()
@@ -8079,8 +7886,8 @@ class MainWindow(QMainWindow):
                     or str(row.get("pl", "") or "")
                     or str(row.get("count", "") or "")
                 )
-                print(f'[INVENTORY EDIT] Inventar!{cell_ref} = "{new_value}"')
-                print("[INVENTORY SAVE] active character saved")
+                log_debug("inventory", f'INVENTORY EDIT Inventar!{cell_ref} = "{new_value}"')
+                log_debug("inventory", "INVENTORY SAVE active character saved")
             else:
                 slot_id = str(row.get("custom_slot_id", binding.get("section_id", "")) or "").strip()
                 custom_index = row.get("custom_row_index", row_index)
@@ -8101,8 +7908,8 @@ class MainWindow(QMainWindow):
                     or str(row.get("pl", "") or "")
                     or str(row.get("count", "") or "")
                 )
-                print(f'[INVENTORY CUSTOM EDIT] {slot_id}[{custom_index}].{value_key} = "{new_value}"')
-                print("[INVENTORY SAVE] active character saved")
+                log_debug("inventory", f'INVENTORY CUSTOM EDIT {slot_id}[{custom_index}].{value_key} = "{new_value}"')
+                log_debug("inventory", "INVENTORY SAVE active character saved")
 
             table.blockSignals(True)
             try:
@@ -8131,7 +7938,7 @@ class MainWindow(QMainWindow):
                 finally:
                     table.blockSignals(False)
         except Exception as exc:
-            print("[INVENTORY EDIT ERROR]", str(exc))
+            log_error("inventory", f"edit failed: {exc}")
             table.blockSignals(True)
             item.setText(old_value)
             table.blockSignals(False)
@@ -8401,8 +8208,8 @@ class MainWindow(QMainWindow):
             if isinstance(category, dict) and str(category.get("id", "")).strip()
         ]
         if self.skills_debug_sources:
-            print("[SKILLS] render category:", self.current_skill_category)
-            print("[SKILLS] loaded categories:", category_ids)
+            log_debug("skills", f"render category={self.current_skill_category}")
+            log_debug("skills", f"loaded categories={category_ids}")
         has_skills_cache = bool(self.loader.cell_cache) and isinstance(
             self.loader.cell_cache.get("Fertigkeiten"),
             dict,
@@ -8412,7 +8219,7 @@ class MainWindow(QMainWindow):
         else:
             self.skill_source_infos = {}
             if self.skills_debug_sources:
-                print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+                log_debug("skills", "no Fertigkeiten sheet loaded")
 
         if self.current_skill_category not in category_ids and category_ids:
             self.current_skill_category = category_ids[0]
@@ -8541,10 +8348,10 @@ class MainWindow(QMainWindow):
             custom_sections["skills_se"] = {"rows": clean_rows}
             self.loader.save_active_character_json()
             if self.skills_debug_sources:
-                print("[SKILLS SE SAVE] saved")
+                log_debug("save", "SKILLS SE SAVE saved")
             return True
         except Exception as exc:
-            print("[SKILLS SE SAVE ERROR]", str(exc))
+            log_error("save", f"SKILLS SE SAVE ERROR {exc}")
             return False
 
     def on_skills_se_table_cell_changed(self, table, min_rows, add_rows_when_last_filled):
@@ -8704,12 +8511,7 @@ class MainWindow(QMainWindow):
             item.setData(Qt.UserRole, skill_key)
             item.setData(Qt.UserRole + 1, skill_name)
             if self.skills_debug_sources:
-                print(
-                    "[SKILLS SE SELECT]",
-                    f"row={row}",
-                    f'skill_key="{skill_key}"',
-                    f'skill_name="{skill_name}"',
-                )
+                log_debug("skills", f'SKILLS SE SELECT row={row} skill_key="{skill_key}" skill_name="{skill_name}"')
         finally:
             table.blockSignals(False)
             self._skills_se_loading = False
@@ -8826,7 +8628,7 @@ class MainWindow(QMainWindow):
             if not skill_key:
                 legacy_text = str(row.get("text", "") or "").strip()
                 if legacy_text and self.skills_debug_sources:
-                    print(f'[SKILLS SE LEGACY] row={idx} text="{legacy_text}" ignored_for_upgrade=no_skill_key')
+                    log_debug("skills", f'SKILLS SE LEGACY row={idx} text="{legacy_text}" ignored_for_upgrade=no_skill_key')
                 continue
             entry = bound_entries.setdefault(
                 skill_key,
@@ -8847,17 +8649,16 @@ class MainWindow(QMainWindow):
         if not isinstance(self.skill_source_infos, dict) or not self.skill_source_infos:
             return {"status": "no_upgrade_data", "items": [], "groups": {}}
         if self.skills_debug_sources:
-            print(
-                "[SKILLS UPGRADE ROWS]",
-                f"bound_rows={sum(len(v.get('row_indices', [])) for v in bound_entries.values())}",
+            log_debug(
+                "skills",
+                f"SKILLS UPGRADE ROWS bound_rows={sum(len(v.get('row_indices', [])) for v in bound_entries.values())} "
                 f"merged_skills={len(bound_entries)}",
             )
         for skill_key, merged in bound_entries.items():
             if len(merged.get("row_indices", [])) > 1 and self.skills_debug_sources:
-                print(
-                    "[SKILLS UPGRADE MERGE]",
-                    f"skill_key={skill_key}",
-                    f"total_se={merged.get('value', 0)}",
+                log_debug(
+                    "skills",
+                    f"SKILLS UPGRADE MERGE skill_key={skill_key} total_se={merged.get('value', 0)} "
                     f"rows={merged.get('row_indices', [])}",
                 )
 
@@ -8881,10 +8682,9 @@ class MainWindow(QMainWindow):
                     }
                 )
                 if self.skills_debug_sources:
-                    print(
-                        "[SKILLS UPGRADE SE BROKEN_LINK]",
-                        f'rows={entry.get("row_indices")}',
-                        f"skill_key={source_key}",
+                    log_debug(
+                        "skills",
+                        f'SKILLS UPGRADE SE BROKEN_LINK rows={entry.get("row_indices")} skill_key={source_key}',
                     )
                 continue
             if not isinstance(info, dict):
@@ -8901,12 +8701,10 @@ class MainWindow(QMainWindow):
                 se_costs, xp_costs, used_fallback = self._get_category_upgrade_costs(category_id, sheet_name)
                 costs_cache[category_id] = (se_costs, xp_costs)
                 if self.skills_debug_sources:
-                    print(
-                        "[SKILLS UPGRADE COSTS]",
-                        f"category={category_id}",
-                        f"se={se_costs}",
-                        f"exp={xp_costs}",
-                        "fallback" if used_fallback else "sheet",
+                    source = "fallback" if used_fallback else "sheet"
+                    log_debug(
+                        "skills",
+                        f"SKILLS UPGRADE COSTS category={category_id} se={se_costs} exp={xp_costs} {source}",
                     )
             se_costs, xp_costs = costs_cache[category_id]
             if not se_costs or not xp_costs:
@@ -8937,12 +8735,10 @@ class MainWindow(QMainWindow):
             needed_xp = int(xp_costs[next_index])
             available_se = int(entry.get("value", 0))
             if self.skills_debug_sources:
-                print(
-                    "[SKILLS UPGRADE SE LINK]",
-                    f'rows={entry.get("row_indices")}',
-                    f'skill_key="{source_key}"',
-                    f'skill="{skill_name}"',
-                    f"se={available_se}",
+                log_debug(
+                    "skills",
+                    f'SKILLS UPGRADE SE LINK rows={entry.get("row_indices")} '
+                    f'skill_key="{source_key}" skill="{skill_name}" se={available_se}',
                 )
 
             xp_ok = int(available_xp) >= needed_xp
@@ -8957,14 +8753,10 @@ class MainWindow(QMainWindow):
                 status = "missing_both"
 
             if self.skills_debug_sources:
-                print(
-                    "[SKILLS UPGRADE RESULT]",
-                    f'skill="{skill_name}"',
-                    f"needed_se={needed_se}",
-                    f"available_se={available_se}",
-                    f"needed_xp={needed_xp}",
-                    f"available_xp={available_xp}",
-                    f"status={status}",
+                log_debug(
+                    "skills",
+                    f'SKILLS UPGRADE RESULT skill="{skill_name}" needed_se={needed_se} '
+                    f"available_se={available_se} needed_xp={needed_xp} available_xp={available_xp} status={status}",
                 )
 
             suggestions.append(
@@ -9001,12 +8793,12 @@ class MainWindow(QMainWindow):
                 key=lambda it: (it["skill_name"].lower(), it["needed_se"], it["needed_xp"]),
             )
         if self.skills_debug_sources:
-            print(
-                "[SKILLS UPGRADE GROUPS]",
-                f'possible={len(groups.get("possible", []))}',
-                f'missing_xp={len(groups.get("missing_xp", []))}',
-                f'missing_se={len(groups.get("missing_se", []))}',
-                f'missing_both={len(groups.get("missing_both", []))}',
+            log_debug(
+                "skills",
+                f'SKILLS UPGRADE GROUPS possible={len(groups.get("possible", []))} '
+                f'missing_xp={len(groups.get("missing_xp", []))} '
+                f'missing_se={len(groups.get("missing_se", []))} '
+                f'missing_both={len(groups.get("missing_both", []))} '
                 f'unknown={len(groups.get("unknown", []))}',
             )
         return {"status": "ok", "items": suggestions, "groups": groups}
@@ -9174,7 +8966,7 @@ class MainWindow(QMainWindow):
         exp_current = parse_int_value(exp_current_raw)
         exp_max = parse_int_value(exp_max_raw)
         if self.skills_debug_sources:
-            print(f"[SKILLS UPGRADE XP] current={exp_current} max={exp_max}")
+            log_debug("skills", f"SKILLS UPGRADE XP current={exp_current} max={exp_max}")
 
         xp_x = self._safe_int(xp_cfg.get("x", x + w + 40), x + w + 40)
         xp_y = self._safe_int(xp_cfg.get("y", y), y)
@@ -9383,7 +9175,7 @@ class MainWindow(QMainWindow):
             content.show()
 
         if self.skills_debug_sources:
-            print(f"[SKILLS SE XP] current={exp_current} max={exp_max}")
+            log_debug("skills", f"SKILLS SE XP current={exp_current} max={exp_max}")
 
     def on_skill_category_clicked(self, category_id):
         self.current_skill_category = str(category_id)
@@ -9452,7 +9244,7 @@ class MainWindow(QMainWindow):
                 align="center",
             )
             if self.skills_debug_sources:
-                print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+                log_debug("skills", "no Fertigkeiten sheet loaded")
             return
         if not isinstance(self.loader.cell_cache.get("Fertigkeiten"), dict):
             self.create_panel_text(
@@ -9464,7 +9256,7 @@ class MainWindow(QMainWindow):
                 bold=True,
                 align="center",
             )
-            print("[SKILLS NO CACHE] no Fertigkeiten sheet loaded")
+            log_debug("skills", "no Fertigkeiten sheet loaded")
             return
 
         skills = category.get("skills", []) if isinstance(category, dict) else []
@@ -9473,12 +9265,12 @@ class MainWindow(QMainWindow):
         category_id = str(category.get("id", "")) if isinstance(category, dict) else ""
         visible_skills = skills[:max_rows]
         if self.skills_debug_sources:
-            print("[SKILLS RENDER]", f"category={category_id}")
-            print("[SKILLS RENDER]", f"source rows={len(skills)}")
-            print("[SKILLS RENDER]", f"visible rows={len(visible_skills)}")
+            log_debug("skills", f"SKILLS RENDER category={category_id}")
+            log_debug("skills", f"SKILLS RENDER source rows={len(skills)}")
+            log_debug("skills", f"SKILLS RENDER visible rows={len(visible_skills)}")
         if len(skills) > max_rows:
             if self.skills_debug_sources:
-                print("[SKILLS] rows truncated:", category_id)
+                log_debug("skills", f"rows truncated category={category_id}")
 
         row_colors = ("rgba(8, 8, 8, 125)", "rgba(20, 20, 20, 105)")
         current_y = header_h
@@ -9511,11 +9303,10 @@ class MainWindow(QMainWindow):
             if sheet_value is None:
                 display_value = "0" if source_info.get("row") is not None else ""
                 if self.skills_debug_sources:
-                    print(
-                        "[SKILLS FALLBACK]",
-                        display_name,
-                        "no sheet value, using:",
-                        display_value if display_value else "blank",
+                    log_debug(
+                        "skills",
+                        f"SKILLS FALLBACK {display_name} no sheet value, using: "
+                        f"{display_value if display_value else 'blank'}",
                     )
             else:
                 display_value = self.format_character_display_value(sheet_value, "int")
@@ -9525,35 +9316,23 @@ class MainWindow(QMainWindow):
                     sheet_int_value = sheet_value
                 if sheet_int_value != attribute_sum:
                     if self.skills_debug_sources:
-                        print(
-                            "[SKILLS DIFF]",
-                            display_name,
-                            "sheet:",
-                            sheet_value,
-                            "attribute_sum:",
-                            attribute_sum,
-                            "display:",
-                            display_value,
+                        log_debug(
+                            "skills",
+                            f"SKILLS DIFF {display_name} sheet={sheet_value} "
+                            f"attribute_sum={attribute_sum} display={display_value}",
                         )
                 else:
                     if self.skills_debug_sources:
-                        print(
-                            "[SKILLS OK]",
-                            display_name,
-                            "sheet:",
-                            sheet_value,
-                            "attribute_sum:",
-                            attribute_sum,
-                            "display:",
-                            display_value,
+                        log_debug(
+                            "skills",
+                            f"SKILLS OK {display_name} sheet={sheet_value} "
+                            f"attribute_sum={attribute_sum} display={display_value}",
                         )
             if self.skills_debug_sources:
-                print("[SKILLS] skill value:", display_name, attributes[:4], "->", display_value)
-                print(
-                    "[SKILLS ROW]",
-                    f"row={source_info.get('row')}",
-                    f"name={display_name}",
-                    f"value={display_value}",
+                log_debug("skills", f"skill value {display_name} {attributes[:4]} -> {display_value}")
+                log_debug(
+                    "skills",
+                    f"SKILLS ROW row={source_info.get('row')} name={display_name} value={display_value}",
                 )
             slot_values = source_info.get("display_attribute_slots", [])
             if not isinstance(slot_values, list) or len(slot_values) < 4:
@@ -9788,10 +9567,10 @@ class MainWindow(QMainWindow):
         if self._character_rendering:
             return
         if not sheet_name or not cell_ref:
-            print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
+            log_debug("character", f"CHARACTER EDIT SKIP field={field_key} reason=no_cell_ref")
             return
         new_value = "" if value is None else str(value)
-        print(f"[{tag}] field={field_key} cell={cell_ref} value={new_value}")
+        log_debug("character", f"{tag} field={field_key} cell={cell_ref} value={new_value}")
         self.loader.set_cell_value(sheet_name, cell_ref, new_value)
         self._recalculate_after_user_edit(
             reason=f"{sheet_name}!{cell_ref}",
@@ -9807,15 +9586,15 @@ class MainWindow(QMainWindow):
         self._recalc_in_progress = True
         try:
             reason_text = str(reason or "").strip() or "unknown"
-            print(f"[RECALC] after user edit: {reason_text}")
+            log_debug("calculation", f"RECALC after user edit: {reason_text}")
             self.parser.recalculate_cache(self.loader.cell_cache)
             if save:
                 self.loader.save_active_character_json()
-                print("[RECALC] saved active character")
+                log_debug("calculation", "RECALC saved active character")
             if rerender:
                 if self.current_main_section == "character":
                     self.show_main_section("character")
-                    print("[RECALC] refreshed section: character")
+                    log_debug("calculation", "RECALC refreshed section: character")
                 if (
                     hasattr(self, "calculation_center_dialog")
                     and self.calculation_center_dialog is not None
@@ -9823,7 +9602,7 @@ class MainWindow(QMainWindow):
                 ):
                     try:
                         self.calculation_center_dialog.refresh_data()
-                        print("[RECALC] refreshed calculation center")
+                        log_debug("calculation", "RECALC refreshed calculation center")
                     except Exception:
                         pass
         finally:
@@ -9857,14 +9636,14 @@ class MainWindow(QMainWindow):
     def _character_debug(self, message):
         cfg = self._character_edit_cfg if isinstance(self._character_edit_cfg, dict) else {}
         if cfg.get("debug", False):
-            print(message)
+            log_debug("character", str(message))
 
     def _character_paradigm_debug(self, message):
         cfg = self.main_ui_layout_config.get("character_screen", {})
         panel = cfg.get("paradigm_panel", {}) if isinstance(cfg, dict) else {}
         edit_cfg = panel.get("edit", {}) if isinstance(panel, dict) else {}
         if isinstance(edit_cfg, dict) and bool(edit_cfg.get("debug", False)):
-            print(message)
+            log_debug("character", str(message))
 
     def _parse_generic_cell_ref(self, cell_ref):
         match = re.match(r"^([A-Z]+)(\d+)$", str(cell_ref or "").strip().upper())
@@ -10095,7 +9874,7 @@ class MainWindow(QMainWindow):
         try:
             numeric = float(normalized)
         except Exception:
-            print(f'[CHARACTER INITIATIVE BONUS EDIT ERROR] invalid value="{new_text}"')
+            log_warning("character", f'CHARACTER INITIATIVE BONUS EDIT ERROR invalid value="{new_text}"')
             editor.setText(old_text if old_text else "0")
             return
 
@@ -10108,12 +9887,12 @@ class MainWindow(QMainWindow):
             editor.setText(normalized_value)
             return
         try:
-            print(f'[CHARACTER INITIATIVE BONUS EDIT] {sheet_name}!{bonus_cell} "{cached_old}" -> "{normalized_value}"')
+            log_debug("character", f'CHARACTER INITIATIVE BONUS EDIT {sheet_name}!{bonus_cell} "{cached_old}" -> "{normalized_value}"')
             self.loader.set_cell_value(sheet_name, bonus_cell, normalized_value)
             self._recalculate_after_user_edit(reason=f"{sheet_name}!{bonus_cell}", save=True, rerender=True)
-            print(f"[RECALC] after user edit: {sheet_name}!{bonus_cell}")
+            log_debug("calculation", f"RECALC after user edit: {sheet_name}!{bonus_cell}")
         except Exception as exc:
-            print("[CHARACTER INITIATIVE BONUS EDIT ERROR]", str(exc))
+            log_error("character", f"initiative bonus edit failed: {exc}")
             editor.setText(cached_old if cached_old else old_text if old_text else "0")
 
     def _render_character_paradigm_panel(self, character_screen, attribute_panel, default_color):
@@ -10354,9 +10133,9 @@ class MainWindow(QMainWindow):
         sheet_name, cell_ref = self._resolve_data_map_cell_ref(mapping_entry, default_sheet)
         if not sheet_name or not cell_ref:
             if section_key == "basic_fields":
-                print(f"[CHARACTER BASIC EDIT SKIP] field={field_key} reason=no_cell_ref")
+                log_debug("character", f"CHARACTER BASIC EDIT SKIP field={field_key} reason=no_cell_ref")
             else:
-                print(f"[CHARACTER EDIT SKIP] field={field_key} reason=no_cell_ref")
+                log_debug("character", f"CHARACTER EDIT SKIP field={field_key} reason=no_cell_ref")
             return self.create_panel_text(
                 parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
             )
@@ -11940,7 +11719,7 @@ class MainWindow(QMainWindow):
     def on_settings_debug_start_toggled(self):
         self.settings_debug_on_start = not self.settings_debug_on_start
         self.update_settings_checkbox_icon()
-        print("[SETTINGS] debug on start:", self.settings_debug_on_start)
+        log_debug("render", f"settings debug on start: {self.settings_debug_on_start}")
 
     def refresh_character_cache_list(self):
         if self.settings_character_combo is None:
@@ -11977,13 +11756,13 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        print("[CHARACTER IMPORT] selected:", file_path)
+        log_debug("character", f"import selected: {file_path}")
         if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
-            print("[CHARACTER WARNING] unsaved changes before switching character")
+            log_warning("character", "unsaved changes before switching character")
         try:
             self.loader.load_file(file_path)
         except ValueError as exc:
-            print("[LOAD ERROR]", str(exc))
+            log_error("cache", f"load failed: {exc}")
             QMessageBox.warning(
                 self,
                 "Dateiformat nicht unterstützt",
@@ -11996,7 +11775,7 @@ class MainWindow(QMainWindow):
         self.refresh_character_cache_list()
         if self.settings_character_active_label is not None:
             self.settings_character_active_label.setText(self.loader.current_character_name)
-        print("[CHARACTER IMPORT] loaded:", self.loader.current_character_name)
+        log_debug("character", f"import loaded: {self.loader.current_character_name}")
         self.show_main_section("character")
 
     def load_selected_character_cache(self):
@@ -12016,7 +11795,7 @@ class MainWindow(QMainWindow):
         if active_cache_path and Path(cache_path) == Path(active_cache_path):
             return
         if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
-            print("[CHARACTER WARNING] unsaved changes before switching character")
+            log_warning("character", "unsaved changes before switching character")
         ok = self.loader.load_character_cache(cache_path)
         if not ok:
             QMessageBox.warning(self, "Charakter laden", "Charakter-Cache konnte nicht geladen werden.")
@@ -12035,11 +11814,11 @@ class MainWindow(QMainWindow):
             self.show_main_section("magic")
         elif self.current_main_section == "notes":
             self.show_main_section("notes")
-        print("[CHARACTER CACHE] loaded:", cache_path)
+        log_debug("cache", f"character cache loaded: {cache_path}")
 
     def on_settings_refresh_character_list_clicked(self):
         self.refresh_character_cache_list()
-        print("[CHARACTER] cache list refreshed")
+        log_debug("character", "cache list refreshed")
 
     def open_calculation_center(self):
         if self.calculation_center_dialog is not None and self.calculation_center_dialog.isVisible():
@@ -12081,7 +11860,7 @@ class MainWindow(QMainWindow):
         self.skill_source_infos = {}
         self.skill_sheet_mapping_config = None
         self.character_paradigm_analysis = {}
-        print("[CHARACTER RESET] runtime state cleared")
+        log_debug("character", "runtime state cleared")
 
     def update_main_nav_button_styles(self):
         nav_style = self.theme_style.get("nav_button", {})
@@ -12258,11 +12037,11 @@ class MainWindow(QMainWindow):
         self.sheet_tabs = {}
 
         if hasattr(self.loader, "has_unsaved_changes") and self.loader.has_unsaved_changes():
-            print("[CHARACTER WARNING] unsaved changes before switching character")
+            log_warning("character", "unsaved changes before switching character")
         try:
             self.loader.load_file(file_path)
         except ValueError as exc:
-            print("[LOAD ERROR]", str(exc))
+            log_error("cache", f"load failed: {exc}")
             QMessageBox.warning(
                 self,
                 "Dateiformat nicht unterstützt",

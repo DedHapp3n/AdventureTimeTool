@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from app_logger import DEFAULT_DEBUG_SETTINGS, normalize_debug_settings
+
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "version": 1,
@@ -16,6 +18,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "width": 1500,
         "height": 900,
     },
+    "debug": DEFAULT_DEBUG_SETTINGS,
 }
 
 DEFAULT_OVERRIDES: dict[str, Any] = {"version": 1, "overrides": {}}
@@ -79,6 +82,10 @@ def load_settings() -> tuple[dict[str, Any], bool]:
     created = False
     settings = dict(DEFAULT_SETTINGS)
     settings["window"] = dict(DEFAULT_SETTINGS["window"])
+    settings["debug"] = {
+        "enabled": DEFAULT_DEBUG_SETTINGS["enabled"],
+        "categories": dict(DEFAULT_DEBUG_SETTINGS["categories"]),
+    }
 
     if loaded is None:
         legacy_theme = resource_path("assets/config/theme_config.json")
@@ -91,6 +98,7 @@ def load_settings() -> tuple[dict[str, Any], bool]:
         created = True
         return settings, created
 
+    changed = False
     settings["version"] = int(loaded.get("version", 1)) if str(loaded.get("version", "")).isdigit() else 1
     theme = loaded.get("theme", DEFAULT_SETTINGS["theme"])
     settings["theme"] = str(theme) if str(theme).strip() else DEFAULT_SETTINGS["theme"]
@@ -114,6 +122,11 @@ def load_settings() -> tuple[dict[str, Any], bool]:
         except Exception:
             settings["window"]["height"] = DEFAULT_SETTINGS["window"]["height"]
 
+    settings["debug"], debug_changed = normalize_debug_settings(loaded.get("debug"))
+    changed = changed or debug_changed
+    if changed:
+        save_settings(settings)
+
     return settings, created
 
 
@@ -131,6 +144,7 @@ def save_settings(settings: dict[str, Any]) -> None:
             "height": int(settings.get("window", {}).get("height", DEFAULT_SETTINGS["window"]["height"])),
         },
     }
+    payload["debug"], _changed = normalize_debug_settings(settings.get("debug"))
     _write_json_atomic(data_path("settings.json"), payload)
 
 

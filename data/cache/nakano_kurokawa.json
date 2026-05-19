@@ -1248,6 +1248,24 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "S25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD15": {
+        "value": "\n",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "BeastForm": {
@@ -4283,6 +4301,12 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "B17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Ausrüstung": {
@@ -5080,6 +5104,30 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "C11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Magie": {
@@ -5420,7 +5468,7 @@
         "error": null
       },
       "B39": {
-        "value": "Regelfragendsad",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -5908,7 +5956,7 @@
             "text": "Ritualistik",
             "skill_key": "handwerk/ritualistik",
             "skill_name": "Ritualistik",
-            "value": "1"
+            "value": "2"
           },
           {
             "text": "",

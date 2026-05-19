@@ -2,20 +2,21 @@
 
 ## 1. Projektziel
 
-Das Projekt ist ein assetbasiertes Fantasy-RPG-Character-Tool.
+Adventure Time Tool ist ein Fantasy-/Pen&Paper-Character-Tool.
 
-Der aktuelle Fokus liegt darauf, Charakterdaten aus echten Tabellen-Dateien zu importieren, in einem JSON-Cache vorzubereiten und anschließend in einer themenbasierten Fantasy-UI darzustellen.
+Der aktuelle Datenfluss ist:
 
-Wichtig bleibt:
+```text
+Tabellen-Datei (.xlsx/.xlsm/.ods)
+-> DataLoader
+-> JSON-Cache
+-> FormulaParser-Recalculation
+-> themenbasierte Fantasy-UI
+```
 
-* Keine neue Architektur erfinden
-* Verantwortlichkeiten sauber trennen
-* Sichtbare Fantasy-UI nur dort bauen, wo sie hingehört
-* Daten, Formelberechnung, Cache und Rendering nicht vermischen
+Die sichtbare UI liest im Normalfall vorbereitete Cache-`value`-Werte. Formeln bleiben in der Cache-Struktur erhalten und werden durch `FormulaParser` normalisiert, ausgewertet oder im Berechnungszentrum analysiert. `DataLoader` verwaltet Tabellenimport, Charakter-Cache, aktive Charakterdatei und Speichern nach UI-Edits.
 
----
-
-## 2. Aktuelle Ordnerstruktur
+## 2. Aktuelle Projektstruktur
 
 ```text
 AdventureTimeTool/
@@ -23,324 +24,220 @@ AdventureTimeTool/
 ├── ui_main.py
 ├── data_loader.py
 ├── formula_parser.py
+├── calculation_center.py
+├── app_paths.py
+├── app_logger.py
+├── build.py
+├── AdventureTimeTool.spec
+├── requirements.txt
 ├── ui_tabs/
 │   └── sheet_tab.py
 ├── assets/
 │   ├── config/
+│   │   ├── calculation_rules.json
+│   │   ├── calculation_overrides.json
+│   │   ├── perk_rules.json
+│   │   ├── skill_definitions.json
+│   │   ├── skill_sheet_mapping.json
 │   │   └── theme_config.json
 │   └── themes/
 │       └── <theme>/
 │           ├── ui_layout.json
+│           ├── skills_layout.json
+│           ├── inventory_layout.json
+│           ├── equipment_layout.json
+│           ├── magic_layout.json
+│           ├── notes_layout.json
+│           ├── roll_dialog_layout.json
 │           └── ui/
-│               └── ...
 └── data/
+    ├── settings.json
+    ├── current_character.json
     ├── cache/
     │   └── *.json
-    └── current_character.json
+    └── config/
+        ├── calculation_rules.json
+        └── calculation_overrides.json
 ```
 
----
+## 3. Wichtige Dateien
 
-## 3. Aufgaben der Dateien
+`main.py` startet die Qt-Anwendung und öffnet `MainWindow`.
 
-### main.py
+`ui_main.py` enthält aktuell die Haupt-UI: Navigation, Tabs, Screens, Settings, Debug-Ansichten, Roll20-Wurf-Assistent und viele JSON-gesteuerte Renderpfade.
 
-* Startpunkt des Programms
-* Erstellt `QApplication`
-* Erstellt `MainWindow`
-* Enthält keine UI-Logik
-* Enthält keine Datenlogik
+`data_loader.py` lädt `.xlsx`, `.xlsm` und `.ods`, baut den `cell_cache`, speichert Charakter-Caches und verwaltet `data/current_character.json`.
 
-### ui_main.py
+`formula_parser.py` erkennt Referenzen, normalisiert einfache Excel-/deutsche Formelsyntax, berechnet Cache-Formeln und liefert Formel-Traces für Analyse.
 
-`ui_main.py` enthält die sichtbare Haupt-UI.
+`calculation_center.py` zeigt Formeln, Werte, Fehler, Rules und Overrides. Es ist derzeit Analyse-/Editor-Schicht.
 
-Aufgaben:
+`app_paths.py` kapselt Pfade für Entwicklung und PyInstaller-Build. `assets/` sind Ressourcen, `data/` ist beschreibbarer Runtime-Bereich.
 
-* Baut `GameCanvas` / Hauptfläche
-* Baut und rendert das `MainFrame`-Asset als Programmhintergrund
-* Lädt das aktive Theme
-* Liest `assets/themes/<theme>/ui_layout.json`
-* Rendert die Hauptnavigation
-* Rendert die Settings-Seite
-* Rendert den Character-Screen
-* Rendert Panels und Texte
-* Öffnet das Debug-Fenster / den Debug-Dialog
-* Darf Styles, Assets und Layouts setzen
-* Darf Daten aus `DataLoader` und Cache anzeigen
+`app_logger.py` stellt zentrale Logging-Funktionen mit Debug-Kategorien bereit.
 
-Nicht in `ui_main.py`:
+`ui_tabs/sheet_tab.py` ist eine Debug-/SheetTab-Struktur für Tabellenansichten und Formelinspektion.
 
-* Keine Excel-/ODS-Parserlogik
-* Keine eigene Formel-Engine
-* Keine hart codierten Theme-Koordinaten, wenn sie in JSON gehören
+## 4. Aktive Tabs und Bereiche
 
-### data_loader.py
+- Charakter
+- Fertigkeiten / SE
+- Inventar
+- Ausrüstung
+- Magie
+- Notizen
+- Settings
+- Berechnungszentrum
 
-`data_loader.py` ist für Dateiimport, Cache-Aufbau und Charakter-Cache-Verwaltung zuständig.
+Das Berechnungszentrum wird aus der UI heraus geöffnet und ist kein eigener Hauptnavigationstab.
 
-Aufgaben:
+## 5. Theme- und Asset-System
 
-* Lädt `.xlsx`, `.xlsm` und `.ods`
-* Baut `cell_cache`
-* Ruft `FormulaParser.recalculate_cache()` auf
-* Speichert charakterbezogene JSON-Caches in `data/cache/`
-* Verwaltet den aktiven Charakter über `data/current_character.json`
-* Listet vorhandene Charakter-Caches
-* Lädt Charakter-Caches
-
-Nicht in `data_loader.py`:
-
-* Keine sichtbare UI bauen
-* Keine Fantasy-Layouts rendern
-
-### formula_parser.py
-
-`formula_parser.py` ist für Formel-Erkennung, Normalisierung und Berechnung im Cache zuständig.
-
-Aufgaben:
-
-* Erkennt Zellreferenzen
-* Normalisiert einfache Excel-/deutsche Formelsyntax
-* Berechnet Formeln im Cache
-* Unterstützt einfache Zellreferenzen
-* Unterstützt Grundrechenarten
-* Unterstützt `SUM` / `SUMME`
-* Unterstützt einfache `IF` / `WENN`-Logik
-* Unterstützt Bereiche
-* Schreibt berechnete Werte in `cell_cache[*][*]["value"]`
+Themes werden aus `assets/themes/<theme>/` erkannt. Ein Theme besteht aus mehreren Layout-Dateien plus `ui/` Assets.
 
 Wichtig:
 
-* Die UI zeigt keine Formelstrings an
-* Die UI liest für sichtbare Werte `value`
-* `formula_parser.py` kennt keine UI
+- `assets/` ist als read-only Ressourcenbereich zu behandeln.
+- `data/` ist der beschreibbare Runtime-Bereich.
+- Das aktive Theme steht in `data/settings.json`.
+- `assets/config/theme_config.json` ist nur noch Legacy-/Default-Migration, wenn `data/settings.json` fehlt.
+- Theme-Koordinaten und Layoutwerte sollen in JSON bleiben, wenn bereits passende Keys existieren.
 
-### ui_tabs/sheet_tab.py
+## 6. Data und Runtime
 
-`SheetTab` ist aktuell eine Debug-/Sheet-Datenstruktur.
+`data/settings.json` enthält Runtime-Settings wie aktives Theme, Theme-Liste, Fenstergröße und Debug-Konfiguration.
 
-Aufgaben:
+`data/cache/*.json` enthält vorbereitete Charakter-Caches. Diese Dateien entstehen aus Tabellenimporten oder UI-Speichern und sollten nicht manuell bearbeitet werden.
 
-* Baut Cell-Cache für SheetTab-Fälle
-* Liefert Daten und Formeln für Debug-Tabellen
-* Verwaltet Sheet-bezogene Datenstrukturen
+`data/current_character.json` merkt den aktiven Charaktercache, Charaktername, Ursprung und Ladezeitpunkt.
 
-Nicht in `SheetTab`:
+`assets/config/calculation_rules.json` und `assets/config/calculation_overrides.json` sind Default-Vorlagen. Zur Laufzeit verwendet das Tool die beschreibbaren Dateien in `data/config/`.
 
-* Kein eigenes Hauptfenster
-* Kein sichtbares Fantasy-UI bauen
-* Kein Fantasy-UI-Styling enthalten
+## 7. Berechnungszentrum
 
----
+Das Berechnungszentrum zeigt:
 
-## 4. Datenfluss
+- Cache-Formeln und Werte
+- Formel-Traces und Fehler
+- fehlende oder manuelle Berechnungsziele
+- Calculation Rules
+- Overrides
+- verwaiste Overrides
 
-### Import
+Rules werden aktuell analysiert und mit Cache-Werten verglichen. `apply_to_cache` ist im Datenmodell vorhanden, wird aber nicht automatisch auf den Cache angewandt. Overrides sind eine eigene Analyse-/Notizschicht und überschreiben nicht direkt Excel- oder Cache-Formeln.
 
-```text
-xlsx / xlsm / ods
-→ data_loader.load_file()
-→ cell_cache bauen
-→ formula_parser.recalculate_cache()
-→ data/cache/<character>.json speichern
-→ data/current_character.json aktualisieren
-→ ui_main rendert aus cell_cache
+## 8. Roll20-Wurf-Assistent
+
+Der Roll20-Wurf-Assistent nutzt einen zentralen Roll-Dialog.
+
+Aktuelle Quellen und Funktionen:
+
+- Fertigkeitswürfe
+- Character-Initiative
+- Wohlbefinden-Vorschläge
+- Perk-/Nachteil-Vorschläge
+- Spezialisierungs-Checkboxen
+- Paradigma/Brennen bei normalen Skillwürfen
+- Roll20-Kommando kopieren
+
+Initiative nutzt den Character-Initiative-Wert aus dem Charakterbereich und nicht den normalen Skillwert. Direktes Senden an Roll20 ist als UI-Option vorhanden, aber aktuell nicht implementiert.
+
+## 9. Debug und Logging
+
+`app_logger.py` stellt bereit:
+
+- `log_debug(category, message)`
+- `log_info(category, message)`
+- `log_warning(category, message)`
+- `log_error(category, message)`
+
+Standardbetrieb:
+
+- Terminal bleibt ruhig.
+- Warnings und Errors bleiben sichtbar.
+- Debug-Ausgaben erscheinen nur, wenn Debug global und die Kategorie aktiv ist.
+
+Debug-Konfiguration in `data/settings.json`:
+
+```json
+{
+  "debug": {
+    "enabled": false,
+    "categories": {
+      "paths": false,
+      "theme": false,
+      "cache": false,
+      "save": false,
+      "render": false,
+      "character": false,
+      "skills": false,
+      "inventory": false,
+      "equipment": false,
+      "magic": false,
+      "notes": false,
+      "calculation": false,
+      "roll20": false,
+      "parser": false,
+      "build": true
+    }
+  }
+}
 ```
 
-### Programmstart
+Bestehende UI-spezifische Debug-Flags in Theme-Layouts bleiben vorerst erhalten und werden nicht automatisch entfernt.
 
-```text
-data/current_character.json
-→ data_loader lädt aktiven Cache
-→ ui_main rendert aktiven Charakter
+## 10. Build
+
+PyInstaller-Build:
+
+```bash
+python build.py
 ```
 
-### Debug
+Falls PyInstaller fehlt:
 
-```text
-ui_main öffnet Debug-Fenster
-→ Tabellenansicht aus Cache- / Sheet-Daten
+```bash
+pip install pyinstaller
 ```
 
----
+Der Build ist ein one-dir Build. `assets/` werden mitgegeben. Bei einer gebauten App wird `data/` neben der ausführbaren Datei erstellt und beschrieben. Die Pfadlogik liegt in `app_paths.py`.
 
-## 5. Theme-/Asset-System
+## 11. Installation / Dependencies
 
-Themes liegen unter:
+Offensichtliche Python-Abhängigkeiten stehen in `requirements.txt`:
 
-```text
-assets/themes/<theme>/
+```bash
+pip install -r requirements.txt
 ```
 
-Ein Theme besteht aus:
+Aktuell verwendet:
 
-* `ui_layout.json`
-* `ui/...` für die verwendeten UI-Assets
+- PySide6
+- openpyxl
+- pyinstaller
 
-`assets/config/theme_config.json` merkt das aktive Theme und die verfügbaren Themes.
+ODS-Lesen nutzt Standardbibliotheken (`zipfile`, `xml.etree.ElementTree`) und benötigt keine zusätzliche ODS-Library.
 
-Das aktive Theme wird in `ui_main.py` geladen. `ui_main.py` liest anschließend die passende `ui_layout.json` und rendert daraus Canvas, MainFrame, Navigation, Content-Bereich, Settings-Seite, Character-Screen, Panels und Texte.
+## 12. Architekturregeln / STOP-Liste
 
-Themewechsel:
+- `DataLoader` baut keine UI.
+- `FormulaParser` kennt keine UI.
+- `ui_main.py` soll keine eigene Formelengine enthalten.
+- `assets/` read-only behandeln.
+- `data/` ist Runtime-/User-Bereich.
+- Keine Theme-Koordinaten hart im Code ergänzen, wenn JSON-Keys vorhanden sind.
+- `data/cache/*.json` nicht manuell verändern.
+- `data/current_character.json` nicht manuell verändern.
+- Excel-/ODS-/XLSX-Dateien nicht als Cleanup-Nebenwirkung ändern.
+- Dead-Code erst nach separater Cleanup-Phase entfernen.
 
-* Per Settings-Button / Settings-Seite
-* Per `F3`
+## 13. Bekannte Altlasten
 
-Wichtig:
-
-* Layout-Koordinaten gehören in `ui_layout.json`
-* Panel-Positionen gehören in `ui_layout.json`
-* Textpositionen gehören in `ui_layout.json`
-* Sichtbares Rendering passiert trotzdem in `ui_main.py`
-
----
-
-## 6. Character-Screen-System
-
-Der Character-Screen ist aktuell nicht in eine eigene Python-Datei ausgelagert.
-
-Er wird in `ui_main.py` über `render_character_screen()` gerendert.
-
-Genutzter Layout-Bereich:
+`ui_main.py` ist groß und enthält viele historisch gewachsene Pfade. Ein Dead-Code-/Debug-/README-Audit liegt hier:
 
 ```text
-character_screen
+docs/audit_dead_code_debug_readme.md
 ```
 
-aus:
+Cleanup 1.0 führt Logging ein und aktualisiert diese README. Dead-Code-Löschung, UI-Aufteilung und größere Refactors sind spätere Phasen.
 
-```text
-assets/themes/<theme>/ui_layout.json
-```
-
-Aktuelle Hauptpanels:
-
-* `character_info_panel`
-* `attribute_panel`
-* `perk_panel`
-
-Daten kommen aus:
-
-```text
-character_screen.data_map
-```
-
-Textpositionen kommen aus:
-
-```text
-character_screen.text_layout
-```
-
-Wichtig:
-
-* Keine Texte hart im Code positionieren, wenn JSON-Werte vorhanden sind
-* Jede Textdefinition soll `font_size` und `color` unterstützen
-* Die UI zeigt nur Cache-`value`, keine Formelstrings
-* Datenbindung soll über `data_map` laufen
-
----
-
-## 7. Settings-/Debug-System
-
-Die Settings-Seite ist Teil der Haupt-UI und wird in `ui_main.py` gerendert.
-
-Sie enthält aktuell:
-
-* Theme-Anzeige
-* Theme wechseln
-* Aktiver Charakter
-* Dropdown mit vorhandenen JSON-Caches
-* Charakter laden / importieren
-* Liste aktualisieren
-* Debug öffnen
-* Debug beim Start anzeigen
-* Cache neu laden
-
-Wichtig:
-
-* Charakter laden/importieren soll echte Tabellen-Dateien importieren
-* Unterstützte Importformate: `.xlsx`, `.xlsm`, `.ods`
-* Das Dropdown zeigt vorhandene JSON-Caches aus `data/cache/`
-* Debug ist ein separates Debug-Fenster / ein separater Dialog mit Tabellenansicht
-
----
-
-## 8. Cache-System
-
-Charakter-Caches liegen unter:
-
-```text
-data/cache/*.json
-```
-
-Sie entstehen aus importierten Tabellen-Dateien und enthalten den vorbereiteten `cell_cache`.
-
-Der aktive Charakter wird gemerkt in:
-
-```text
-data/current_character.json
-```
-
-Diese Datei merkt:
-
-* Aktive Cache-Datei
-* Charaktername
-* Ursprungsdatei (`source_file`)
-* Zeitpunkt des letzten Ladens
-
-Die UI rendert aus dem aktiven Cache. Sichtbare Werte kommen aus `value`.
-
----
-
-## 9. Wichtige Regeln / STOP-Liste
-
-STOP:
-
-* `SheetTab` darf kein sichtbares Fantasy-UI bauen
-* `SheetTab` darf kein Styling enthalten
-* `ui_main.py` darf keine Excel-/ODS-Parserlogik enthalten
-* `ui_main.py` darf keine Formel-Engine enthalten
-* `formula_parser.py` darf keine UI kennen
-* `data_loader.py` darf keine sichtbare UI bauen
-* Keine doppelte UI-Struktur
-* Keine Theme-Koordinaten hart in Python, wenn sie in JSON gehören
-* Keine Formelstrings im Frontend anzeigen
-* Keine falsche Annahme, dass der Character-Screen bereits eine eigene `.py`-Datei hat
-
----
-
-## 10. Aktueller Stand / bekannte nächste Schritte
-
-Aktueller Stand:
-
-* Assetbasierte Haupt-UI mit `GameCanvas`
-* `MainFrame`-Asset als Programmhintergrund
-* Content-Layer innerhalb `content_area`
-* Hauptnavigation oben:
-  * Charakter
-  * Fertigkeiten
-  * Inventar
-  * Ausrüstung
-  * Magie
-  * Notizen
-* Settings über Settings-Button
-* Themewechsel per `F3`
-* Character-Screen wird in `ui_main.py` gerendert
-* Debug als separates Debug-Fenster / Dialog mit Tabellenansicht
-* Import von `.xlsx`, `.xlsm` und `.ods`
-* Charakter-Caches in `data/cache/`
-* Aktiver Charakter über `data/current_character.json`
-
-Bekannte nächste Schritte:
-
-* Attribute-Ansicht weiter ausbauen
-* Perk-/Nachteil-Daten später für Würfellogik nutzbar machen
-* Character-Screen-Panels weiter per JSON feinjustieren
-* Editierbare Felder später sauber über `data_map` / `edit_target` lösen
-* Weitere Tabs ausbauen:
-  * Fertigkeiten
-  * Inventar
-  * Ausrüstung
-  * Magie
-  * Notizen

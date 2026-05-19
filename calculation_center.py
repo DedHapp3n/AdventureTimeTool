@@ -26,7 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app_paths import config_path, ensure_runtime_defaults
+from app_paths import config_path, ensure_runtime_defaults, resource_path
+from app_logger import log_debug, log_warning
 
 
 OVERRIDE_DEFAULT = {"version": 1, "overrides": {}}
@@ -66,23 +67,23 @@ def load_calculation_overrides() -> dict[str, Any]:
     ensure_runtime_defaults()
     path = _override_file_path()
     if not path.exists():
-        print("[CALC OVERRIDE] loaded count=0")
+        log_debug("calculation", "override loaded count=0")
         return dict(OVERRIDE_DEFAULT)
     try:
         with open(path, "r", encoding="utf-8") as f:
             loaded = json.load(f)
         if not isinstance(loaded, dict):
-            print("[CALC OVERRIDE] loaded count=0")
+            log_warning("calculation", f"invalid override file, using defaults: {path}")
             return dict(OVERRIDE_DEFAULT)
         overrides = loaded.get("overrides")
         if not isinstance(overrides, dict):
             loaded["overrides"] = {}
         if not isinstance(loaded.get("version"), int):
             loaded["version"] = 1
-        print(f"[CALC OVERRIDE] loaded count={len(loaded['overrides'])}")
+        log_debug("calculation", f"override loaded count={len(loaded['overrides'])}")
         return loaded
-    except Exception:
-        print("[CALC OVERRIDE] loaded count=0")
+    except Exception as exc:
+        log_warning("calculation", f"override load failed, using defaults: {path} ({exc})")
         return dict(OVERRIDE_DEFAULT)
 
 
@@ -99,9 +100,10 @@ def save_calculation_overrides(data: dict[str, Any]) -> bool:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
-        print(f"[CALC OVERRIDE] saved count={len(payload['overrides'])}")
+        log_debug("calculation", f"override saved count={len(payload['overrides'])}")
         return True
-    except Exception:
+    except Exception as exc:
+        log_warning("calculation", f"override save failed: {path} ({exc})")
         return False
 
 
@@ -109,23 +111,23 @@ def load_calculation_rules() -> dict[str, Any]:
     ensure_runtime_defaults()
     path = _rules_file_path()
     if not path.exists():
-        print("[CALC RULES] loaded count=0")
+        log_debug("calculation", "rules loaded count=0")
         return dict(RULES_DEFAULT)
     try:
         with open(path, "r", encoding="utf-8") as f:
             loaded = json.load(f)
         if not isinstance(loaded, dict):
-            print("[CALC RULES] loaded count=0")
+            log_warning("calculation", f"invalid rules file, using defaults: {path}")
             return dict(RULES_DEFAULT)
         rules = loaded.get("rules")
         if not isinstance(rules, dict):
             loaded["rules"] = {}
         if not isinstance(loaded.get("version"), int):
             loaded["version"] = 1
-        print(f"[CALC RULES] loaded count={len(loaded['rules'])}")
+        log_debug("calculation", f"rules loaded count={len(loaded['rules'])}")
         return loaded
-    except Exception:
-        print("[CALC RULES] loaded count=0")
+    except Exception as exc:
+        log_warning("calculation", f"rules load failed, using defaults: {path} ({exc})")
         return dict(RULES_DEFAULT)
 
 
@@ -142,9 +144,10 @@ def save_calculation_rules(data: dict[str, Any]) -> bool:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
-        print(f"[CALC RULES] saved count={len(payload['rules'])}")
+        log_debug("calculation", f"rules saved count={len(payload['rules'])}")
         return True
-    except Exception:
+    except Exception as exc:
+        log_warning("calculation", f"rules save failed: {path} ({exc})")
         return False
 
 
@@ -483,7 +486,7 @@ class CalculationCenterDialog(QDialog):
             "notes": self.override_notes_edit.toPlainText().strip(),
         }
         if save_calculation_overrides(payload):
-            print(f"[CALC OVERRIDE SAVE] target={target_key}")
+            log_debug("calculation", f"override save target={target_key}")
             self.override_status_label.setText("Override gespeichert")
             self.refresh_data()
 
@@ -706,7 +709,11 @@ def collect_calculation_entries(
     if not isinstance(rules, dict):
         rules = {}
 
-    ui_targets = _load_ui_targets_for_missing_rules()
+    try:
+        ui_targets = _load_ui_targets_for_missing_rules()
+    except Exception as exc:
+        log_warning("calculation", f"ui targets for missing rules unavailable: {exc}")
+        ui_targets = {}
     faith_cell = ui_targets.get("faith_current")
     faith_same_cell = bool(
         faith_cell and faith_cell == ui_targets.get("faith_max")
@@ -926,8 +933,11 @@ def _collect_missing_rule_targets(
 
 
 def _load_ui_targets_for_missing_rules() -> dict[str, str]:
-    path = _project_base_dir() / "assets" / "themes" / "diablo" / "ui_layout.json"
+    path = resource_path("assets/themes/diablo/ui_layout.json")
     targets: dict[str, str] = {}
+    if not path.exists():
+        log_warning("calculation", f"missing ui layout for rule targets: {path}")
+        return targets
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -950,7 +960,8 @@ def _load_ui_targets_for_missing_rules() -> dict[str, str]:
                             item_cell = item.get("value")
                             if item_id and isinstance(item_cell, str) and _is_cell_ref(item_cell):
                                 targets[item_id] = item_cell
-    except Exception:
+    except Exception as exc:
+        log_warning("calculation", f"failed to load ui targets for missing rules: {path} ({exc})")
         return {}
     return targets
 

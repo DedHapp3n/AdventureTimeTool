@@ -1,6 +1,8 @@
 import re
 from typing import Any, Callable
 
+from app_logger import log_debug, log_warning
+
 
 class FormulaEvaluationError(Exception):
     def __init__(self, code):
@@ -41,6 +43,7 @@ class FormulaParser:
         if not isinstance(cell_cache, dict):
             return cell_cache
 
+        unsupported_count = 0
         for sheet_name, sheet_cache in cell_cache.items():
             if not isinstance(sheet_cache, dict):
                 continue
@@ -55,15 +58,23 @@ class FormulaParser:
                     result = self._evaluate_cache_cell(sheet_name, cell_ref, set())
                     cell_info["value"] = result
                     cell_info["error"] = None
-                    print("[CALC]", sheet_name, cell_ref, formula, "->", result)
+                    log_debug("parser", f"{sheet_name} {cell_ref} {formula} -> {result}")
                 except FormulaEvaluationError as exc:
                     cell_info["error"] = exc.code
                     if exc.code == "cycle":
                         cell_info["value"] = None
-                    print("[CALC ERROR]", sheet_name, cell_ref, formula, exc.code)
+                    if exc.code == "unsupported":
+                        unsupported_count += 1
+                        log_debug("parser", f"{sheet_name} {cell_ref} {formula} {exc.code}")
+                    else:
+                        log_warning("parser", f"{sheet_name} {cell_ref} {formula} {exc.code}")
                 except Exception as exc:
                     cell_info["error"] = "unsupported"
-                    print("[CALC ERROR]", sheet_name, cell_ref, formula, exc)
+                    unsupported_count += 1
+                    log_debug("parser", f"{sheet_name} {cell_ref} {formula} {exc}")
+
+        if unsupported_count:
+            log_debug("parser", f"{unsupported_count} unsupported formulas during recalculation")
 
         return cell_cache
 
