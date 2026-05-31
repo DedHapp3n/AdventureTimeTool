@@ -1,0 +1,827 @@
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QBrush
+from PySide6.QtWidgets import QAbstractItemView, QFrame, QTableWidget, QTableWidgetItem
+
+from app_logger import log_debug, log_error, log_warning
+
+
+def render_equipment_section(window, parent, layout_config):
+    window._equipment_table_bindings = {}
+    screen_cfg = layout_config.get("equipment_screen", {}) if isinstance(layout_config, dict) else {}
+    screen = QFrame(parent)
+    screen.setGeometry(
+        window._safe_int(screen_cfg.get("x", 20), 20),
+        window._safe_int(screen_cfg.get("y", 20), 20),
+        window._safe_int(screen_cfg.get("w", 1420), 1420),
+        window._safe_int(screen_cfg.get("h", 820), 820),
+    )
+    screen.setStyleSheet("background: transparent;")
+    screen.show()
+
+    title_cfg = screen_cfg.get("title", {})
+    if bool(screen_cfg.get("show_title", False)):
+        window.create_panel_text(
+            screen,
+            title_cfg,
+            str(title_cfg.get("text", "Ausrüstung")),
+            window._safe_int(title_cfg.get("font_size", 24), 24),
+            str(title_cfg.get("color", "#f2d28b")),
+            bold=True,
+            align=str(title_cfg.get("align", "center")),
+        )
+    debug_cfg = screen_cfg.get("debug", {})
+    if not isinstance(debug_cfg, dict):
+        debug_cfg = {}
+    if bool(debug_cfg.get("enabled", True)) and (
+        bool(screen_cfg.get("show_debug_label", False)) or bool(debug_cfg.get("show_label", False))
+    ):
+        window.create_panel_text(
+            screen,
+            {"x": 20, "y": 70, "w": 700, "h": 30},
+            "Ausrüstung Analyse - siehe Terminal",
+            16,
+            "#e8e0c8",
+            bold=False,
+            align="left",
+        )
+    analysis = window.analyze_equipment_sheet()
+    if not isinstance(analysis, dict):
+        analysis = {}
+    armor_block = analysis.get("armor", {}) if isinstance(analysis, dict) else {}
+    armor_rows = armor_block.get("rows", []) if isinstance(armor_block, dict) else []
+    if not isinstance(armor_rows, list):
+        armor_rows = []
+    weapons_block = analysis.get("weapons", {}) if isinstance(analysis, dict) else {}
+    weapon_rows = weapons_block.get("rows", []) if isinstance(weapons_block, dict) else []
+    if not isinstance(weapon_rows, list):
+        weapon_rows = []
+
+    try:
+        render_equipment_armor_table(window, screen, screen_cfg.get("armor", {}), armor_rows)
+    except Exception as exc:
+        log_error("equipment", f"armor render failed: {exc}")
+        window.create_panel_text(
+            screen,
+            {"x": 20, "y": 150, "w": 760, "h": 32},
+            "Rüstung konnte nicht gerendert werden - siehe Terminal",
+            16,
+            "#e8e0c8",
+            bold=False,
+            align="left",
+        )
+
+    if not armor_rows:
+        window.create_panel_text(
+            screen,
+            {"x": 20, "y": 410, "w": 700, "h": 30},
+            "Keine Rüstungsdaten gefunden",
+            16,
+            "#e8e0c8",
+            bold=False,
+            align="left",
+        )
+    try:
+        render_equipment_weapons_table(window, screen, screen_cfg.get("weapons", {}), weapon_rows)
+    except Exception as exc:
+        log_error("equipment", f"weapon render failed: {exc}")
+        window.create_panel_text(
+            screen,
+            {"x": 20, "y": 470, "w": 760, "h": 32},
+            "Waffen konnten nicht gerendert werden - siehe Terminal",
+            16,
+            "#e8e0c8",
+            bold=False,
+            align="left",
+        )
+    return screen
+
+
+def equipment_summary_int(value):
+    text = str(value or "").strip()
+    if not text or text in {"-", "/"}:
+        return 0
+    try:
+        return int(text)
+    except (TypeError, ValueError):
+        return 0
+
+
+def build_armor_summary_row(window, armor_rows):
+    summary_fields = [
+        "phys_head",
+        "phys_chest",
+        "phys_arms",
+        "phys_legs",
+        "fire",
+        "water",
+        "earth",
+        "wind",
+        "lightning",
+        "ice",
+        "acid",
+        "light",
+        "dark",
+    ]
+    summary_row = {
+        "slot": "",
+        "name": "Summe",
+        "pl": "",
+        "durability_current": "",
+        "durability_max": "",
+        "attributes": "",
+    }
+    # Summary stays runtime-only; no equipment values are written back in phase 5.2.x.
+    for field_key in summary_fields:
+        total = 0
+        for row_data in armor_rows:
+            if isinstance(row_data, dict):
+                total += equipment_summary_int(row_data.get(field_key, ""))
+        summary_row[field_key] = str(total)
+    if window._equipment_print_rows_enabled():
+        log_debug("equipment", "EQUIPMENT ARMOR SUMMARY " + " ".join(f"{field}={summary_row.get(field, '0')}" for field in summary_fields))
+    return summary_row
+
+
+def get_equipment_table_edit_settings(window, table_cfg):
+    if not isinstance(table_cfg, dict):
+        table_cfg = {}
+    edit_cfg = table_cfg.get("edit", {})
+    if not isinstance(edit_cfg, dict):
+        edit_cfg = {}
+    editable = bool(table_cfg.get("editable", False)) and bool(edit_cfg.get("enabled", True))
+    save_on_cell_change = bool(edit_cfg.get("save_on_cell_change", True))
+    debug_enabled = bool(edit_cfg.get("debug", True)) and window._equipment_debug_enabled()
+    return editable, save_on_cell_change, debug_enabled
+
+
+def apply_equipment_item_editability(item, editable):
+    if item is None:
+        return
+    if editable:
+        item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+    else:
+        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+        item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
+
+def refresh_armor_summary_table_row(window, table):
+    binding = window._equipment_table_bindings.get(id(table), {})
+    if not isinstance(binding, dict):
+        return
+    rows = binding.get("rows", [])
+    summary_row_index = int(binding.get("summary_row_index", -1))
+    if summary_row_index < 0 or summary_row_index >= table.rowCount():
+        return
+    summary_row = build_armor_summary_row(window, rows)
+    summary_row["name"] = str(binding.get("summary_label", "Summe"))
+    binding["summary_row"] = summary_row
+    window._equipment_table_bindings[id(table)] = binding
+    table.blockSignals(True)
+    try:
+        for col_index, (field_key, _) in enumerate(binding.get("column_order", [])):
+            item = table.item(summary_row_index, col_index)
+            if item is None:
+                continue
+            value = str(summary_row.get(field_key, "") or "").strip()
+            item.setText(value)
+            item.setToolTip(value if value else "")
+            item.setData(Qt.UserRole, value)
+    finally:
+        table.blockSignals(False)
+
+
+def on_equipment_table_item_changed(window, table, row_index, column_index):
+    if window._equipment_rendering:
+        return
+    binding = window._equipment_table_bindings.get(id(table), {})
+    if not isinstance(binding, dict):
+        return
+    if not bool(binding.get("save_on_cell_change", True)):
+        return
+    rows = binding.get("rows", [])
+    if not isinstance(rows, list) or row_index < 0 or row_index >= len(rows):
+        return
+    row_data = rows[row_index]
+    if not isinstance(row_data, dict):
+        return
+    if row_data.get("is_summary_row"):
+        return
+    column_order = binding.get("column_order", [])
+    if column_index < 0 or column_index >= len(column_order):
+        return
+    field_key = str(column_order[column_index][0])
+    item = table.item(row_index, column_index)
+    if item is None:
+        return
+    cells = row_data.get("cells", {})
+    if not isinstance(cells, dict):
+        cells = {}
+    cell_ref = str(cells.get(field_key, "") or "").strip()
+    if not cell_ref:
+        if binding.get("debug"):
+            log_debug("equipment", f"EQUIPMENT EDIT SKIP no cell_ref table={binding.get('table_type')} row={row_index} column={field_key}")
+        return
+
+    new_value = str(item.text() or "")
+    old_value = str(item.data(Qt.UserRole) or "")
+    if new_value == old_value:
+        return
+
+    sheet_name = str(window.equipment_analysis.get("sheet", "") or "Ausrüstung")
+    table_type = str(binding.get("table_type", ""))
+    source_row = row_data.get("row_index", row_data.get("row", row_index))
+    if binding.get("debug"):
+        log_debug("equipment", f"EQUIPMENT EDIT table={table_type} ui_row={row_index} source_row={source_row} column={field_key} cell={cell_ref} old={old_value!r} new={new_value!r}")
+
+    window.loader.set_cell_value(sheet_name, cell_ref, new_value)
+    window.loader.save_active_character_json()
+    row_data[field_key] = new_value
+    item.setData(Qt.UserRole, new_value)
+    if binding.get("debug"):
+        log_debug("equipment", "EQUIPMENT SAVE active character saved")
+
+    if table_type == "armor":
+        refresh_armor_summary_table_row(window, table)
+
+
+def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
+    if not isinstance(armor_cfg, dict) or not armor_cfg.get("enabled", True):
+        return
+
+    table_x = window._safe_int(armor_cfg.get("x", 20), 20)
+    table_y = window._safe_int(armor_cfg.get("y", 70), 70)
+    table_w = window._safe_int(armor_cfg.get("w", 1380), 1380)
+    table_h = window._safe_int(armor_cfg.get("h", 330), 330)
+    title_text = str(armor_cfg.get("title", "Rüstung"))
+    title_font_size = window._safe_int(armor_cfg.get("title_font_size", 20), 20)
+    title_color = str(armor_cfg.get("title_color", "#f2d28b"))
+    font_size = window._safe_int(armor_cfg.get("font_size", 14), 14)
+    header_font_size = window._safe_int(armor_cfg.get("header_font_size", 14), 14)
+    header_color = str(armor_cfg.get("header_color", "#f2d28b"))
+    text_color = str(armor_cfg.get("text_color", "#ffffff"))
+    value_color = str(armor_cfg.get("value_color", "#7fd0ff"))
+    border_color = str(armor_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+    background = str(armor_cfg.get("background", "rgba(5, 5, 5, 95)"))
+    min_row_h = window._safe_int(armor_cfg.get("min_row_h", 32), 32)
+    max_row_h = window._safe_int(armor_cfg.get("max_row_h", 120), 120)
+    min_rows = window._safe_int(armor_cfg.get("min_rows", 10), 10)
+    summary_cfg = armor_cfg.get("summary", {})
+    if not isinstance(summary_cfg, dict):
+        summary_cfg = {}
+    summary_enabled = bool(summary_cfg.get("enabled", True))
+    summary_row_h = window._safe_int(summary_cfg.get("height", 34), 34)
+    summary_text_color = str(summary_cfg.get("text_color", "#000000"))
+    summary_label_color = str(summary_cfg.get("label_color", "#f2d28b"))
+    summary_background_raw = str(summary_cfg.get("background", "rgba(230, 210, 120, 120)"))
+    summary_physical_background_raw = str(
+        summary_cfg.get("physical_background", "rgba(210, 210, 210, 150)")
+    )
+    summary_elemental_background_raw = str(
+        summary_cfg.get("elemental_background", "rgba(245, 210, 90, 150)")
+    )
+    summary_durability_background_raw = str(
+        summary_cfg.get("durability_background", "rgba(170, 170, 185, 120)")
+    )
+    summary_label = str(summary_cfg.get("label", "Summe"))
+    editable, save_on_cell_change, edit_debug = get_equipment_table_edit_settings(window, armor_cfg)
+
+    panel = QFrame(parent)
+    panel.setGeometry(table_x, table_y, table_w, table_h)
+    panel.setStyleSheet(
+        f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+    )
+    panel.show()
+
+    window.create_panel_text(
+        panel,
+        {"x": 10, "y": 8, "w": table_w - 20, "h": 28},
+        title_text,
+        title_font_size,
+        title_color,
+        bold=True,
+        align="left",
+    )
+
+    columns_cfg = armor_cfg.get("columns", {})
+    if not isinstance(columns_cfg, dict):
+        columns_cfg = {}
+
+    column_order = [
+        ("slot", "Wo getragen"),
+        ("name", "Name"),
+        ("pl", "PL"),
+        ("phys_head", "Kopf"),
+        ("phys_chest", "Brust"),
+        ("phys_arms", "Arme"),
+        ("phys_legs", "Beine"),
+        ("fire", "Feuer"),
+        ("water", "Wasser"),
+        ("earth", "Erde"),
+        ("wind", "Wind"),
+        ("lightning", "Blitz"),
+        ("ice", "Eis"),
+        ("acid", "Säure"),
+        ("light", "Licht"),
+        ("dark", "Dunkel"),
+        ("durability_current", "Haltb."),
+        ("durability_max", "Max"),
+        ("attributes", "Attribute / Sonderfertigkeiten"),
+    ]
+
+    table = QTableWidget(panel)
+    table.setGeometry(10, 42, table_w - 20, table_h - 52)
+    table.setColumnCount(len(column_order))
+    summary_row = build_armor_summary_row(window, armor_rows) if summary_enabled else {}
+    if summary_enabled:
+        summary_row["name"] = summary_label
+    summary_row_index = max(len(armor_rows), min_rows) if summary_enabled else -1
+    table_row_count = max(len(armor_rows), min_rows) + (1 if summary_enabled else 0)
+    table.setRowCount(table_row_count)
+    if editable:
+        table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.SelectedClicked
+        )
+    else:
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    table.setWordWrap(True)
+    table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+    table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+    table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setAlternatingRowColors(False)
+    table.setSelectionBehavior(QAbstractItemView.SelectRows)
+    table.setSelectionMode(QAbstractItemView.SingleSelection)
+    table.verticalHeader().setVisible(False)
+    table.horizontalHeader().setStretchLastSection(False)
+
+    field_to_col_index = {}
+    header_labels = []
+    for col_index, (field_key, fallback_title) in enumerate(column_order):
+        field_to_col_index[field_key] = col_index
+        col_cfg = columns_cfg.get(field_key, {})
+        if not isinstance(col_cfg, dict):
+            col_cfg = {}
+        header_title = str(col_cfg.get("title", fallback_title))
+        col_width = window._safe_int(col_cfg.get("w", 70), 70)
+        header_labels.append(header_title)
+        table.setColumnWidth(col_index, col_width)
+    table.setHorizontalHeaderLabels(header_labels)
+
+    table.setStyleSheet(
+        "QTableWidget {"
+        f"background: {background};"
+        f"color: {text_color};"
+        f"gridline-color: {border_color};"
+        "border: none;"
+        f"font-size: {font_size}px;"
+        "}"
+        "QHeaderView::section {"
+        "background: rgba(0,0,0,0);"
+        f"color: {header_color};"
+        f"font-size: {header_font_size}px; font-weight: 700;"
+        f"border: 1px solid {border_color};"
+        "padding: 4px;"
+        "}"
+        "QTableWidget::item { padding: 4px; }"
+    )
+
+    group_styles = {}
+    column_groups = armor_cfg.get("column_groups", {})
+    if not isinstance(column_groups, dict):
+        column_groups = {}
+    for group_cfg in column_groups.values():
+        if not isinstance(group_cfg, dict):
+            continue
+        group_columns = group_cfg.get("columns", [])
+        if not isinstance(group_columns, list):
+            group_columns = []
+        for field_key in group_columns:
+            field_name = str(field_key or "").strip()
+            if field_name:
+                group_styles[field_name] = group_cfg
+
+    element_header_colors = armor_cfg.get("element_header_colors", {})
+    if not isinstance(element_header_colors, dict):
+        element_header_colors = {}
+    column_backgrounds = armor_cfg.get("column_backgrounds", {})
+    if not isinstance(column_backgrounds, dict):
+        column_backgrounds = {}
+    header_backgrounds = armor_cfg.get("header_backgrounds", {})
+    if not isinstance(header_backgrounds, dict):
+        header_backgrounds = {}
+    cell_text_colors = armor_cfg.get("cell_text_colors", {})
+    if not isinstance(cell_text_colors, dict):
+        cell_text_colors = {}
+
+    value_fields = {
+        "pl",
+        "phys_head",
+        "phys_chest",
+        "phys_arms",
+        "phys_legs",
+        "fire",
+        "water",
+        "earth",
+        "wind",
+        "lightning",
+        "ice",
+        "acid",
+        "light",
+        "dark",
+        "durability_current",
+        "durability_max",
+    }
+    center_fields = value_fields
+
+    column_background_brushes = {}
+    header_background_brushes = {}
+    summary_default_color, _ = window.parse_layout_color(summary_background_raw, "rgba(230,210,120,120)")
+    summary_physical_color, _ = window.parse_layout_color(
+        summary_physical_background_raw, "rgba(210,210,210,150)"
+    )
+    summary_elemental_color, _ = window.parse_layout_color(
+        summary_elemental_background_raw, "rgba(245,210,90,150)"
+    )
+    summary_durability_color, _ = window.parse_layout_color(
+        summary_durability_background_raw, "rgba(170,170,185,120)"
+    )
+    for field_key, _ in column_order:
+        col_bg_raw = column_backgrounds.get(field_key, "")
+        if not col_bg_raw:
+            group_cfg = group_styles.get(field_key, {})
+            if isinstance(group_cfg, dict):
+                col_bg_raw = group_cfg.get("background", "")
+        col_color, col_ok = window.parse_layout_color(col_bg_raw, "rgba(0,0,0,0)")
+        column_background_brushes[field_key] = QBrush(col_color)
+
+        header_bg_raw = header_backgrounds.get(field_key, "")
+        if not header_bg_raw:
+            group_cfg = group_styles.get(field_key, {})
+            if isinstance(group_cfg, dict):
+                header_bg_raw = group_cfg.get("background", "")
+        header_color_parsed, header_ok = window.parse_layout_color(header_bg_raw, "rgba(0,0,0,0)")
+        header_background_brushes[field_key] = QBrush(header_color_parsed)
+
+        if window._equipment_print_mapping_enabled():
+            log_debug("equipment", f"EQUIPMENT ARMOR STYLE TEST column={field_key} cell_bg={col_bg_raw} header_bg={header_bg_raw}")
+            if field_key == "durability_current":
+                title_text_current = header_labels[field_to_col_index[field_key]]
+                log_debug("equipment", f"EQUIPMENT ARMOR STYLE TEST column=durability_current title={title_text_current}")
+            if not col_ok and str(col_bg_raw or "").strip() not in {"", "-"}:
+                log_warning("equipment", f"EQUIPMENT ARMOR STYLE ERROR column={field_key} value={col_bg_raw} parsed=False")
+            elif not col_ok:
+                log_debug("equipment", f"EQUIPMENT ARMOR STYLE empty column value skipped column={field_key}")
+            if not header_ok and str(header_bg_raw or "").strip() not in {"", "-"}:
+                log_warning("equipment", f"EQUIPMENT ARMOR STYLE ERROR column={field_key} value={header_bg_raw} parsed=False")
+            elif not header_ok:
+                log_debug("equipment", f"EQUIPMENT ARMOR STYLE empty header value skipped column={field_key}")
+
+    for field_key, _ in column_order:
+        col_index = field_to_col_index.get(field_key)
+        if col_index is None:
+            continue
+        header_item = table.horizontalHeaderItem(col_index)
+        if header_item is None:
+            continue
+        header_item.setToolTip(header_item.text())
+        header_item.setBackground(header_background_brushes.get(field_key, QBrush()))
+        header_item.setForeground(QBrush(QColor("#f2d28b")))
+
+    for field_key, color_value in element_header_colors.items():
+        col_index = field_to_col_index.get(str(field_key or "").strip())
+        if col_index is None:
+            continue
+        header_item = table.horizontalHeaderItem(col_index)
+        if header_item is None:
+            continue
+        element_color = QColor(str(color_value))
+        if element_color.isValid():
+            header_item.setForeground(QBrush(element_color))
+
+    table.blockSignals(True)
+    window._equipment_rendering = True
+    for row_index in range(table_row_count):
+        is_summary_row = summary_enabled and row_index == summary_row_index
+        if is_summary_row:
+            row_data = summary_row
+        else:
+            row_data = armor_rows[row_index] if row_index < len(armor_rows) and isinstance(armor_rows[row_index], dict) else {}
+        row_has_data = any(str(row_data.get(key, "") or "").strip() for key, _ in column_order)
+        for col_index, (field_key, _) in enumerate(column_order):
+            raw_value = str(row_data.get(field_key, "") or "").strip()
+            display_value = raw_value if raw_value else ""
+            item = QTableWidgetItem(display_value)
+            item.setData(Qt.UserRole, raw_value)
+            if field_key in center_fields:
+                item.setTextAlignment(Qt.AlignCenter)
+            else:
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+            custom_text_color = str(cell_text_colors.get(field_key, "") or "").strip()
+            if is_summary_row:
+                if field_key == "name":
+                    item.setForeground(QBrush(QColor(summary_label_color)))
+                else:
+                    item.setForeground(QBrush(QColor(summary_text_color)))
+            elif custom_text_color:
+                item.setForeground(QBrush(QColor(custom_text_color)))
+            elif raw_value and field_key in value_fields:
+                item.setForeground(QColor(value_color))
+            else:
+                item.setForeground(QColor(text_color))
+            if is_summary_row:
+                if field_key in {"phys_head", "phys_chest", "phys_arms", "phys_legs"}:
+                    item.setBackground(QBrush(summary_physical_color))
+                elif field_key in {
+                    "fire",
+                    "water",
+                    "earth",
+                    "wind",
+                    "lightning",
+                    "ice",
+                    "acid",
+                    "light",
+                    "dark",
+                }:
+                    item.setBackground(QBrush(summary_elemental_color))
+                elif field_key in {"durability_current", "durability_max"}:
+                    item.setBackground(QBrush(summary_durability_color))
+                else:
+                    item.setBackground(QBrush(summary_default_color))
+            else:
+                item.setBackground(column_background_brushes.get(field_key, QBrush()))
+            if raw_value:
+                item.setToolTip(raw_value)
+            elif not row_has_data:
+                item.setToolTip("")
+            can_edit = (
+                editable
+                and not is_summary_row
+                and row_index < len(armor_rows)
+                and bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+            )
+            apply_equipment_item_editability(item, can_edit)
+            table.setItem(row_index, col_index, item)
+        table.setRowHeight(row_index, summary_row_h if is_summary_row else min_row_h)
+        if edit_debug and row_index < len(armor_rows):
+            cell_ref = str(row_data.get("cells", {}).get("name", "") or "").strip()
+            if cell_ref:
+                log_debug("equipment", f"EQUIPMENT EDIT MAP armor row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
+
+    table.resizeRowsToContents()
+    for row_index in range(table_row_count):
+        if summary_enabled and row_index == summary_row_index:
+            table.setRowHeight(row_index, summary_row_h)
+            continue
+        current_h = table.rowHeight(row_index)
+        if current_h < min_row_h:
+            table.setRowHeight(row_index, min_row_h)
+        elif current_h > max_row_h:
+            table.setRowHeight(row_index, max_row_h)
+
+    table.blockSignals(False)
+    window._equipment_rendering = False
+    window._equipment_table_bindings[id(table)] = {
+        "table_type": "armor",
+        "rows": armor_rows,
+        "column_order": column_order,
+        "summary_row_index": summary_row_index,
+        "summary_row": summary_row,
+        "summary_label": summary_label,
+        "save_on_cell_change": save_on_cell_change,
+        "debug": edit_debug,
+    }
+    table.itemChanged.connect(
+        lambda item, widget=table: on_equipment_table_item_changed(
+            window, widget, item.row(), item.column()
+        )
+    )
+    table.show()
+
+
+def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
+    if not isinstance(weapons_cfg, dict) or not weapons_cfg.get("enabled", True):
+        return
+
+    table_x = window._safe_int(weapons_cfg.get("x", 20), 20)
+    table_y = window._safe_int(weapons_cfg.get("y", 470), 470)
+    table_w = window._safe_int(weapons_cfg.get("w", 1380), 1380)
+    table_h = window._safe_int(weapons_cfg.get("h", 300), 300)
+    title_text = str(weapons_cfg.get("title", "Waffen"))
+    title_font_size = window._safe_int(weapons_cfg.get("title_font_size", 20), 20)
+    title_color = str(weapons_cfg.get("title_color", "#f2d28b"))
+    font_size = window._safe_int(weapons_cfg.get("font_size", 14), 14)
+    header_font_size = window._safe_int(weapons_cfg.get("header_font_size", 14), 14)
+    header_color = str(weapons_cfg.get("header_color", "#f2d28b"))
+    text_color = str(weapons_cfg.get("text_color", "#ffffff"))
+    value_color = str(weapons_cfg.get("value_color", "#7fd0ff"))
+    border_color = str(weapons_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
+    background = str(weapons_cfg.get("background", "rgba(5, 5, 5, 95)"))
+    min_row_h = window._safe_int(weapons_cfg.get("min_row_h", 32), 32)
+    max_row_h = window._safe_int(weapons_cfg.get("max_row_h", 72), 72)
+    min_rows = window._safe_int(weapons_cfg.get("min_rows", 8), 8)
+    editable, save_on_cell_change, edit_debug = get_equipment_table_edit_settings(window, weapons_cfg)
+
+    panel = QFrame(parent)
+    panel.setGeometry(table_x, table_y, table_w, table_h)
+    panel.setStyleSheet(
+        f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+    )
+    panel.show()
+
+    window.create_panel_text(
+        panel,
+        {"x": 10, "y": 8, "w": table_w - 20, "h": 28},
+        title_text,
+        title_font_size,
+        title_color,
+        bold=True,
+        align="left",
+    )
+
+    columns_cfg = weapons_cfg.get("columns", {})
+    if not isinstance(columns_cfg, dict):
+        columns_cfg = {}
+
+    column_order = [
+        ("name", "Name"),
+        ("weapon_type", "Waffentyp"),
+        ("pl", "PL"),
+        ("damage_cut", "Schnitt"),
+        ("damage_blunt", "Stoß"),
+        ("damage_pierce", "Stich"),
+        ("physical_dice", "Phys. Würfel"),
+        ("physical_bonus", "Phys. Bonus"),
+        ("elemental_dice", "Elem. Würfel"),
+        ("elemental_elements", "Element(e)"),
+        ("elemental_bonus", "Elem. Bonus"),
+        ("durability_current", "Haltb."),
+        ("durability_max", "Max"),
+        ("attributes", "Attribute / Sonderfertigkeiten"),
+    ]
+
+    table = QTableWidget(panel)
+    table.setGeometry(10, 42, table_w - 20, table_h - 52)
+    table.setColumnCount(len(column_order))
+    table_row_count = max(len(weapon_rows), min_rows)
+    table.setRowCount(table_row_count)
+    if editable:
+        table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.SelectedClicked
+        )
+    else:
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    table.setWordWrap(True)
+    table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+    table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+    table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setAlternatingRowColors(False)
+    table.setSelectionBehavior(QAbstractItemView.SelectRows)
+    table.setSelectionMode(QAbstractItemView.SingleSelection)
+    table.verticalHeader().setVisible(False)
+    table.horizontalHeader().setStretchLastSection(False)
+
+    field_to_col_index = {}
+    header_labels = []
+    for col_index, (field_key, fallback_title) in enumerate(column_order):
+        field_to_col_index[field_key] = col_index
+        col_cfg = columns_cfg.get(field_key, {})
+        if not isinstance(col_cfg, dict):
+            col_cfg = {}
+        header_title = str(col_cfg.get("title", fallback_title))
+        col_width = window._safe_int(col_cfg.get("w", 70), 70)
+        header_labels.append(header_title)
+        table.setColumnWidth(col_index, col_width)
+    table.setHorizontalHeaderLabels(header_labels)
+
+    table.setStyleSheet(
+        "QTableWidget {"
+        f"background: {background};"
+        f"color: {text_color};"
+        f"gridline-color: {border_color};"
+        "border: none;"
+        f"font-size: {font_size}px;"
+        "}"
+        "QHeaderView::section {"
+        "background: rgba(0,0,0,0);"
+        f"color: {header_color};"
+        f"font-size: {header_font_size}px; font-weight: 700;"
+        f"border: 1px solid {border_color};"
+        "padding: 4px;"
+        "}"
+        "QTableWidget::item { padding: 4px; }"
+    )
+
+    column_backgrounds = weapons_cfg.get("column_backgrounds", {})
+    if not isinstance(column_backgrounds, dict):
+        column_backgrounds = {}
+    header_backgrounds = weapons_cfg.get("header_backgrounds", {})
+    if not isinstance(header_backgrounds, dict):
+        header_backgrounds = {}
+    cell_text_colors = weapons_cfg.get("cell_text_colors", {})
+    if not isinstance(cell_text_colors, dict):
+        cell_text_colors = {}
+
+    value_fields = {
+        "pl",
+        "damage_cut",
+        "damage_blunt",
+        "damage_pierce",
+        "physical_dice",
+        "physical_bonus",
+        "elemental_dice",
+        "elemental_bonus",
+        "durability_current",
+        "durability_max",
+    }
+    center_fields = value_fields | {"weapon_type", "elemental_elements"}
+
+    column_background_brushes = {}
+    header_background_brushes = {}
+    for field_key, _ in column_order:
+        col_bg_raw = str(column_backgrounds.get(field_key, "") or "")
+        col_color, _ = window.parse_layout_color(col_bg_raw, "rgba(0,0,0,0)")
+        column_background_brushes[field_key] = QBrush(col_color)
+
+        header_bg_raw = str(header_backgrounds.get(field_key, "") or col_bg_raw)
+        header_color_parsed, _ = window.parse_layout_color(header_bg_raw, "rgba(0,0,0,0)")
+        header_background_brushes[field_key] = QBrush(header_color_parsed)
+
+    for field_key, _ in column_order:
+        col_index = field_to_col_index.get(field_key)
+        if col_index is None:
+            continue
+        header_item = table.horizontalHeaderItem(col_index)
+        if header_item is None:
+            continue
+        header_item.setToolTip(header_item.text())
+        header_item.setBackground(header_background_brushes.get(field_key, QBrush()))
+        header_item.setForeground(QBrush(QColor("#f2d28b")))
+
+    table.blockSignals(True)
+    window._equipment_rendering = True
+    for row_index in range(table_row_count):
+        row_data = (
+            weapon_rows[row_index]
+            if row_index < len(weapon_rows) and isinstance(weapon_rows[row_index], dict)
+            else {}
+        )
+        for col_index, (field_key, _) in enumerate(column_order):
+            raw_value = str(row_data.get(field_key, "") or "").strip()
+            item = QTableWidgetItem(raw_value)
+            item.setData(Qt.UserRole, raw_value)
+            if field_key in center_fields:
+                item.setTextAlignment(Qt.AlignCenter)
+            else:
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+            custom_text_color = str(cell_text_colors.get(field_key, "") or "").strip()
+            if custom_text_color:
+                item.setForeground(QBrush(QColor(custom_text_color)))
+            elif raw_value and field_key in value_fields:
+                item.setForeground(QColor(value_color))
+            else:
+                item.setForeground(QColor(text_color))
+            item.setBackground(column_background_brushes.get(field_key, QBrush()))
+            if raw_value:
+                item.setToolTip(raw_value)
+            can_edit = (
+                editable
+                and row_index < len(weapon_rows)
+                and bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+            )
+            apply_equipment_item_editability(item, can_edit)
+            table.setItem(row_index, col_index, item)
+        table.setRowHeight(row_index, min_row_h)
+        if edit_debug and row_index < len(weapon_rows):
+            cell_ref = str(row_data.get("cells", {}).get("name", "") or "").strip()
+            if cell_ref:
+                log_debug("equipment", f"EQUIPMENT EDIT MAP weapons row={row_data.get('row_index', row_index)} column=name cell={cell_ref}")
+
+    table.resizeRowsToContents()
+    for row_index in range(table_row_count):
+        current_h = table.rowHeight(row_index)
+        if current_h < min_row_h:
+            table.setRowHeight(row_index, min_row_h)
+        elif current_h > max_row_h:
+            table.setRowHeight(row_index, max_row_h)
+
+    table.blockSignals(False)
+    window._equipment_rendering = False
+    window._equipment_table_bindings[id(table)] = {
+        "table_type": "weapons",
+        "rows": weapon_rows,
+        "column_order": column_order,
+        "summary_row_index": -1,
+        "save_on_cell_change": save_on_cell_change,
+        "debug": edit_debug,
+    }
+    table.itemChanged.connect(
+        lambda item, widget=table: on_equipment_table_item_changed(
+            window, widget, item.row(), item.column()
+        )
+    )
+    table.show()
