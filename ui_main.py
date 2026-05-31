@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog, QGroupBox,
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
-from PySide6.QtCore import Qt, QEvent, QRect, QTimer
+from PySide6.QtCore import Qt, QEvent, QRect
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush
 import re
 import os
@@ -29,6 +29,8 @@ from ui_tabs.sheet_tab import SheetTab
 from calculation_center import CalculationCenterDialog
 from ui_dialogs.resource_dialog import open_resource_dialog
 from ui_dialogs.roll20_dialog import open_roll20_dialog
+from ui_sections.magic_section import render_magic_section
+from ui_sections.notes_section import notes_debug_enabled, render_notes_section
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -1584,9 +1586,7 @@ class MainWindow(QMainWindow):
         return self.magic_layout_config
 
     def _notes_debug_enabled(self, notes_layout):
-        screen_cfg = notes_layout.get("notes_screen", {}) if isinstance(notes_layout, dict) else {}
-        debug_cfg = screen_cfg.get("debug", {}) if isinstance(screen_cfg, dict) else {}
-        return isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False))
+        return notes_debug_enabled(notes_layout)
 
     def _get_notes_text_from_meta(self):
         app_meta = getattr(self.loader, "app_meta", {})
@@ -5664,533 +5664,48 @@ class MainWindow(QMainWindow):
         if self.content_layer is None:
             return
         layout_config = self.load_notes_layout_config()
-        screen_cfg = layout_config.get("notes_screen", {})
-        if not isinstance(screen_cfg, dict):
-            screen_cfg = self.get_default_notes_layout_config().get("notes_screen", {})
-        notes_debug = self._notes_debug_enabled(layout_config)
-
-        screen = QFrame(self.content_layer)
-        screen.setGeometry(
-            self._safe_int(screen_cfg.get("x", 40), 40),
-            self._safe_int(screen_cfg.get("y", 40), 40),
-            self._safe_int(screen_cfg.get("w", 1380), 1380),
-            self._safe_int(screen_cfg.get("h", 790), 790),
+        default_screen_cfg = self.get_default_notes_layout_config().get("notes_screen", {})
+        return render_notes_section(
+            self.content_layer,
+            layout_config,
+            default_screen_cfg,
+            {
+                "safe_int": self._safe_int,
+                "create_panel_text": self.create_panel_text,
+                "get_text": self._get_notes_text_from_meta,
+                "save_text": self._save_notes_text_to_meta,
+                "has_active_character": lambda: bool(str(getattr(self.loader, "active_cache_path", "") or "")),
+                "log_debug": log_debug,
+            },
         )
-        screen.setStyleSheet("background: transparent;")
-        screen.show()
-
-        title_cfg = screen_cfg.get("title", {})
-        if isinstance(title_cfg, dict) and bool(title_cfg.get("enabled", True)):
-            self.create_panel_text(
-                screen,
-                {
-                    "x": self._safe_int(title_cfg.get("x", 0), 0),
-                    "y": self._safe_int(title_cfg.get("y", 0), 0),
-                    "w": self._safe_int(title_cfg.get("w", 1380), 1380),
-                    "h": self._safe_int(title_cfg.get("h", 42), 42),
-                },
-                str(title_cfg.get("text", "Notizen")),
-                self._safe_int(title_cfg.get("font_size", 24), 24),
-                str(title_cfg.get("color", "#f2d28b")),
-                bold=True,
-                align=str(title_cfg.get("align", "center")),
-            )
-
-        editor_cfg = screen_cfg.get("editor", {})
-        editor_x = self._safe_int(editor_cfg.get("x", 20), 20)
-        editor_y = self._safe_int(editor_cfg.get("y", 60), 60)
-        editor_w = self._safe_int(editor_cfg.get("w", 1340), 1340)
-        editor_h = self._safe_int(editor_cfg.get("h", 620), 620)
-        editor_font_size = self._safe_int(editor_cfg.get("font_size", 16), 16)
-        editor_text_color = str(editor_cfg.get("text_color", "#ffffff"))
-        editor_bg = str(editor_cfg.get("background", "rgba(5, 5, 5, 120)"))
-        editor_border = str(editor_cfg.get("border_color", "rgba(242, 210, 139, 100)"))
-
-        editor = QTextEdit(screen)
-        editor.setGeometry(editor_x, editor_y, editor_w, editor_h)
-        editor.setAcceptRichText(False)
-        editor.setLineWrapMode(QTextEdit.WidgetWidth)
-        editor.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        editor.setPlaceholderText(str(editor_cfg.get("placeholder", "Notizen...")))
-        editor.setStyleSheet(
-            "QTextEdit {"
-            f"background: {editor_bg};"
-            f"border: 1px solid {editor_border};"
-            f"color: {editor_text_color};"
-            f"font-size: {editor_font_size}px;"
-            "padding: 8px;"
-            "}"
-        )
-        editor.show()
-
-        status_cfg = screen_cfg.get("status", {})
-        status_label = None
-        if isinstance(status_cfg, dict) and bool(status_cfg.get("enabled", True)):
-            status_label = QLabel(screen)
-            status_label.setGeometry(
-                self._safe_int(status_cfg.get("x", 20), 20),
-                self._safe_int(status_cfg.get("y", 700), 700),
-                self._safe_int(status_cfg.get("w", 700), 700),
-                self._safe_int(status_cfg.get("h", 32), 32),
-            )
-            status_label.setText("")
-            status_label.setStyleSheet(
-                "background: transparent; "
-                f"color: {str(status_cfg.get('color', '#e8e0c8'))}; "
-                f"font-size: {self._safe_int(status_cfg.get('font_size', 14), 14)}px;"
-                "font-weight: 500;"
-            )
-            status_label.show()
-
-        autosave_cfg = screen_cfg.get("autosave", {})
-        if not isinstance(autosave_cfg, dict):
-            autosave_cfg = {}
-        autosave_enabled = bool(autosave_cfg.get("enabled", True))
-        autosave_delay_ms = max(100, self._safe_int(autosave_cfg.get("delay_ms", 600), 600))
-
-        autosave_timer = QTimer(screen)
-        autosave_timer.setSingleShot(True)
-        autosave_timer.setInterval(autosave_delay_ms)
-
-        notes_text = self._get_notes_text_from_meta()
-        self._notes_loading_text = True
-        try:
-            editor.setPlainText(notes_text)
-        finally:
-            self._notes_loading_text = False
-        self._notes_last_saved_text = str(notes_text)
-        if notes_debug:
-            log_debug("notes", f"NOTES LOAD chars={len(notes_text)}")
-
-        if status_label is not None:
-            status_label.setText("Automatisch gespeichert")
-
-        def run_autosave():
-            if self._notes_loading_text:
-                return
-            active_cache_path = str(getattr(self.loader, "active_cache_path", "") or "")
-            if not active_cache_path:
-                if status_label is not None:
-                    status_label.setText("Kein Charakter geladen")
-                return
-            text_value = editor.toPlainText()
-            if text_value == str(getattr(self, "_notes_last_saved_text", "")):
-                if status_label is not None:
-                    status_label.setText("Automatisch gespeichert")
-                return
-            if notes_debug:
-                log_debug("notes", f"NOTES AUTOSAVE chars={len(text_value)}")
-            ok = self._save_notes_text_to_meta(text_value)
-            if ok:
-                self._notes_last_saved_text = text_value
-                if notes_debug:
-                    log_debug("notes", "NOTES SAVE active character saved")
-                if status_label is not None:
-                    status_label.setText("Automatisch gespeichert")
-            else:
-                if status_label is not None:
-                    status_label.setText("Autosave fehlgeschlagen — siehe Terminal")
-
-        autosave_timer.timeout.connect(run_autosave)
-
-        def on_text_changed():
-            if self._notes_loading_text:
-                return
-            text_value = editor.toPlainText()
-            if text_value == str(getattr(self, "_notes_last_saved_text", "")):
-                return
-            if status_label is not None:
-                status_label.setText("Speichert...")
-            if notes_debug:
-                log_debug("notes", f"NOTES AUTOSAVE QUEUED chars={len(text_value)}")
-            if autosave_enabled:
-                autosave_timer.start()
-
-        editor.textChanged.connect(on_text_changed)
-
-        save_cfg = screen_cfg.get("save_button", {})
-        if isinstance(save_cfg, dict) and bool(save_cfg.get("enabled", True)):
-            save_button = QPushButton(screen)
-            save_button.setGeometry(
-                self._safe_int(save_cfg.get("x", 1120), 1120),
-                self._safe_int(save_cfg.get("y", 700), 700),
-                self._safe_int(save_cfg.get("w", 220), 220),
-                self._safe_int(save_cfg.get("h", 44), 44),
-            )
-            save_button.setText(str(save_cfg.get("text", "Speichern")))
-            save_button.setCursor(Qt.PointingHandCursor)
-            save_button.setStyleSheet(
-                "QPushButton {"
-                "background-color: rgba(35, 24, 12, 185);"
-                "color: #f2d28b;"
-                "border: 1px solid rgba(184, 138, 53, 150);"
-                "border-radius: 4px;"
-                "font-size: 18px;"
-                "font-weight: 700;"
-                "padding: 0px;"
-                "}"
-                "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
-            )
-
-            def on_save_clicked():
-                text_value = editor.toPlainText()
-                if notes_debug:
-                    log_debug("notes", f"NOTES SAVE chars={len(text_value)}")
-                ok = self._save_notes_text_to_meta(text_value)
-                if ok:
-                    self._notes_last_saved_text = text_value
-                    if notes_debug:
-                        log_debug("notes", "NOTES SAVE active character saved")
-                    if status_label is not None:
-                        status_label.setText("Automatisch gespeichert")
-                else:
-                    if status_label is not None:
-                        status_label.setText("Autosave fehlgeschlagen — siehe Terminal")
-
-            save_button.clicked.connect(on_save_clicked)
-            save_button.show()
-
-    def on_magic_spell_table_item_changed(self, table, row_index, column_index):
-        if self._magic_rendering:
-            return
-        binding = self._magic_table_bindings.get(id(table), {})
-        if not isinstance(binding, dict):
-            return
-        rows = binding.get("rows", [])
-        if not isinstance(rows, list) or row_index < 0 or row_index >= len(rows):
-            return
-        column_order = binding.get("column_order", [])
-        if column_index < 0 or column_index >= len(column_order):
-            return
-        key = str(column_order[column_index])
-        row_data = rows[row_index]
-        if not isinstance(row_data, dict):
-            return
-        cells = row_data.get("cells", {})
-        if not isinstance(cells, dict):
-            return
-        cell_ref = str(cells.get(key, "") or "").strip().upper()
-        if not cell_ref:
-            if self._magic_print_mapping_enabled():
-                source_row = row_data.get("row_index", row_data.get("row", row_index))
-                log_debug("magic", f"MAGIC EDIT SKIP no cell_ref row={source_row} column={key}")
-            return
-        item = table.item(row_index, column_index)
-        if item is None:
-            return
-        new_value = str(item.text() or "")
-        old_value = str(item.data(Qt.UserRole) or "")
-        if new_value == old_value:
-            return
-        source_row = row_data.get("row_index", row_data.get("row", row_index))
-        if self._magic_print_mapping_enabled():
-            log_debug("magic", f'MAGIC EDIT row={source_row} column={key} cell={cell_ref} old="{old_value}" new="{new_value}"')
-        self.loader.set_cell_value(str(binding.get("sheet", "Magie") or "Magie"), cell_ref, new_value)
-        self.loader.save_active_character_json()
-        row_data[key] = new_value
-        row_data.setdefault("values", {})[key] = new_value
-        item.setData(Qt.UserRole, new_value)
-        if self._magic_print_mapping_enabled():
-            log_debug("magic", "MAGIC SAVE active character saved")
-
-    def _render_magic_upgrade_table(self, parent, table_cfg, upgrade_rows):
-        if not isinstance(table_cfg, dict) or not bool(table_cfg.get("enabled", True)):
-            return
-
-        panel = QFrame(parent)
-        panel.setGeometry(
-            self._safe_int(table_cfg.get("x", 20), 20),
-            self._safe_int(table_cfg.get("y", 50), 50),
-            self._safe_int(table_cfg.get("w", 760), 760),
-            self._safe_int(table_cfg.get("h", 250), 250),
-        )
-        panel.setStyleSheet("background: transparent;")
-        panel.show()
-
-        self.create_panel_text(
-            panel,
-            {"x": 0, "y": 0, "w": panel.width(), "h": 30},
-            str(table_cfg.get("title", "Upgrade Tabelle")),
-            self._safe_int(table_cfg.get("title_font_size", 18), 18),
-            str(table_cfg.get("header_color", "#f2d28b")),
-            bold=True,
-            align="left",
-        )
-
-        table = QTableWidget(panel)
-        table.setGeometry(0, 34, panel.width(), max(60, panel.height() - 36))
-        row_count = len(upgrade_rows) if isinstance(upgrade_rows, list) and upgrade_rows else 1
-        max_cols = 0
-        for row_data in (upgrade_rows or []):
-            if isinstance(row_data, dict):
-                max_cols = max(max_cols, len(row_data.get("values", [])))
-        max_cols = max(1, max_cols)
-        table.setRowCount(row_count)
-        table.setColumnCount(1 + max_cols)
-        headers = ["Upgrade"] + [f"Wert {i+1}" for i in range(max_cols)]
-        table.setHorizontalHeaderLabels(headers)
-        table.verticalHeader().setVisible(False)
-        table.setAlternatingRowColors(False)
-        table.setEditTriggers(QTableWidget.NoEditTriggers)
-        table.setSelectionBehavior(QAbstractItemView.SelectItems)
-        table.setSelectionMode(QAbstractItemView.NoSelection)
-        table.setWordWrap(True)
-        selection_cfg = table_cfg.get("selection", {})
-        if not isinstance(selection_cfg, dict):
-            selection_cfg = {}
-        selection_bg = str(selection_cfg.get("background", "rgba(242, 210, 139, 45)"))
-        selection_text = str(selection_cfg.get("text_color", "#ffffff"))
-        selection_border = str(selection_cfg.get("border_color", "rgba(242, 210, 139, 120)"))
-        selection_enabled = bool(selection_cfg.get("enabled", True))
-        table.setStyleSheet(
-            "QTableWidget {"
-            f"background: {str(table_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
-            f"border: 1px solid {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
-            f"color: {str(table_cfg.get('text_color', '#ffffff'))};"
-            f"gridline-color: {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
-            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px;"
-            "}"
-            "QTableWidget::item:selected {"
-            + (
-                f"background: {selection_bg}; color: {selection_text}; border: 1px solid {selection_border};"
-                if selection_enabled
-                else "background: transparent; color: inherit; border: none;"
-            )
-            + "}"
-            "QTableWidget::item:focus { outline: none; }"
-            "QHeaderView::section {"
-            f"background: rgba(20, 16, 10, 180); color: {str(table_cfg.get('header_color', '#f2d28b'))};"
-            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px; font-weight: 700; border: 0px;"
-            "}"
-        )
-
-        for row_index, row_data in enumerate(upgrade_rows or []):
-            label_item = QTableWidgetItem(str(row_data.get("label", "") or ""))
-            label_item.setFlags(label_item.flags() & ~Qt.ItemIsEditable)
-            label_item.setForeground(QColor(str(table_cfg.get("header_color", "#f2d28b"))))
-            table.setItem(row_index, 0, label_item)
-            values = row_data.get("values", [])
-            for value_index in range(max_cols):
-                value = str(values[value_index] if value_index < len(values) else "")
-                item = QTableWidgetItem(value)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                item.setForeground(QColor(str(table_cfg.get("value_color", "#7fd0ff"))))
-                table.setItem(row_index, value_index + 1, item)
-
-        table.verticalHeader().setDefaultSectionSize(26)
-        content_w = max(120, table.width() - 24)
-        label_w = max(180, min(260, int(content_w * 0.22)))
-        min_value_col_w = 110
-        required_w = label_w + (max_cols * min_value_col_w)
-        needs_h_scroll = required_w > content_w
-        if needs_h_scroll:
-            table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        else:
-            table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        table.setColumnWidth(0, label_w)
-        remaining_w = max(10, content_w - label_w)
-        if max_cols > 0:
-            if needs_h_scroll:
-                per_col = min_value_col_w
-            else:
-                per_col = max(min_value_col_w, int(remaining_w / max_cols))
-            for col in range(1, 1 + max_cols):
-                table.setColumnWidth(col, per_col)
-
-        header_h = max(24, table.horizontalHeader().height())
-        content_h = max(60, table.height() - header_h - 6)
-        row_h = max(24, min(34, int(content_h / max(1, row_count))))
-        for row_index in range(row_count):
-            table.setRowHeight(row_index, row_h)
-        required_h = header_h + (row_count * row_h) + 6
-        needs_v_scroll = required_h > table.height()
-        table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded if needs_v_scroll else Qt.ScrollBarAlwaysOff)
-        table.show()
-
-    def _render_magic_spell_table(self, parent, table_cfg, sheet_name, rows, mapping):
-        if not isinstance(table_cfg, dict) or not bool(table_cfg.get("enabled", True)):
-            return
-
-        panel = QFrame(parent)
-        panel.setGeometry(
-            self._safe_int(table_cfg.get("x", 20), 20),
-            self._safe_int(table_cfg.get("y", 330), 330),
-            self._safe_int(table_cfg.get("w", 1360), 1360),
-            self._safe_int(table_cfg.get("h", 450), 450),
-        )
-        panel.setStyleSheet("background: transparent;")
-        panel.show()
-
-        self.create_panel_text(
-            panel,
-            {"x": 0, "y": 0, "w": panel.width(), "h": 30},
-            str(table_cfg.get("title", "Magie")),
-            self._safe_int(table_cfg.get("title_font_size", 18), 18),
-            str(table_cfg.get("header_color", "#f2d28b")),
-            bold=True,
-            align="left",
-        )
-
-        columns_cfg = table_cfg.get("columns", {})
-        if not isinstance(columns_cfg, dict):
-            columns_cfg = {}
-        column_order = ["school", "info", "prepared_spell", "charge", "duration", "effect"]
-        headers = [str(columns_cfg.get(key, {}).get("title", key)) for key in column_order]
-
-        min_rows = max(1, self._safe_int(table_cfg.get("min_rows", 14), 14))
-        visible_rows = list(rows) if isinstance(rows, list) else []
-        while len(visible_rows) < min_rows:
-            visible_rows.append({"row": 0, "row_index": 0, "values": {}, "cells": {}, "school": "", "info": "", "prepared_spell": "", "charge": "", "duration": "", "effect": ""})
-
-        table = QTableWidget(panel)
-        table.setGeometry(0, 34, panel.width(), max(80, panel.height() - 36))
-        table.setRowCount(len(visible_rows))
-        table.setColumnCount(len(column_order))
-        table.setHorizontalHeaderLabels(headers)
-        table.verticalHeader().setVisible(False)
-        table.setWordWrap(True)
-        table.setAlternatingRowColors(False)
-        table.setSelectionBehavior(QAbstractItemView.SelectItems)
-        table.setSelectionMode(QAbstractItemView.SingleSelection)
-        table.setEditTriggers(
-            QAbstractItemView.DoubleClicked
-            | QAbstractItemView.EditKeyPressed
-            | QAbstractItemView.SelectedClicked
-        )
-        selection_cfg = table_cfg.get("selection", {})
-        if not isinstance(selection_cfg, dict):
-            selection_cfg = {}
-        selection_bg = str(selection_cfg.get("background", "rgba(242, 210, 139, 45)"))
-        selection_text = str(selection_cfg.get("text_color", "#ffffff"))
-        selection_border = str(selection_cfg.get("border_color", "rgba(242, 210, 139, 120)"))
-        selection_enabled = bool(selection_cfg.get("enabled", True))
-        table.setStyleSheet(
-            "QTableWidget {"
-            f"background: {str(table_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
-            f"border: 1px solid {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
-            f"color: {str(table_cfg.get('text_color', '#ffffff'))};"
-            f"gridline-color: {str(table_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
-            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px;"
-            "}"
-            "QTableWidget::item:selected {"
-            + (
-                f"background: {selection_bg}; color: {selection_text}; border: 1px solid {selection_border};"
-                if selection_enabled
-                else "background: transparent; color: inherit; border: none;"
-            )
-            + "}"
-            "QTableWidget::item:focus { outline: none; }"
-            "QHeaderView::section {"
-            f"background: rgba(20, 16, 10, 180); color: {str(table_cfg.get('header_color', '#f2d28b'))};"
-            f"font-size: {self._safe_int(table_cfg.get('font_size', 14), 14)}px; font-weight: 700; border: 0px;"
-            "}"
-        )
-
-        self._magic_rendering = True
-        try:
-            for row_index, row_data in enumerate(visible_rows):
-                values = row_data.get("values", {})
-                cells = row_data.get("cells", {})
-                if not isinstance(values, dict):
-                    values = {}
-                if not isinstance(cells, dict):
-                    cells = {}
-                for col_index, key in enumerate(column_order):
-                    value = str(values.get(key, row_data.get(key, "")) or "")
-                    item = QTableWidgetItem(value)
-                    item.setToolTip(value if value else "")
-                    item.setData(Qt.UserRole, value)
-                    can_edit = bool(table_cfg.get("editable", True)) and bool(str(cells.get(key, "") or "").strip())
-                    if can_edit:
-                        item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-                    else:
-                        item.setFlags((item.flags() & ~Qt.ItemIsEditable) | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-                    color = str(table_cfg.get("value_color", "#7fd0ff")) if key in ("charge", "duration") else str(table_cfg.get("text_color", "#ffffff"))
-                    item.setForeground(QColor(color))
-                    item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                    table.setItem(row_index, col_index, item)
-        finally:
-            self._magic_rendering = False
-
-        total_w = panel.width()
-        used_w = 0
-        for col_index, key in enumerate(column_order):
-            width = self._safe_int(columns_cfg.get(key, {}).get("w", 150), 150)
-            if col_index == len(column_order) - 1:
-                width = max(80, total_w - used_w - 20)
-            table.setColumnWidth(col_index, width)
-            used_w += width
-        table.verticalHeader().setDefaultSectionSize(max(30, self._safe_int(table_cfg.get("font_size", 14), 14) * 2))
-        table.resizeRowsToContents()
-
-        self._magic_table_bindings[id(table)] = {
-            "sheet": str(sheet_name or "Magie"),
-            "rows": visible_rows,
-            "mapping": mapping if isinstance(mapping, dict) else {},
-            "column_order": column_order,
-        }
-        table.itemChanged.connect(
-            lambda item, widget=table: self.on_magic_spell_table_item_changed(widget, item.row(), item.column())
-        )
-        table.show()
 
     def render_magic_screen(self):
         if self.content_layer is None:
             return
-        self._magic_table_bindings = {}
         layout_config = self.load_magic_layout_config()
-        screen_cfg = layout_config.get("magic_screen", {})
-        if not isinstance(screen_cfg, dict):
-            screen_cfg = self.get_default_magic_layout_config().get("magic_screen", {})
+        default_screen_cfg = self.get_default_magic_layout_config().get("magic_screen", {})
 
-        screen = QFrame(self.content_layer)
-        screen.setGeometry(
-            self._safe_int(screen_cfg.get("x", 30), 30),
-            self._safe_int(screen_cfg.get("y", 25), 25),
-            self._safe_int(screen_cfg.get("w", 1400), 1400),
-            self._safe_int(screen_cfg.get("h", 820), 820),
-        )
-        screen.setStyleSheet("background: transparent;")
-        screen.show()
+        def save_cell_value(sheet_name, cell_ref, new_value):
+            self.loader.set_cell_value(str(sheet_name or "Magie"), cell_ref, new_value)
+            self.loader.save_active_character_json()
 
-        title_cfg = screen_cfg.get("title", {})
-        if isinstance(title_cfg, dict) and bool(title_cfg.get("enabled", True)):
-            self.create_panel_text(
-                screen,
-                {"x": self._safe_int(title_cfg.get("x", 0), 0), "y": self._safe_int(title_cfg.get("y", 0), 0), "w": self._safe_int(title_cfg.get("w", 1400), 1400), "h": self._safe_int(title_cfg.get("h", 38), 38)},
-                str(title_cfg.get("text", "Magie")),
-                self._safe_int(title_cfg.get("font_size", 24), 24),
-                str(title_cfg.get("color", "#f2d28b")),
-                bold=True,
-                align=str(title_cfg.get("align", "center")),
-            )
-
-        analysis = self.analyze_magic_sheet()
-        if not str(analysis.get("sheet", "") or "").strip():
-            self.create_panel_text(
-                screen,
-                {"x": 20, "y": 80, "w": 1200, "h": 38},
-                "Magie-Sheet nicht gefunden",
-                20,
-                "#f2d28b",
-                bold=True,
-                align="left",
-            )
-            return
-
-        upgrade_cfg = screen_cfg.get("upgrade_table", {})
-        self._render_magic_upgrade_table(screen, upgrade_cfg, analysis.get("upgrade_table", {}).get("rows", []))
-
-        spell_cfg = screen_cfg.get("spell_table", {})
-        spell_data = analysis.get("spells", {})
-        self._render_magic_spell_table(
-            screen,
-            spell_cfg,
-            analysis.get("sheet", "Magie"),
-            spell_data.get("rows", []),
-            spell_data.get("mapping", {}),
+        return render_magic_section(
+            self.content_layer,
+            layout_config,
+            default_screen_cfg,
+            {
+                "safe_int": self._safe_int,
+                "create_panel_text": self.create_panel_text,
+                "analyze_magic_sheet": self.analyze_magic_sheet,
+                "clear_table_bindings": self._magic_table_bindings.clear,
+                "register_table_binding": lambda table, binding: self._magic_table_bindings.__setitem__(id(table), binding),
+                "get_table_binding": lambda table: self._magic_table_bindings.get(id(table), {}),
+                "set_rendering": lambda value: setattr(self, "_magic_rendering", bool(value)),
+                "is_rendering": lambda: bool(self._magic_rendering),
+                "print_mapping_enabled": self._magic_print_mapping_enabled,
+                "save_cell_value": save_cell_value,
+                "log_debug": log_debug,
+            },
         )
 
     def on_inventory_category_clicked(self, category_id):
