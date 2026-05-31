@@ -699,7 +699,7 @@
         "error": null
       },
       "G24": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -717,7 +717,7 @@
         "error": null
       },
       "S24": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -1208,7 +1208,7 @@
         "error": null
       },
       "F24": {
-        "value": "",
+        "value": "X",
         "formula": null,
         "references": [],
         "error": null
@@ -1281,6 +1281,12 @@
       },
       "AV23": {
         "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R24": {
+        "value": "X",
         "formula": null,
         "references": [],
         "error": null
@@ -3913,13 +3919,13 @@
         "error": null
       },
       "B9": {
-        "value": "3",
+        "value": "11",
         "formula": null,
         "references": [],
         "error": null
       },
       "E9": {
-        "value": "5",
+        "value": "6",
         "formula": null,
         "references": [],
         "error": null
@@ -3979,19 +3985,19 @@
         "error": null
       },
       "B14": {
-        "value": "Gürtel , 2 quickslots",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "P14": {
-        "value": 1,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "Q14": {
-        "value": 1,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4015,7 +4021,7 @@
         "error": null
       },
       "B16": {
-        "value": "Rucksack , bis zu 5 schwere\"große\" Items vs",
+        "value": "Knochenwürfel +3 auf gaukelei bei nutzung",
         "formula": null,
         "references": [],
         "error": null
@@ -4033,7 +4039,7 @@
         "error": null
       },
       "T16": {
-        "value": "Gürtel",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4099,7 +4105,7 @@
         "error": null
       },
       "AH20": {
-        "value": 2,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4165,7 +4171,7 @@
         "error": null
       },
       "T26": {
-        "value": "Knochenwürfel +3 auf gaukelei bei nutzung",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4177,7 +4183,7 @@
         "error": null
       },
       "T28": {
-        "value": "PL: (unbestimmt) / Wupple-Fibre-Kadaver (mit Loot)",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4219,19 +4225,19 @@
         "error": null
       },
       "T36": {
-        "value": "Pike Meat ||Food Effect: Natural Armor: 2 für Food-PL-ZE",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AH36": {
-        "value": 2,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AI36": {
-        "value": 3,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4315,7 +4321,7 @@
         "error": null
       },
       "T13": {
-        "value": "Random Beutel Korvessa ???",
+        "value": "PL: (unbestimmt) / Wupple-Fibre-Kadaver (mit Loot)",
         "formula": null,
         "references": [],
         "error": null
@@ -4333,6 +4339,108 @@
         "error": null
       },
       "B17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T19": {
+        "value": "Grant's Miracle Elixir's Coupon - buy one get one free  (up to Rare Quality)",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T21": {
+        "value": "Aquamarin (rare) PL:3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH21": {
+        "value": "3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI21": {
+        "value": "1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T23": {
+        "value": "Tiegerauge (uncommon) PL:2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T25": {
+        "value": "Pike Meat ||Food Effect: Natural Armor: 2 für Food-PL-ZE",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH25": {
+        "value": "2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI25": {
+        "value": "3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T27": {
+        "value": "Magewright-Stone",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH27": {
+        "value": "3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI27": {
+        "value": "1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B21": {
+        "value": "Rucksack , bis zu 5 schwere\"große\" Items vs",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B19": {
+        "value": "Gürtel , 2 quickslots",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P19": {
+        "value": "1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q19": {
+        "value": "1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q17": {
         "value": "",
         "formula": null,
         "references": [],
@@ -5787,7 +5895,7 @@
     "inventory": {
       "tab_labels": {
         "inventory_02": "Inventar 02",
-        "inventory_03": "ddd",
+        "inventory_03": "Inventar 3",
         "inventory_04": "Bücher"
       },
       "custom_rows": {
