@@ -731,6 +731,28 @@ class MainWindow(QMainWindow):
         container.show()
         return {"container": container, "bg": bg_label, "text": text_label, "button": click_button}
 
+    def create_dialog_asset_text_button(self, parent, text, callback, cfg=None):
+        button_cfg = cfg if isinstance(cfg, dict) else {}
+        result = self.create_asset_text_button(
+            parent,
+            {
+                "x": 0,
+                "y": 0,
+                "w": int(button_cfg.get("w", 110)),
+                "h": int(button_cfg.get("h", 32)),
+                "text": text,
+                "asset": str(button_cfg.get("asset", "buttons/menu_button_medium.png")),
+                "font_size": int(button_cfg.get("font_size", 13)),
+                "color": str(button_cfg.get("color", "#f2d28b")),
+            },
+            text,
+            callback,
+        )
+        container = result.get("container") if isinstance(result, dict) else None
+        if container is not None:
+            container.setFixedSize(int(button_cfg.get("w", 110)), int(button_cfg.get("h", 32)))
+        return container
+
     def render_settings_page(self):
         if self.content_layer is None:
             return
@@ -9243,7 +9265,14 @@ class MainWindow(QMainWindow):
                 "roll_command": self._character_resource_roll_command(resource_id, cfg),
             },
             {"save_current": save_current},
-            {"width": 390, "height": 260},
+            {
+                "width": 390,
+                "height": 260,
+                "roll_layout": self.load_roll_dialog_layout_config(),
+                "ui_layout": self.main_ui_layout_config,
+                "asset_button_factory": self.create_dialog_asset_text_button,
+                "load_ui_pixmap": self.load_ui_pixmap,
+            },
         )
 
     def _open_hp_regen_dialog(self):
