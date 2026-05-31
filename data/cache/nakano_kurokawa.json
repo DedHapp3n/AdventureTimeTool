@@ -288,7 +288,7 @@
         "error": null
       },
       "B10": {
-        "value": "28",
+        "value": "32",
         "formula": null,
         "references": [],
         "error": null
@@ -400,7 +400,7 @@
         "error": null
       },
       "B13": {
-        "value": 2,
+        "value": "4",
         "formula": null,
         "references": [],
         "error": null
@@ -753,7 +753,7 @@
         "error": null
       },
       "K25": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -777,19 +777,19 @@
         "error": null
       },
       "E26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "F26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "G26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -813,31 +813,31 @@
         "error": null
       },
       "K26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "L26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "Q26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "R26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "S26": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -1214,7 +1214,7 @@
         "error": null
       },
       "Q25": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -1238,7 +1238,7 @@
         "error": null
       },
       "AA43": {
-        "value": "x",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -1327,7 +1327,7 @@
         "error": null
       },
       "B9": {
-        "value": 2,
+        "value": 4,
         "formula": "=Charakterbogen!B13",
         "references": [
           "B13"
@@ -3867,6 +3867,12 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "Z51": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Inventar": {
@@ -5908,13 +5914,13 @@
             "text": "Etikette und Redegewandheit",
             "skill_key": "allgemein/etikette_und_redegewandheit",
             "skill_name": "Etikette und Redegewandheit",
-            "value": "2"
+            "value": "5"
           },
           {
             "text": "Klettern , Athletik , Ini-Wurf",
             "skill_key": "allgemein/klettern_athletik_ini_wurf",
             "skill_name": "Klettern , Athletik , Ini-Wurf",
-            "value": "20"
+            "value": "23"
           },
           {
             "text": "Feinschliff und Präzisionsmechanik",
@@ -5944,7 +5950,7 @@
             "text": "Nahkampf",
             "skill_key": "kampf/nahkampf",
             "skill_name": "Nahkampf",
-            "value": "2"
+            "value": "4"
           },
           {
             "text": "Gaukelei und Trickbetrug",
@@ -5956,7 +5962,7 @@
             "text": "Mustern und Menschenkenntnis",
             "skill_key": "allgemein/mustern_und_menschenkenntnis",
             "skill_name": "Mustern und Menschenkenntnis",
-            "value": "6"
+            "value": "15"
           },
           {
             "text": "Handel und Wertgegenstände",

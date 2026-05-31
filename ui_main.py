@@ -9080,6 +9080,265 @@ class MainWindow(QMainWindow):
             rerender=True,
         )
 
+    def _character_resource_config(self):
+        return {
+            "hp": {
+                "label": "HP",
+                "title": "HP verwalten",
+                "current_field": "hp_current",
+                "max_field": "hp_max",
+                "roll_title": "Regeneration",
+            },
+            "mp": {
+                "label": "MP",
+                "title": "MP verwalten",
+                "current_field": "mp_current",
+                "max_field": "mp_max",
+                "roll_title": "Regeneration",
+                "roll_command": "/r 1d4",
+            },
+            "lifeforce": {
+                "label": "LifeForce",
+                "title": "LifeForce verwalten",
+                "current_field": "lifeforce_current",
+                "max_field": "lifeforce_max",
+                "roll_title": "LifeForce-Regeneration",
+                "roll_command": "/r 1d20",
+            },
+            "sanity": {
+                "label": "Sanity",
+                "title": "Sanity verwalten",
+                "current_field": "sanity_current",
+                "max_field": "sanity_max",
+                "roll_title": "Sanity",
+                "roll_command": "/r 1d20",
+            },
+            "faith": {
+                "label": "Faith",
+                "title": "Faith verwalten",
+                "current_field": "faith_current",
+                "max_field": "faith_max",
+                "roll_title": "Faith",
+                "roll_command": "/r 1d20",
+            },
+        }
+
+    def _character_basic_map(self):
+        character_screen = self.main_ui_layout_config.get("character_screen", {})
+        data_map = character_screen.get("data_map", {}) if isinstance(character_screen, dict) else {}
+        basic_map = data_map.get("basic", {}) if isinstance(data_map, dict) else {}
+        return basic_map if isinstance(basic_map, dict) else {}
+
+    def _character_default_sheet(self):
+        character_screen = self.main_ui_layout_config.get("character_screen", {})
+        data_map = character_screen.get("data_map", {}) if isinstance(character_screen, dict) else {}
+        if isinstance(data_map, dict):
+            return str(data_map.get("sheet", "Charakterbogen") or "Charakterbogen")
+        return "Charakterbogen"
+
+    def _character_int_value(self, sheet_name, cell_ref, fallback=0):
+        value = self.get_numeric_cache_value(sheet_name, cell_ref)
+        if value is None:
+            return int(fallback)
+        return int(math.floor(float(value) + 0.5)) if float(value) >= 0 else int(math.ceil(float(value) - 0.5))
+
+    def _get_character_resource_data(self, resource_id):
+        cfg = self._character_resource_config().get(resource_id)
+        if not cfg:
+            return None
+        basic_map = self._character_basic_map()
+        default_sheet = self._character_default_sheet()
+        current_src = basic_map.get(cfg["current_field"], "")
+        max_src = basic_map.get(cfg["max_field"], "")
+        current_sheet, current_cell = self._resolve_data_map_cell_ref(current_src, default_sheet)
+        max_sheet, max_cell = self._resolve_data_map_cell_ref(max_src, default_sheet)
+        if not current_sheet or not current_cell:
+            return None
+        current_value = self._character_int_value(current_sheet, current_cell, 0)
+        max_value = self._character_int_value(max_sheet, max_cell, current_value) if max_sheet and max_cell else current_value
+        max_value = max(0, max_value)
+        return {
+            "config": cfg,
+            "current_sheet": current_sheet,
+            "current_cell": current_cell,
+            "max_sheet": max_sheet,
+            "max_cell": max_cell,
+            "current": max(0, current_value),
+            "max": max_value,
+        }
+
+    def _character_body_value(self):
+        character_screen = self.main_ui_layout_config.get("character_screen", {})
+        data_map = character_screen.get("data_map", {}) if isinstance(character_screen, dict) else {}
+        attributes_map = data_map.get("attributes", {}) if isinstance(data_map, dict) else {}
+        body_map = attributes_map.get("body", {}) if isinstance(attributes_map, dict) else {}
+        body_src = body_map.get("value", body_map.get("header", ""))
+        sheet_name, cell_ref = self._resolve_data_map_cell_ref(body_src, self._character_default_sheet())
+        if not sheet_name or not cell_ref:
+            return 0
+        return self._character_int_value(sheet_name, cell_ref, 0)
+
+    def _character_resource_roll_command(self, resource_id, cfg):
+        if resource_id == "hp":
+            return f"/r 1d4+{self._character_body_value()}"
+        return str(cfg.get("roll_command", "/r 1d20"))
+
+    def _set_character_resource_values(self, updates, reason):
+        changed = []
+        for sheet_name, cell_ref, value in updates:
+            if not sheet_name or not cell_ref:
+                continue
+            normalized = str(int(max(0, value)))
+            self.loader.set_cell_value(sheet_name, cell_ref, normalized)
+            changed.append(f"{sheet_name}!{cell_ref}")
+        if changed:
+            self._recalculate_after_user_edit(
+                reason=reason or ", ".join(changed),
+                save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                rerender=True,
+            )
+
+    def _make_character_resource_label_clickable(self, label, resource_id):
+        if resource_id not in self._character_resource_config():
+            return label
+        label.setCursor(Qt.PointingHandCursor)
+        label.setProperty("character_resource_id", resource_id)
+        label.installEventFilter(self)
+        return label
+
+    def open_character_resource_dialog(self, resource_id):
+        resource_id = str(resource_id or "").strip().lower()
+        data = self._get_character_resource_data(resource_id)
+        if not data:
+            QMessageBox.information(self, "Ressource", "Ressourcenfeld nicht gefunden.")
+            return
+
+        cfg = data["config"]
+        label = str(cfg.get("label", resource_id.upper()))
+        dialog = QDialog(self)
+        dialog.setWindowTitle(str(cfg.get("title", f"{label} verwalten")))
+        dialog.setModal(True)
+        dialog.resize(390, 260)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
+
+        title_label = QLabel(str(cfg.get("title", f"{label} verwalten")), dialog)
+        title_label.setStyleSheet("font-size: 18px; font-weight: 700; color: #f2d28b;")
+        layout.addWidget(title_label)
+
+        info_label = QLabel(dialog)
+        info_label.setStyleSheet("color: #e8e0c8; font-weight: 600;")
+        layout.addWidget(info_label)
+
+        value_row = QHBoxLayout()
+        value_row.addWidget(QLabel("Wert:", dialog))
+        minus_step_button = QPushButton("-", dialog)
+        plus_step_button = QPushButton("+", dialog)
+        amount_input = QSpinBox(dialog)
+        amount_input.setRange(0, 9999)
+        amount_input.setValue(1)
+        value_row.addWidget(minus_step_button)
+        value_row.addWidget(amount_input, 1)
+        value_row.addWidget(plus_step_button)
+        layout.addLayout(value_row)
+
+        action_row = QHBoxLayout()
+        add_button = QPushButton(f"+ {label}", dialog)
+        subtract_button = QPushButton(f"- {label}", dialog)
+        set_button = QPushButton("Setzen", dialog)
+        action_row.addWidget(add_button)
+        action_row.addWidget(subtract_button)
+        action_row.addWidget(set_button)
+        layout.addLayout(action_row)
+
+        utility_row = QHBoxLayout()
+        zero_button = QPushButton("Auf 0", dialog)
+        copy_button = QPushButton("Kopieren", dialog)
+        close_button = QPushButton("Schließen", dialog)
+        utility_row.addWidget(zero_button)
+        utility_row.addWidget(copy_button)
+        utility_row.addWidget(close_button)
+        layout.addLayout(utility_row)
+
+        roll_title = QLabel(str(cfg.get("roll_title", "Roll")), dialog)
+        roll_title.setStyleSheet("color: #f2d28b; font-weight: 700;")
+        layout.addWidget(roll_title)
+        roll_command = self._character_resource_roll_command(resource_id, cfg)
+        roll_preview = QLineEdit(roll_command, dialog)
+        roll_preview.setReadOnly(True)
+        layout.addWidget(roll_preview)
+        roll_copy_button = QPushButton("Roll kopieren", dialog)
+        layout.addWidget(roll_copy_button)
+
+        dialog.setStyleSheet(
+            "QDialog { background: #1d1a16; color: #e8e0c8; }"
+            "QPushButton { background: #3a2d20; border: 1px solid #8a6a35; color: #f4ead0; padding: 6px 10px; }"
+            "QPushButton:hover { background: #4b3926; }"
+            "QLineEdit, QSpinBox { background: #12100d; border: 1px solid #6e5831; color: #ffffff; padding: 4px; }"
+        )
+
+        state = {"current": int(data["current"]), "max": int(data["max"])}
+
+        def refresh_info():
+            info_label.setText(f"Aktuell {label}: {state['current']} / {state['max']}")
+
+        def clamp(value):
+            return max(0, min(int(value), state["max"]))
+
+        def save_current(new_value, reason, reduce_lifeforce=False):
+            updates = [(data["current_sheet"], data["current_cell"], clamp(new_value))]
+            if reduce_lifeforce:
+                lifeforce_data = self._get_character_resource_data("lifeforce")
+                if lifeforce_data:
+                    updates.append(
+                        (
+                            lifeforce_data["current_sheet"],
+                            lifeforce_data["current_cell"],
+                            max(0, int(lifeforce_data["current"]) - 1),
+                        )
+                    )
+            self._set_character_resource_values(updates, reason)
+            dialog.accept()
+
+        def add_resource():
+            save_current(state["current"] + amount_input.value(), f"{label} add")
+
+        def subtract_resource():
+            amount = amount_input.value()
+            raw_new = state["current"] - amount
+            reduce_lifeforce = resource_id == "hp" and amount > 0 and state["current"] > 0 and raw_new <= 0
+            save_current(raw_new, f"{label} subtract", reduce_lifeforce=reduce_lifeforce)
+
+        def set_resource():
+            save_current(amount_input.value(), f"{label} set")
+
+        def zero_resource():
+            save_current(0, f"{label} zero")
+
+        minus_step_button.clicked.connect(lambda: amount_input.setValue(max(0, amount_input.value() - 1)))
+        plus_step_button.clicked.connect(lambda: amount_input.setValue(amount_input.value() + 1))
+        add_button.clicked.connect(add_resource)
+        subtract_button.clicked.connect(subtract_resource)
+        set_button.clicked.connect(set_resource)
+        zero_button.clicked.connect(zero_resource)
+        copy_button.clicked.connect(lambda: QApplication.clipboard().setText(str(state["current"])))
+        roll_copy_button.clicked.connect(lambda: QApplication.clipboard().setText(roll_preview.text()))
+        close_button.clicked.connect(dialog.reject)
+
+        refresh_info()
+        dialog.exec()
+
+    def _open_hp_regen_dialog(self):
+        return self.open_character_resource_dialog("hp")
+
+    def _open_mp_regen_dialog(self):
+        return self.open_character_resource_dialog("mp")
+
+    def _open_lifeforce_regen_dialog(self):
+        return self.open_character_resource_dialog("lifeforce")
+
     def _recalculate_after_user_edit(self, reason="", save=True, rerender=True):
         if self._recalc_in_progress:
             return
@@ -9970,7 +10229,7 @@ class MainWindow(QMainWindow):
                         mode,
                     )
 
-                self.create_panel_text(
+                label_widget = self.create_panel_text(
                     character_panel,
                     row.get("label_rect", {}),
                     label_text,
@@ -9979,6 +10238,7 @@ class MainWindow(QMainWindow):
                     bold=bool(row.get("label_bold", False)),
                     align=str(row.get("label_align", "left")),
                 )
+                self._make_character_resource_label_clickable(label_widget, row_id)
                 if row_id in field_pair_sources:
                     current_src, max_src = field_pair_sources[row_id]
                     split_enabled = isinstance(row.get("current_rect"), dict) and isinstance(row.get("max_rect"), dict)
@@ -10004,11 +10264,17 @@ class MainWindow(QMainWindow):
                     value_color = str(row.get("value_color", row.get("color", value_color_default)))
                     value_bold = bool(row.get("bold_value", bold_values_default))
                     value_align = str(row.get("value_align", "left"))
-                    max_editable = True
-                    if row_id == "faith":
-                        if not current_cell or not max_cell or (current_sheet == max_sheet and current_cell == max_cell):
-                            max_editable = False
-                            self._character_debug("[CHARACTER BASIC EDIT SKIP] field=faith_max reason=same_cell_as_current")
+                    max_editable = bool(max_cell) and not (
+                        bool(current_cell)
+                        and bool(max_cell)
+                        and current_sheet == max_sheet
+                        and current_cell == max_cell
+                    )
+                    if not max_editable:
+                        self._character_debug(
+                            f"[CHARACTER BASIC EDIT SKIP] field={row_id}_max reason="
+                            f"{'same_cell_as_current' if max_cell else 'no_cell_ref'}"
+                        )
                     self._create_character_value_editor(
                         character_panel,
                         current_rect,
@@ -10128,7 +10394,7 @@ class MainWindow(QMainWindow):
                     row_id = str(row.get("id", "")).strip().lower()
                     label_text = str(row.get("label", row_id.upper() if row_id else ""))
                     value_text = stats_values.get(row_id, "-")
-                    self.create_panel_text(
+                    label_widget = self.create_panel_text(
                         character_panel,
                         row.get("label_rect", {}),
                         label_text,
@@ -10137,6 +10403,7 @@ class MainWindow(QMainWindow):
                         bold=True,
                         align=str(row.get("label_align", "left")),
                     )
+                    self._make_character_resource_label_clickable(label_widget, row_id)
                     if row_id in ("hp", "mp", "exp"):
                         current_src = basic_map.get(f"{row_id}_current", "")
                         max_src = basic_map.get(f"{row_id}_max", "")
@@ -10208,7 +10475,7 @@ class MainWindow(QMainWindow):
                 ]
                 for i, (label_text, value_text, lf, vf) in enumerate(stat_rows):
                     y = stats_start_y + i * stats_gap
-                    self.create_panel_text(
+                    label_widget = self.create_panel_text(
                         character_panel,
                         {"x": stats_x_label, "y": y, "w": 140, "h": 34},
                         f"{label_text}:",
@@ -10216,6 +10483,7 @@ class MainWindow(QMainWindow):
                         str(stats_cfg.get("label_color", default_color)),
                         bold=True,
                     )
+                    self._make_character_resource_label_clickable(label_widget, label_text.lower())
                     self.create_panel_text(
                         character_panel,
                         {"x": stats_x_value, "y": y - 8, "w": max(160, character_panel.width() - stats_x_value - 20), "h": max(34, vf + 10)},
@@ -11405,6 +11673,11 @@ class MainWindow(QMainWindow):
                         f"background: transparent; color: {inactive_color}; font-weight: 400;"
                     )
         if isinstance(obj, QLabel):
+            if event.type() == QEvent.MouseButtonPress:
+                resource_id = str(obj.property("character_resource_id") or "")
+                if resource_id:
+                    self.open_character_resource_dialog(resource_id)
+                    return True
             if event.type() == QEvent.MouseButtonDblClick:
                 if bool(obj.property("character_editable")):
                     return self._handle_character_widget_double_click(obj)
