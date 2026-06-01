@@ -1119,21 +1119,21 @@
           "enabled": true,
           "asset": "frames/tini_frame.png",
           "slice": {
-            "left": 24,
-            "top": 24,
-            "right": 24,
-            "bottom": 24
+            "left": 0.15,
+            "top": 0.15,
+            "right": 0.15,
+            "bottom": 0.15
           },
           "draw_center": true,
           "remove_old_border_when_active": true,
           "transparent_background_when_active": true,
           "smooth_scaling": true,
-          "render_scale": 1.0,
+          "render_scale": 5.0,
           "opacity": 1.0,
           "fallback_border": true
         },
         "items": {
-          "it_is_what_it_is": {
+          "column_1": {
             "enabled": true,
             "text": "It is what it is",
             "x": 90,
@@ -1143,7 +1143,7 @@
             "font_size": 13,
             "color": "#ffffff"
           },
-          "arkanes": {
+          "column_2": {
             "enabled": true,
             "text": "Arkanes",
             "x": 238,
@@ -1153,7 +1153,7 @@
             "font_size": 13,
             "color": "#ffffff"
           },
-          "all_or_nothing": {
+          "column_3": {
             "enabled": true,
             "text": "All or Nothing",
             "x": 386,
@@ -1163,7 +1163,8 @@
             "font_size": 13,
             "color": "#ffffff"
           }
-        }
+        },
+        "use_data_text": true
       }
     },
     "initiative_panel": {

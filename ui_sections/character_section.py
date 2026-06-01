@@ -214,7 +214,7 @@ def _apply_nine_slice_frame_for_rect(window, parent, rect_cfg, frame_cfg):
     bg.setGeometry(x, y, target_w, target_h)
     bg.setPixmap(rendered)
     bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-    bg.lower()
+    # Keep tiny frame above panel background frame; header label is created after and stays above this.
     bg.show()
     return {
         "active": True,
@@ -492,9 +492,24 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
 
     headers_cfg = panel_cfg.get("column_headers", {})
     headers_enabled = isinstance(headers_cfg, dict) and bool(headers_cfg.get("enabled", False))
-    header_items_cfg = headers_cfg.get("items", {}) if isinstance(headers_cfg.get("items", {}), dict) else {}
+    use_data_text = not isinstance(headers_cfg, dict) or bool(headers_cfg.get("use_data_text", True))
+    raw_header_items = headers_cfg.get("items", {})
+    header_items_cfg = raw_header_items if isinstance(raw_header_items, dict) else {}
     header_frame_cfg = headers_cfg.get("frame", {}) if isinstance(headers_cfg.get("frame", {}), dict) else {}
-    header_items = list(header_items_cfg.values()) if headers_enabled else []
+    header_items = []
+    if headers_enabled:
+        if isinstance(raw_header_items, list):
+            header_items = [item for item in raw_header_items if isinstance(item, dict)]
+        elif isinstance(header_items_cfg, dict):
+            generic_keys = sorted(
+                [k for k in header_items_cfg.keys() if str(k).startswith("column_")],
+                key=lambda x: window._safe_int(str(x).split("_")[-1], 9999),
+            )
+            if generic_keys:
+                header_items = [header_items_cfg[k] for k in generic_keys if isinstance(header_items_cfg.get(k), dict)]
+            else:
+                # Legacy fallback for older JSON structures.
+                header_items = [item for item in header_items_cfg.values() if isinstance(item, dict)]
 
     for idx, col_info in enumerate(analysis.get("columns", [])[:col_count]):
         col_x = start_x + idx * (col_w + column_gap)
@@ -505,6 +520,14 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
             if not isinstance(item_cfg, dict) or not bool(item_cfg.get("enabled", False)):
                 name_label = None
             else:
+                override_text = str(item_cfg.get("text", "") or "").strip()
+                if use_data_text:
+                    # Data-driven mode: keep paradigm names sourced from character/cache data.
+                    # Optional JSON text is only a fallback when no data name is available.
+                    visible_text = name_text if str(name_text).strip() else override_text
+                else:
+                    # Visual-override mode: JSON text can intentionally replace data text.
+                    visible_text = override_text if override_text else name_text
                 header_rect = {
                     "x": window._safe_int(item_cfg.get("x", col_x), col_x),
                     "y": window._safe_int(item_cfg.get("y", header_y), header_y),
@@ -517,7 +540,7 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
                     base_bg = "transparent" if bool(mini_frame_state.get("transparent_background_when_active", True)) else "rgba(0,0,0,35)"
                     name_label = QLabel(panel)
                     name_label.setGeometry(header_rect["x"], header_rect["y"], header_rect["w"], header_rect["h"])
-                    name_label.setText(str(item_cfg.get("text", name_text)))
+                    name_label.setText(visible_text)
                     name_label.setAlignment(Qt.AlignCenter)
                     name_label.setStyleSheet(
                         "QLabel {"
@@ -532,7 +555,7 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
                 else:
                     name_label = QLabel(panel)
                     name_label.setGeometry(header_rect["x"], header_rect["y"], header_rect["w"], header_rect["h"])
-                    name_label.setText(str(item_cfg.get("text", name_text)))
+                    name_label.setText(visible_text)
                     name_label.setAlignment(Qt.AlignCenter)
                     name_label.setStyleSheet(
                         "QLabel {"
