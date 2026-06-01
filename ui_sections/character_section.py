@@ -1,5 +1,227 @@
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QLineEdit
+
+
+def _optional_theme_ui_pixmap(window, asset_rel_path):
+    asset_name = str(asset_rel_path or "").strip()
+    if not asset_name:
+        return None
+    try:
+        primary = window.theme_asset_base_path / asset_name
+        if primary.exists():
+            pixmap = QPixmap(str(primary))
+            if not pixmap.isNull():
+                return pixmap
+        fallback = window.assets_dir / "themes" / "diablo" / "ui" / asset_name
+        if fallback.exists():
+            pixmap = QPixmap(str(fallback))
+            if not pixmap.isNull():
+                return pixmap
+    except Exception:
+        return None
+    return None
+
+
+def _apply_character_panel_frame_if_enabled(window, panel, panel_cfg):
+    frame_cfg = panel_cfg.get("frame", {}) if isinstance(panel_cfg, dict) else {}
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return {"active": False}
+    asset = str(frame_cfg.get("asset", "")).strip()
+    src = _optional_theme_ui_pixmap(window, asset)
+    if src is None:
+        return {"active": False}
+
+    slice_cfg = frame_cfg.get("slice", {}) if isinstance(frame_cfg.get("slice", {}), dict) else {}
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    left = max(0, min(window._safe_int(slice_cfg.get("left", 32), 32), src_w))
+    right = max(0, min(window._safe_int(slice_cfg.get("right", 32), 32), src_w - left))
+    top = max(0, min(window._safe_int(slice_cfg.get("top", 32), 32), src_h))
+    bottom = max(0, min(window._safe_int(slice_cfg.get("bottom", 32), 32), src_h - top))
+
+    target_w = max(1, panel.width())
+    target_h = max(1, panel.height())
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    try:
+        render_scale = float(frame_cfg.get("render_scale", 1.0))
+    except Exception:
+        render_scale = 1.0
+    render_scale = max(1.0, min(4.0, render_scale))
+    try:
+        opacity = float(frame_cfg.get("opacity", 1.0))
+    except Exception:
+        opacity = 1.0
+    opacity = max(0.0, min(1.0, opacity))
+    if left + right > target_w:
+        overflow = left + right - target_w
+        shrink_left = min(left, overflow // 2)
+        left -= shrink_left
+        right = max(0, right - (overflow - shrink_left))
+    if top + bottom > target_h:
+        overflow = top + bottom - target_h
+        shrink_top = min(top, overflow // 2)
+        top -= shrink_top
+        bottom = max(0, bottom - (overflow - shrink_top))
+    center_src_w = max(0, src_w - left - right)
+    center_src_h = max(0, src_h - top - bottom)
+    center_dst_w = max(0, target_w - left - right)
+    center_dst_h = max(0, target_h - top - bottom)
+
+    scaled_w = max(1, int(round(target_w * render_scale)))
+    scaled_h = max(1, int(round(target_h * render_scale)))
+    rendered = QPixmap(scaled_w, scaled_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if smooth_scaling:
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    painter.setOpacity(opacity)
+
+    scaled_left = max(0, int(round(left * render_scale)))
+    scaled_right = max(0, int(round(right * render_scale)))
+    scaled_top = max(0, int(round(top * render_scale)))
+    scaled_bottom = max(0, int(round(bottom * render_scale)))
+    scaled_center_dst_w = max(0, scaled_w - scaled_left - scaled_right)
+    scaled_center_dst_h = max(0, scaled_h - scaled_top - scaled_bottom)
+
+    def draw_slice(dx, dy, dw, dh, sx, sy, sw, sh):
+        if dw <= 0 or dh <= 0 or sw <= 0 or sh <= 0:
+            return
+        painter.drawPixmap(dx, dy, dw, dh, src, sx, sy, sw, sh)
+
+    draw_slice(0, 0, scaled_left, scaled_top, 0, 0, left, top)
+    draw_slice(scaled_w - scaled_right, 0, scaled_right, scaled_top, src_w - right, 0, right, top)
+    draw_slice(0, scaled_h - scaled_bottom, scaled_left, scaled_bottom, 0, src_h - bottom, left, bottom)
+    draw_slice(scaled_w - scaled_right, scaled_h - scaled_bottom, scaled_right, scaled_bottom, src_w - right, src_h - bottom, right, bottom)
+    draw_slice(scaled_left, 0, scaled_center_dst_w, scaled_top, left, 0, center_src_w, top)
+    draw_slice(scaled_left, scaled_h - scaled_bottom, scaled_center_dst_w, scaled_bottom, left, src_h - bottom, center_src_w, bottom)
+    draw_slice(0, scaled_top, scaled_left, scaled_center_dst_h, 0, top, left, center_src_h)
+    draw_slice(scaled_w - scaled_right, scaled_top, scaled_right, scaled_center_dst_h, src_w - right, top, right, center_src_h)
+    if bool(frame_cfg.get("draw_center", True)):
+        draw_slice(scaled_left, scaled_top, scaled_center_dst_w, scaled_center_dst_h, left, top, center_src_w, center_src_h)
+    painter.end()
+
+    if render_scale > 1.0:
+        rendered = rendered.scaled(
+            target_w,
+            target_h,
+            Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation,
+        )
+
+    bg = QLabel(panel)
+    bg.setGeometry(0, 0, target_w, target_h)
+    bg.setPixmap(rendered)
+    bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    bg.lower()
+    bg.show()
+    return {
+        "active": True,
+        "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)),
+        "transparent_panel_background_when_active": bool(frame_cfg.get("transparent_panel_background_when_active", True)),
+        "fallback_border": bool(frame_cfg.get("fallback_border", True)),
+    }
+
+
+def _apply_nine_slice_frame_for_rect(window, parent, rect_cfg, frame_cfg):
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return {"active": False}
+    asset = str(frame_cfg.get("asset", "")).strip()
+    src = _optional_theme_ui_pixmap(window, asset)
+    if src is None:
+        return {"active": False}
+
+    x = window._safe_int(rect_cfg.get("x", 0), 0)
+    y = window._safe_int(rect_cfg.get("y", 0), 0)
+    target_w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
+    target_h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+
+    slice_cfg = frame_cfg.get("slice", {}) if isinstance(frame_cfg.get("slice", {}), dict) else {}
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    left = max(0, min(window._safe_int(slice_cfg.get("left", 24), 24), src_w))
+    right = max(0, min(window._safe_int(slice_cfg.get("right", 24), 24), src_w - left))
+    top = max(0, min(window._safe_int(slice_cfg.get("top", 24), 24), src_h))
+    bottom = max(0, min(window._safe_int(slice_cfg.get("bottom", 24), 24), src_h - top))
+
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    try:
+        render_scale = float(frame_cfg.get("render_scale", 1.0))
+    except Exception:
+        render_scale = 1.0
+    render_scale = max(1.0, min(4.0, render_scale))
+    try:
+        opacity = float(frame_cfg.get("opacity", 1.0))
+    except Exception:
+        opacity = 1.0
+    opacity = max(0.0, min(1.0, opacity))
+
+    if left + right > target_w:
+        overflow = left + right - target_w
+        shrink_left = min(left, overflow // 2)
+        left -= shrink_left
+        right = max(0, right - (overflow - shrink_left))
+    if top + bottom > target_h:
+        overflow = top + bottom - target_h
+        shrink_top = min(top, overflow // 2)
+        top -= shrink_top
+        bottom = max(0, bottom - (overflow - shrink_top))
+
+    center_src_w = max(0, src_w - left - right)
+    center_src_h = max(0, src_h - top - bottom)
+    scaled_w = max(1, int(round(target_w * render_scale)))
+    scaled_h = max(1, int(round(target_h * render_scale)))
+    scaled_left = max(0, int(round(left * render_scale)))
+    scaled_right = max(0, int(round(right * render_scale)))
+    scaled_top = max(0, int(round(top * render_scale)))
+    scaled_bottom = max(0, int(round(bottom * render_scale)))
+    scaled_center_dst_w = max(0, scaled_w - scaled_left - scaled_right)
+    scaled_center_dst_h = max(0, scaled_h - scaled_top - scaled_bottom)
+
+    rendered = QPixmap(scaled_w, scaled_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if smooth_scaling:
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    painter.setOpacity(opacity)
+
+    def draw_slice(dx, dy, dw, dh, sx, sy, sw, sh):
+        if dw <= 0 or dh <= 0 or sw <= 0 or sh <= 0:
+            return
+        painter.drawPixmap(dx, dy, dw, dh, src, sx, sy, sw, sh)
+
+    draw_slice(0, 0, scaled_left, scaled_top, 0, 0, left, top)
+    draw_slice(scaled_w - scaled_right, 0, scaled_right, scaled_top, src_w - right, 0, right, top)
+    draw_slice(0, scaled_h - scaled_bottom, scaled_left, scaled_bottom, 0, src_h - bottom, left, bottom)
+    draw_slice(scaled_w - scaled_right, scaled_h - scaled_bottom, scaled_right, scaled_bottom, src_w - right, src_h - bottom, right, bottom)
+    draw_slice(scaled_left, 0, scaled_center_dst_w, scaled_top, left, 0, center_src_w, top)
+    draw_slice(scaled_left, scaled_h - scaled_bottom, scaled_center_dst_w, scaled_bottom, left, src_h - bottom, center_src_w, bottom)
+    draw_slice(0, scaled_top, scaled_left, scaled_center_dst_h, 0, top, left, center_src_h)
+    draw_slice(scaled_w - scaled_right, scaled_top, scaled_right, scaled_center_dst_h, src_w - right, top, right, center_src_h)
+    if bool(frame_cfg.get("draw_center", True)):
+        draw_slice(scaled_left, scaled_top, scaled_center_dst_w, scaled_center_dst_h, left, top, center_src_w, center_src_h)
+    painter.end()
+
+    if render_scale > 1.0:
+        rendered = rendered.scaled(
+            target_w,
+            target_h,
+            Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation,
+        )
+
+    bg = QLabel(parent)
+    bg.setGeometry(x, y, target_w, target_h)
+    bg.setPixmap(rendered)
+    bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    bg.lower()
+    bg.show()
+    return {
+        "active": True,
+        "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)),
+        "transparent_background_when_active": bool(frame_cfg.get("transparent_background_when_active", True)),
+        "fallback_border": bool(frame_cfg.get("fallback_border", True)),
+    }
 
 
 def render_character_initiative_panel(window, character_screen, character_panel, attribute_panel, default_color):
@@ -15,13 +237,23 @@ def render_character_initiative_panel(window, character_screen, character_panel,
     panel_w = window._safe_int(panel_cfg.get("w", 260), 260)
     panel_h = window._safe_int(panel_cfg.get("h", 125), 125)
     panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
-    panel.setStyleSheet(
-        "QFrame {"
-        f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
-        f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
-        "border-radius: 6px;"
-        "}"
-    )
+    frame_state = _apply_character_panel_frame_if_enabled(window, panel, panel_cfg)
+    frame_active = bool(frame_state.get("active", False))
+    if frame_active and bool(frame_state.get("remove_old_border_when_active", True)):
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {'transparent' if bool(frame_state.get('transparent_panel_background_when_active', True)) else str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            "border: none;"
+            "}"
+        )
+    elif (not frame_active) or bool(frame_state.get("fallback_border", True)):
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            "border-radius: 6px;"
+            "}"
+        )
     panel.show()
 
     title = str(panel_cfg.get("title", "Initiative"))
@@ -29,29 +261,88 @@ def render_character_initiative_panel(window, character_screen, character_panel,
     font_size = window._safe_int(panel_cfg.get("font_size", 16), 16)
     label_color = str(panel_cfg.get("color", default_color))
     value_color = str(panel_cfg.get("value_color", "#7fd0ff"))
-    window.create_panel_text(
-        panel,
-        {"x": 10, "y": 8, "w": panel_w - 20, "h": 26},
-        title,
-        title_size,
-        label_color,
-        bold=True,
-        align="left",
-    )
+    title_cfg = panel_cfg.get("title_layout", {})
+    if not isinstance(title_cfg, dict):
+        title_cfg = {}
+    if bool(title_cfg.get("enabled", True)):
+        window.create_panel_text(
+            panel,
+            {
+                "x": window._safe_int(title_cfg.get("x", 10), 10),
+                "y": window._safe_int(title_cfg.get("y", 8), 8),
+                "w": window._safe_int(title_cfg.get("w", panel_w - 20), panel_w - 20),
+                "h": window._safe_int(title_cfg.get("h", 26), 26),
+            },
+            title,
+            window._safe_int(title_cfg.get("font_size", title_size), title_size),
+            str(title_cfg.get("color", label_color)),
+            bold=bool(title_cfg.get("bold", True)),
+            align=str(title_cfg.get("align", "left")),
+        )
     raw_text = str(data.get("raw_value", "-")) if isinstance(data, dict) else "-"
     bonus_text = str(data.get("bonus", 0)) if isinstance(data, dict) else "0"
     roll_text = str(roll_value) if roll_value is not None else "-"
-    window.create_panel_text(panel, {"x": 12, "y": 36, "w": 96, "h": 22}, "Wert:", font_size, label_color, bold=True)
-    window.create_panel_text(panel, {"x": 100, "y": 36, "w": panel_w - 112, "h": 22}, raw_text, font_size, value_color, bold=True)
-    window.create_panel_text(panel, {"x": 12, "y": 59, "w": 96, "h": 22}, "Bonus:", font_size, label_color, bold=True)
+    rows_cfg = panel_cfg.get("rows", {})
+    if not isinstance(rows_cfg, dict):
+        rows_cfg = {}
+    value_row_cfg = rows_cfg.get("value", {}) if isinstance(rows_cfg.get("value", {}), dict) else {}
+    bonus_row_cfg = rows_cfg.get("bonus", {}) if isinstance(rows_cfg.get("bonus", {}), dict) else {}
+    roll_row_cfg = rows_cfg.get("roll_value", {}) if isinstance(rows_cfg.get("roll_value", {}), dict) else {}
+    value_enabled = bool(value_row_cfg.get("enabled", True))
+    bonus_enabled = bool(bonus_row_cfg.get("enabled", True))
+    roll_enabled = bool(roll_row_cfg.get("enabled", True))
+
+    def _row_rects(cfg, fallback_label_y, fallback_value_y):
+        return (
+            {
+                "x": window._safe_int(cfg.get("label_x", 12), 12),
+                "y": window._safe_int(cfg.get("label_y", fallback_label_y), fallback_label_y),
+                "w": window._safe_int(cfg.get("label_w", 96), 96),
+                "h": window._safe_int(cfg.get("label_h", 22), 22),
+            },
+            {
+                "x": window._safe_int(cfg.get("value_x", 100), 100),
+                "y": window._safe_int(cfg.get("value_y", fallback_value_y), fallback_value_y),
+                "w": window._safe_int(cfg.get("value_w", panel_w - 112), panel_w - 112),
+                "h": window._safe_int(cfg.get("value_h", 22), 22),
+            },
+        )
+
+    value_label_rect, value_value_rect = _row_rects(value_row_cfg, 36, 36)
+    bonus_label_rect, bonus_value_rect = _row_rects(bonus_row_cfg, 59, 59)
+    roll_label_rect, roll_value_rect = _row_rects(roll_row_cfg, 82, 82)
+    if value_enabled:
+        window.create_panel_text(
+            panel,
+            value_label_rect,
+            str(value_row_cfg.get("label", "Wert:")),
+            font_size,
+            label_color,
+            bold=True,
+        )
+        window.create_panel_text(panel, value_value_rect, raw_text, font_size, value_color, bold=True)
+    if bonus_enabled:
+        window.create_panel_text(
+            panel,
+            bonus_label_rect,
+            str(bonus_row_cfg.get("label", "Bonus:")),
+            font_size,
+            label_color,
+            bold=True,
+        )
     data_cfg = panel_cfg.get("data", {}) if isinstance(panel_cfg.get("data", {}), dict) else {}
-    bonus_editable = bool(data_cfg.get("bonus_editable", False))
+    bonus_editable = bool(data_cfg.get("bonus_editable", False)) and bonus_enabled
     bonus_cell = str(data.get("bonus_cell", "") if isinstance(data, dict) else "").strip().upper()
     bonus_sheet = str(data.get("sheet", "") if isinstance(data, dict) else "").strip()
     bonus_old_raw = str(data.get("raw_bonus", bonus_text) if isinstance(data, dict) else bonus_text)
     if bonus_editable and bonus_cell and bonus_sheet:
         bonus_editor = QLineEdit(panel)
-        bonus_editor.setGeometry(100, 59, panel_w - 112, 22)
+        bonus_editor.setGeometry(
+            window._safe_int(bonus_value_rect.get("x", 100), 100),
+            window._safe_int(bonus_value_rect.get("y", 59), 59),
+            window._safe_int(bonus_value_rect.get("w", panel_w - 112), panel_w - 112),
+            window._safe_int(bonus_value_rect.get("h", 22), 22),
+        )
         bonus_editor.setText(bonus_text)
         bonus_editor.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         bonus_editor.setStyleSheet(
@@ -70,28 +361,39 @@ def render_character_initiative_panel(window, character_screen, character_panel,
         )
         bonus_editor.show()
     else:
-        window.create_panel_text(panel, {"x": 100, "y": 59, "w": panel_w - 112, "h": 22}, bonus_text, font_size, value_color, bold=True)
-    window.create_panel_text(panel, {"x": 12, "y": 82, "w": 96, "h": 22}, "Rollwert:", font_size, label_color, bold=True)
-    window.create_panel_text(panel, {"x": 100, "y": 82, "w": panel_w - 112, "h": 22}, roll_text, font_size, value_color, bold=True)
+        window.create_panel_text(panel, bonus_value_rect, bonus_text, font_size, value_color, bold=True)
+    if roll_enabled:
+        window.create_panel_text(
+            panel,
+            roll_label_rect,
+            str(roll_row_cfg.get("label", "Rollwert:")),
+            font_size,
+            label_color,
+            bold=True,
+        )
+        window.create_panel_text(panel, roll_value_rect, roll_text, font_size, value_color, bold=True)
 
-    button_cfg = {
-        "x": window._safe_int(panel_cfg.get("button_x", 12), 12),
-        "y": window._safe_int(panel_cfg.get("button_y", panel_h - 38), panel_h - 38),
-        "w": window._safe_int(panel_cfg.get("button_w", panel_w - 24), panel_w - 24),
-        "h": window._safe_int(panel_cfg.get("button_h", 28), 28),
-        "asset": str(panel_cfg.get("button_asset", "buttons/menu_button_medium.png")),
-        "font_size": window._safe_int(panel_cfg.get("button_font_size", 16), 16),
-        "color": str(panel_cfg.get("color", label_color)),
-    }
-    btn = window.create_asset_text_button(
-        panel,
-        button_cfg,
-        str(panel_cfg.get("button_text", "Ini-Wurf")),
-        window.open_character_initiative_roll,
-    )
-    btn_widget = btn.get("button") if isinstance(btn, dict) else btn
-    if btn_widget is not None:
-        btn_widget.setEnabled(roll_value is not None)
+    button_layout_cfg = panel_cfg.get("button", {}) if isinstance(panel_cfg.get("button", {}), dict) else {}
+    button_enabled = bool(button_layout_cfg.get("enabled", panel_cfg.get("button_enabled", True)))
+    if button_enabled:
+        button_cfg = {
+            "x": window._safe_int(button_layout_cfg.get("x", panel_cfg.get("button_x", 12)), 12),
+            "y": window._safe_int(button_layout_cfg.get("y", panel_cfg.get("button_y", panel_h - 38)), panel_h - 38),
+            "w": window._safe_int(button_layout_cfg.get("w", panel_cfg.get("button_w", panel_w - 24)), panel_w - 24),
+            "h": window._safe_int(button_layout_cfg.get("h", panel_cfg.get("button_h", 28)), 28),
+            "asset": str(button_layout_cfg.get("asset", panel_cfg.get("button_asset", "buttons/menu_button_medium.png"))),
+            "font_size": window._safe_int(button_layout_cfg.get("font_size", panel_cfg.get("button_font_size", 16)), 16),
+            "color": str(button_layout_cfg.get("color", panel_cfg.get("color", label_color))),
+        }
+        btn = window.create_asset_text_button(
+            panel,
+            button_cfg,
+            str(button_layout_cfg.get("text", panel_cfg.get("button_text", "Ini-Wurf"))),
+            window.open_character_initiative_roll,
+        )
+        btn_widget = btn.get("button") if isinstance(btn, dict) else btn
+        if btn_widget is not None:
+            btn_widget.setEnabled(roll_value is not None)
 
 
 def render_character_paradigm_panel(window, character_screen, attribute_panel, default_color):
@@ -128,13 +430,23 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
         window._character_paradigm_debug("[CHARACTER PARADIGM LAYOUT] fallback used")
 
     panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
-    panel.setStyleSheet(
-        "QFrame {"
-        f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
-        f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
-        "border-radius: 6px;"
-        "}"
-    )
+    frame_state = _apply_character_panel_frame_if_enabled(window, panel, panel_cfg)
+    frame_active = bool(frame_state.get("active", False))
+    if frame_active and bool(frame_state.get("remove_old_border_when_active", True)):
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {'transparent' if bool(frame_state.get('transparent_panel_background_when_active', True)) else str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            "border: none;"
+            "}"
+        )
+    elif (not frame_active) or bool(frame_state.get("fallback_border", True)):
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            "border-radius: 6px;"
+            "}"
+        )
     panel.show()
 
     title = str(panel_cfg.get("title", "Paradigmen"))
@@ -178,20 +490,63 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
     marker_fallback_text = str(marker_cfg.get("fallback_text", "X"))
     marker_icon_padding = max(0, window._safe_int(marker_cfg.get("icon_padding", 4), 4))
 
+    headers_cfg = panel_cfg.get("column_headers", {})
+    headers_enabled = isinstance(headers_cfg, dict) and bool(headers_cfg.get("enabled", False))
+    header_items_cfg = headers_cfg.get("items", {}) if isinstance(headers_cfg.get("items", {}), dict) else {}
+    header_frame_cfg = headers_cfg.get("frame", {}) if isinstance(headers_cfg.get("frame", {}), dict) else {}
+    header_items = list(header_items_cfg.values()) if headers_enabled else []
+
     for idx, col_info in enumerate(analysis.get("columns", [])[:col_count]):
         col_x = start_x + idx * (col_w + column_gap)
         name_cell = str(col_info.get("name_cell", ""))
         name_text = str(col_info.get("name", ""))
-        name_label = window.create_panel_text(
-            panel,
-            {"x": col_x, "y": header_y, "w": col_w, "h": name_h},
-            name_text,
-            window._safe_int(panel_cfg.get("font_size", 14), 14),
-            str(panel_cfg.get("text_color", "#ffffff")),
-            bold=True,
-            align="center",
-        )
-        if edit_allowed and name_cell:
+        item_cfg = header_items[idx] if idx < len(header_items) and isinstance(header_items[idx], dict) else None
+        if headers_enabled:
+            if not isinstance(item_cfg, dict) or not bool(item_cfg.get("enabled", False)):
+                name_label = None
+            else:
+                header_rect = {
+                    "x": window._safe_int(item_cfg.get("x", col_x), col_x),
+                    "y": window._safe_int(item_cfg.get("y", header_y), header_y),
+                    "w": window._safe_int(item_cfg.get("w", col_w), col_w),
+                    "h": window._safe_int(item_cfg.get("h", name_h), name_h),
+                }
+                mini_frame_state = _apply_nine_slice_frame_for_rect(window, panel, header_rect, header_frame_cfg)
+                frame_active = bool(mini_frame_state.get("active", False))
+                if frame_active and bool(mini_frame_state.get("remove_old_border_when_active", True)):
+                    base_bg = "transparent" if bool(mini_frame_state.get("transparent_background_when_active", True)) else "rgba(0,0,0,35)"
+                    name_label = QLabel(panel)
+                    name_label.setGeometry(header_rect["x"], header_rect["y"], header_rect["w"], header_rect["h"])
+                    name_label.setText(str(item_cfg.get("text", name_text)))
+                    name_label.setAlignment(Qt.AlignCenter)
+                    name_label.setStyleSheet(
+                        "QLabel {"
+                        f"background: {base_bg};"
+                        "border: none;"
+                        f"color: {str(item_cfg.get('color', panel_cfg.get('text_color', '#ffffff')))};"
+                        f"font-size: {window._safe_int(item_cfg.get('font_size', panel_cfg.get('font_size', 14)), 14)}px;"
+                        "font-weight: 700;"
+                        "}"
+                    )
+                    name_label.show()
+                else:
+                    name_label = QLabel(panel)
+                    name_label.setGeometry(header_rect["x"], header_rect["y"], header_rect["w"], header_rect["h"])
+                    name_label.setText(str(item_cfg.get("text", name_text)))
+                    name_label.setAlignment(Qt.AlignCenter)
+                    name_label.setStyleSheet(
+                        "QLabel {"
+                        "background: rgba(0,0,0,35);"
+                        "border: 1px solid rgba(232, 224, 200, 70);"
+                        f"color: {str(item_cfg.get('color', panel_cfg.get('text_color', '#ffffff')))};"
+                        f"font-size: {window._safe_int(item_cfg.get('font_size', panel_cfg.get('font_size', 14)), 14)}px;"
+                        "font-weight: 700;"
+                        "}"
+                    )
+                    name_label.show()
+        else:
+            name_label = None
+        if edit_allowed and name_cell and name_label is not None:
             name_label.setProperty("character_paradigm_name_edit", True)
             name_label.setProperty("character_paradigm_index", idx)
             name_label.setProperty("character_paradigm_cell_ref", name_cell)
@@ -284,6 +639,15 @@ def render_character_section(window):
     character_panel_cfg = panels_cfg.get("character_info_panel", {})
     attribute_panel_cfg = panels_cfg.get("attribute_panel", {})
     perk_panel_cfg = panels_cfg.get("perk_panel", {})
+    if not isinstance(character_panel_cfg, dict) or not bool(character_panel_cfg.get("enabled", True)):
+        window._character_rendering = False
+        return
+    if not isinstance(attribute_panel_cfg, dict) or not bool(attribute_panel_cfg.get("enabled", True)):
+        window._character_rendering = False
+        return
+    if not isinstance(perk_panel_cfg, dict) or not bool(perk_panel_cfg.get("enabled", True)):
+        window._character_rendering = False
+        return
 
     character_panel = window._create_content_panel(window.content_layer, character_panel_cfg)
     attribute_panel = window._create_content_panel(window.content_layer, attribute_panel_cfg)
@@ -393,7 +757,7 @@ def render_character_section(window):
             if not isinstance(row, dict):
                 continue
             row_id = str(row.get("id", "")).strip().lower()
-            if not row_id:
+            if not row_id or not bool(row.get("enabled", True)):
                 continue
             mode = str(row.get("mode", "raw" if row_id in ("race",) else "auto"))
             label_text = str(row.get("label", row_id.capitalize()))
@@ -415,17 +779,21 @@ def render_character_section(window):
                     mode,
                 )
 
-            label_widget = window.create_panel_text(
-                character_panel,
-                row.get("label_rect", {}),
-                label_text,
-                window._safe_int(row.get("label_font_size", row.get("font_size", label_font_default)), 14),
-                str(row.get("label_color", row.get("color", label_color_default))),
-                bold=bool(row.get("label_bold", False)),
-                align=str(row.get("label_align", "left")),
-            )
-            window._make_character_resource_label_clickable(label_widget, row_id)
+            label_enabled = bool(row.get("label_enabled", True))
+            if label_enabled:
+                label_widget = window.create_panel_text(
+                    character_panel,
+                    row.get("label_rect", {}),
+                    label_text,
+                    window._safe_int(row.get("label_font_size", row.get("font_size", label_font_default)), 14),
+                    str(row.get("label_color", row.get("color", label_color_default))),
+                    bold=bool(row.get("label_bold", False)),
+                    align=str(row.get("label_align", "left")),
+                )
+                window._make_character_resource_label_clickable(label_widget, row_id)
             if row_id in field_pair_sources:
+                current_enabled = bool(row.get("current_enabled", True))
+                max_enabled = bool(row.get("max_enabled", True))
                 current_src, max_src = field_pair_sources[row_id]
                 split_enabled = isinstance(row.get("current_rect"), dict) and isinstance(row.get("max_rect"), dict)
                 current_rect = row.get("current_rect", {})
@@ -461,48 +829,51 @@ def render_character_section(window):
                         f"[CHARACTER BASIC EDIT SKIP] field={row_id}_max reason="
                         f"{'same_cell_as_current' if max_cell else 'no_cell_ref'}"
                     )
-                window._create_character_value_editor(
-                    character_panel,
-                    current_rect,
-                    f"{row_id}_current",
-                    current_src,
-                    default_sheet,
-                    current,
-                    value_font,
-                    value_color,
-                    bold=value_bold,
-                    align=value_align,
-                    section_key="basic_fields",
-                )
-                window._create_character_value_editor(
-                    character_panel,
-                    max_rect,
-                    f"{row_id}_max",
-                    max_src,
-                    default_sheet,
-                    maximum,
-                    value_font,
-                    value_color,
-                    bold=value_bold,
-                    align=value_align,
-                    editable=max_editable,
-                    section_key="basic_fields",
-                )
+                if current_enabled:
+                    window._create_character_value_editor(
+                        character_panel,
+                        current_rect,
+                        f"{row_id}_current",
+                        current_src,
+                        default_sheet,
+                        current,
+                        value_font,
+                        value_color,
+                        bold=value_bold,
+                        align=value_align,
+                        section_key="basic_fields",
+                    )
+                if max_enabled:
+                    window._create_character_value_editor(
+                        character_panel,
+                        max_rect,
+                        f"{row_id}_max",
+                        max_src,
+                        default_sheet,
+                        maximum,
+                        value_font,
+                        value_color,
+                        bold=value_bold,
+                        align=value_align,
+                        editable=max_editable,
+                        section_key="basic_fields",
+                    )
             else:
                 window._character_debug(f"[CHARACTER BASIC LEGACY] id={row_id} value_rect used")
-                window._create_character_value_editor(
-                    character_panel,
-                    row.get("value_rect", {}),
-                    row_id,
-                    field_single_sources.get(row_id),
-                    default_sheet,
-                    value_text,
-                    window._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15),
-                    str(row.get("value_color", row.get("color", value_color_default))),
-                    bold=bool(row.get("bold_value", bold_values_default)),
-                    align=str(row.get("value_align", "left")),
-                    section_key="basic_fields",
-                )
+                if bool(row.get("value_enabled", True)):
+                    window._create_character_value_editor(
+                        character_panel,
+                        row.get("value_rect", {}),
+                        row_id,
+                        field_single_sources.get(row_id),
+                        default_sheet,
+                        value_text,
+                        window._safe_int(row.get("value_font_size", row.get("font_size", value_font_default)), 15),
+                        str(row.get("value_color", row.get("color", value_color_default))),
+                        bold=bool(row.get("bold_value", bold_values_default)),
+                        align=str(row.get("value_align", "left")),
+                        section_key="basic_fields",
+                    )
     else:
         basic_rows_cfg = info_layout.get("basic_rows", {})
         basic_rows = basic_rows_cfg.get("rows", [])
@@ -975,13 +1346,23 @@ def render_character_section(window):
 
         panel = QFrame(window.content_layer)
         panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
-        panel.setStyleSheet(
-            "QFrame {"
-            f"background: {background};"
-            f"border: 1px solid {border_color};"
-            f"border-radius: {border_radius}px;"
-            "}"
-        )
+        frame_state = _apply_character_panel_frame_if_enabled(window, panel, wellbeing_cfg)
+        frame_active = bool(frame_state.get("active", False))
+        if frame_active and bool(frame_state.get("remove_old_border_when_active", True)):
+            panel.setStyleSheet(
+                "QFrame {"
+                f"background: {'transparent' if bool(frame_state.get('transparent_panel_background_when_active', True)) else background};"
+                "border: none;"
+                "}"
+            )
+        elif (not frame_active) or bool(frame_state.get("fallback_border", True)):
+            panel.setStyleSheet(
+                "QFrame {"
+                f"background: {background};"
+                f"border: 1px solid {border_color};"
+                f"border-radius: {border_radius}px;"
+                "}"
+            )
         panel.show()
 
         title_cfg = wellbeing_cfg.get("title", {})

@@ -272,21 +272,24 @@
         "x": 8,
         "y": 0,
         "w": 360,
-        "h": 600
+        "h": 600,
+        "enabled": true
       },
       "attribute_panel": {
         "asset": "panels/attribute_panel.png",
         "x": 360,
         "y": 20,
         "w": 460,
-        "h": 400
+        "h": 400,
+        "enabled": true
       },
       "perk_panel": {
         "asset": "panels/perk_panel.png",
         "x": 810,
         "y": -10,
         "w": 650,
-        "h": 882
+        "h": 882,
+        "enabled": true
       }
     },
     "wellbeing_panel": {
@@ -381,7 +384,30 @@
           "end_row": 44,
           "color": "#1f6f37"
         }
-      ]
+      ],
+      "frame": {
+        "enabled": false,
+        "asset": "panels/shared_character_panel_frame.png",
+        "slice": {
+          "left": 32,
+          "top": 32,
+          "right": 32,
+          "bottom": 32
+        },
+        "content_margin": {
+          "left": 10,
+          "top": 10,
+          "right": 10,
+          "bottom": 10
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0
+      }
     },
     "data_map": {
       "sheet": "Charakterbogen",
@@ -503,7 +529,7 @@
           "rows": [
             {
               "id": "race",
-              "label": "Rasse:",
+              "label": "Rasse",
               "label_rect": {
                 "x": 68,
                 "y": 315,
@@ -511,14 +537,17 @@
                 "h": 30
               },
               "value_rect": {
-                "x": 180,
+                "x": 190,
                 "y": 315,
                 "w": 140,
                 "h": 30
               },
               "font_size": 22,
               "color": "#f0e6c8",
-              "mode": "raw"
+              "mode": "raw",
+              "enabled": true,
+              "label_enabled": true,
+              "value_enabled": true
             },
             {
               "id": "size",
@@ -537,7 +566,10 @@
               },
               "font_size": 20,
               "color": "#f0e6c8",
-              "mode": "int"
+              "mode": "int",
+              "enabled": true,
+              "label_enabled": true,
+              "value_enabled": true
             },
             {
               "id": "weight",
@@ -556,7 +588,10 @@
               },
               "font_size": 17,
               "color": "#f0e6c8",
-              "mode": "int"
+              "mode": "int",
+              "enabled": true,
+              "label_enabled": true,
+              "value_enabled": true
             },
             {
               "id": "hp",
@@ -584,7 +619,11 @@
               },
               "separator": {
                 "enabled": false
-              }
+              },
+              "enabled": true,
+              "label_enabled": true,
+              "current_enabled": true,
+              "max_enabled": true
             },
             {
               "id": "mp",
@@ -612,7 +651,11 @@
               },
               "separator": {
                 "enabled": false
-              }
+              },
+              "enabled": true,
+              "label_enabled": true,
+              "current_enabled": true,
+              "max_enabled": true
             },
             {
               "id": "exp",
@@ -640,7 +683,11 @@
               },
               "separator": {
                 "enabled": false
-              }
+              },
+              "enabled": true,
+              "label_enabled": true,
+              "current_enabled": true,
+              "max_enabled": true
             },
             {
               "id": "lifeforce",
@@ -668,7 +715,11 @@
               },
               "separator": {
                 "enabled": false
-              }
+              },
+              "enabled": true,
+              "label_enabled": true,
+              "current_enabled": true,
+              "max_enabled": true
             },
             {
               "id": "sanity",
@@ -696,7 +747,11 @@
               },
               "separator": {
                 "enabled": false
-              }
+              },
+              "enabled": true,
+              "label_enabled": true,
+              "current_enabled": true,
+              "max_enabled": true
             },
             {
               "id": "faith",
@@ -724,7 +779,11 @@
               },
               "separator": {
                 "enabled": false
-              }
+              },
+              "enabled": true,
+              "label_enabled": true,
+              "current_enabled": true,
+              "max_enabled": true
             }
           ]
         }
@@ -985,7 +1044,7 @@
       "w": 520,
       "h": 180,
       "title": "Paradigmen",
-      "title_font_size": 18,
+      "title_font_size": 22,
       "font_size": 13,
       "label_color": "#e8e0c8",
       "text_color": "#ffffff",
@@ -1010,15 +1069,18 @@
       "rows": [
         {
           "id": "grad",
-          "label": "Grad"
+          "label": "Grad",
+          "enabled": true
         },
         {
           "id": "brand",
-          "label": "Brand"
+          "label": "Brand",
+          "enabled": true
         },
         {
           "id": "daily",
-          "label": "Daily"
+          "label": "Daily",
+          "enabled": true
         }
       ],
       "marker": {
@@ -1027,6 +1089,81 @@
         "use_icon": true,
         "fallback_text": "X",
         "icon_padding": 4
+      },
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_character_panel_frame.png",
+        "slice": {
+          "left": 32,
+          "top": 32,
+          "right": 32,
+          "bottom": 32
+        },
+        "content_margin": {
+          "left": 10,
+          "top": 10,
+          "right": 10,
+          "bottom": 10
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1,
+        "opacity": 1.0
+      },
+      "column_headers": {
+        "enabled": true,
+        "frame": {
+          "enabled": true,
+          "asset": "frames/tini_frame.png",
+          "slice": {
+            "left": 24,
+            "top": 24,
+            "right": 24,
+            "bottom": 24
+          },
+          "draw_center": true,
+          "remove_old_border_when_active": true,
+          "transparent_background_when_active": true,
+          "smooth_scaling": true,
+          "render_scale": 1.0,
+          "opacity": 1.0,
+          "fallback_border": true
+        },
+        "items": {
+          "it_is_what_it_is": {
+            "enabled": true,
+            "text": "It is what it is",
+            "x": 90,
+            "y": 44,
+            "w": 124,
+            "h": 34,
+            "font_size": 13,
+            "color": "#ffffff"
+          },
+          "arkanes": {
+            "enabled": true,
+            "text": "Arkanes",
+            "x": 238,
+            "y": 44,
+            "w": 124,
+            "h": 34,
+            "font_size": 13,
+            "color": "#ffffff"
+          },
+          "all_or_nothing": {
+            "enabled": true,
+            "text": "All or Nothing",
+            "x": 386,
+            "y": 44,
+            "w": 124,
+            "h": 34,
+            "font_size": 13,
+            "color": "#ffffff"
+          }
+        }
       }
     },
     "initiative_panel": {
@@ -1057,6 +1194,87 @@
         "bonus_cell": "",
         "scan_enabled": true,
         "bonus_editable": true
+      },
+      "title_layout": {
+        "enabled": false,
+        "x": 10,
+        "y": 8,
+        "w": 130,
+        "h": 26,
+        "font_size": 1,
+        "bold": true,
+        "align": "left"
+      },
+      "rows": {
+        "value": {
+          "enabled": true,
+          "label": "Wert:",
+          "label_x": 12,
+          "label_y": 36,
+          "label_w": 85,
+          "label_h": 22,
+          "value_x": 100,
+          "value_y": 36,
+          "value_w": 38,
+          "value_h": 22
+        },
+        "bonus": {
+          "enabled": true,
+          "label": "Bonus:",
+          "label_x": 12,
+          "label_y": 59,
+          "label_w": 85,
+          "label_h": 22,
+          "value_x": 100,
+          "value_y": 59,
+          "value_w": 38,
+          "value_h": 22
+        },
+        "roll_value": {
+          "enabled": true,
+          "label": "Rollwert:",
+          "label_x": 12,
+          "label_y": 82,
+          "label_w": 85,
+          "label_h": 22,
+          "value_x": 100,
+          "value_y": 82,
+          "value_w": 38,
+          "value_h": 22
+        }
+      },
+      "button": {
+        "enabled": true,
+        "text": "Ini-Wurf",
+        "asset": "buttons/menu_button_small.png",
+        "font_size": 16,
+        "x": 5,
+        "y": 2,
+        "w": 141,
+        "h": 28
+      },
+      "frame": {
+        "enabled": false,
+        "asset": "panels/shared_character_panel_frame.png",
+        "slice": {
+          "left": 32,
+          "top": 32,
+          "right": 32,
+          "bottom": 32
+        },
+        "content_margin": {
+          "left": 10,
+          "top": 10,
+          "right": 10,
+          "bottom": 10
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0
       }
     }
   }
