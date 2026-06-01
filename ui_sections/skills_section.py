@@ -329,7 +329,7 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
     line_h = 28
     window.create_panel_text(
         xp_frame,
-        {"x": 10, "y": line_y, "w": 110, "h": line_h},
+        {"x": 10, "y": line_y, "w": 70, "h": line_h},
         f"{label_current}:",
         xp_font_size,
         xp_text_color,
@@ -338,18 +338,18 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
     )
     window.create_panel_text(
         xp_frame,
-        {"x": 125, "y": line_y, "w": max(1, xp_w - 135), "h": line_h},
+        {"x": 85, "y": line_y, "w": max(1, xp_w - 110), "h": line_h},
         str(exp_current),
         xp_font_size,
         xp_value_color,
         bold=True,
-        align="right",
+        align="left",
     )
 
     line_y += line_h
     window.create_panel_text(
         xp_frame,
-        {"x": 10, "y": line_y, "w": 110, "h": line_h},
+        {"x": 10, "y": line_y, "w": 70, "h": line_h},
         f"{label_max}:",
         xp_font_size,
         xp_text_color,
@@ -358,12 +358,12 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
     )
     window.create_panel_text(
         xp_frame,
-        {"x": 125, "y": line_y, "w": max(1, xp_w - 135), "h": line_h},
+        {"x": 85, "y": line_y, "w": max(1, xp_w - 110), "h": line_h},
         str(exp_max),
         xp_font_size,
         xp_value_color,
         bold=True,
-        align="right",
+        align="left",
     )
 
     upgrade_cfg = {}

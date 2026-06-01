@@ -70,10 +70,10 @@
       "button_text": "SE",
       "xp_info": {
         "enabled": true,
-        "x": 410,
-        "y": 110,
-        "w": 260,
-        "h": 150,
+        "x": 1210,
+        "y": 80,
+        "w": 160,
+        "h": 120,
         "title": "XP Info",
         "font_size": 16,
         "title_font_size": 18,
@@ -90,15 +90,15 @@
       },
       "table": {
         "x": 40,
-        "y": 110,
-        "w": 320,
-        "h": 520,
-        "min_rows": 16,
+        "y": 80,
+        "w": 437,
+        "h": 618,
+        "min_rows": 20,
         "add_rows_when_last_filled": 3,
         "columns": {
           "text": {
             "title": "Fertigkeit",
-            "w": 240
+            "w": 340
           },
           "value": {
             "title": "SE",
@@ -108,10 +108,10 @@
       },
       "skill_upgrade_info": {
         "enabled": true,
-        "x": 420,
-        "y": 285,
+        "x": 520,
+        "y": 80,
         "w": 680,
-        "h": 360,
+        "h": 660,
         "title": "Skill Upgrade",
         "max_items": 999,
         "font_size": 15,
