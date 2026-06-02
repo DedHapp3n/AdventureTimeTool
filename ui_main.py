@@ -5197,9 +5197,20 @@ class MainWindow(QMainWindow):
         row_fields_cfg = table_cfg.get("row_fields", {})
         if not isinstance(row_fields_cfg, dict):
             row_fields_cfg = {}
+        inset_cfg = table_cfg.get("content_inset", {})
+        if not isinstance(inset_cfg, dict):
+            inset_cfg = {}
+        inset_left = max(0, self._safe_int(inset_cfg.get("left", 0), 0))
+        inset_top = max(0, self._safe_int(inset_cfg.get("top", 0), 0))
+        inset_right = max(0, self._safe_int(inset_cfg.get("right", 0), 0))
+        inset_bottom = max(0, self._safe_int(inset_cfg.get("bottom", 0), 0))
+        content_x = inset_left
+        content_y = inset_top
+        content_w = max(1, table.width() - inset_left - inset_right)
+        content_h = max(1, table.height() - inset_top - inset_bottom)
 
         header_bg = QFrame(table)
-        header_bg.setGeometry(0, 0, table.width(), header_h)
+        header_bg.setGeometry(content_x, content_y, content_w, header_h)
         header_bg.setStyleSheet(
             "background: rgba(24, 16, 8, 175); border-bottom: 1px solid rgba(242, 210, 139, 85);"
         )
@@ -5210,8 +5221,8 @@ class MainWindow(QMainWindow):
             self.create_panel_text(
                 table,
                 {
-                    "x": self._safe_int(col_cfg.get("x", 0), 0),
-                    "y": 0,
+                    "x": content_x + self._safe_int(col_cfg.get("x", 0), 0),
+                    "y": content_y,
                     "w": self._safe_int(col_cfg.get("w", 120), 120),
                     "h": header_h,
                 },
@@ -5225,7 +5236,7 @@ class MainWindow(QMainWindow):
         if not self.loader.cell_cache:
             self.create_panel_text(
                 table,
-                {"x": 0, "y": header_h, "w": table.width(), "h": row_h * 2},
+                {"x": content_x, "y": content_y + header_h, "w": content_w, "h": min(row_h * 2, max(1, content_h - header_h))},
                 "Kein Charaktercache geladen",
                 font_size,
                 str(table_cfg.get("note_color", "#d8d0b0")),
@@ -5238,7 +5249,7 @@ class MainWindow(QMainWindow):
         if not isinstance(self.loader.cell_cache.get("Fertigkeiten"), dict):
             self.create_panel_text(
                 table,
-                {"x": 0, "y": header_h, "w": table.width(), "h": row_h * 2},
+                {"x": content_x, "y": content_y + header_h, "w": content_w, "h": min(row_h * 2, max(1, content_h - header_h))},
                 "Keine Fertigkeiten-Daten gefunden",
                 font_size,
                 str(table_cfg.get("note_color", "#d8d0b0")),
@@ -5262,13 +5273,13 @@ class MainWindow(QMainWindow):
                 log_debug("skills", f"rows truncated category={category_id}")
 
         row_colors = ("rgba(8, 8, 8, 125)", "rgba(20, 20, 20, 105)")
-        current_y = header_h
+        current_y = content_y + header_h
         for index, skill in enumerate(visible_skills):
             if not isinstance(skill, dict):
                 continue
             y = current_y
             row_bg = QFrame(table)
-            row_bg.setGeometry(0, y, table.width(), row_h)
+            row_bg.setGeometry(content_x, y, content_w, row_h)
             row_bg.setStyleSheet(
                 f"background: {row_colors[index % 2]};"
                 "border-bottom: 1px solid rgba(255, 255, 255, 24);"
@@ -5337,15 +5348,21 @@ class MainWindow(QMainWindow):
             value_col = columns.get("value", {})
             spec_col = columns.get("specialization", {})
             note_col = columns.get("note", {})
-            spec_x = self._safe_int(spec_col.get("x", 690), 690) + 8
-            spec_w = max(1, self._safe_int(spec_col.get("w", 470), 470) - 12)
-            note_x = self._safe_int(note_col.get("x", 1170), 1170) + 8
-            note_w = max(1, self._safe_int(note_col.get("w", 210), 210) - 12)
+            skill_pad_l = max(0, self._safe_int(skill_col.get("text_padding_left", 8), 8))
+            skill_pad_r = max(0, self._safe_int(skill_col.get("text_padding_right", 6), 6))
+            spec_pad_l = max(0, self._safe_int(spec_col.get("text_padding_left", 8), 8))
+            spec_pad_r = max(0, self._safe_int(spec_col.get("text_padding_right", 8), 8))
+            note_pad_l = max(0, self._safe_int(note_col.get("text_padding_left", 8), 8))
+            note_pad_r = max(0, self._safe_int(note_col.get("text_padding_right", 8), 8))
+            spec_x = content_x + self._safe_int(spec_col.get("x", 690), 690) + spec_pad_l
+            spec_w = max(1, self._safe_int(spec_col.get("w", 470), 470) - spec_pad_l - spec_pad_r)
+            note_x = content_x + self._safe_int(note_col.get("x", 1170), 1170) + note_pad_l
+            note_w = max(1, self._safe_int(note_col.get("w", 210), 210) - note_pad_l - note_pad_r)
             row_height = row_h
-            row_bg.setGeometry(0, y, table.width(), row_height)
+            row_bg.setGeometry(content_x, y, content_w, row_height)
 
-            skill_x = self._safe_int(skill_col.get("x", 0), 0) + 8
-            skill_w = max(1, self._safe_int(skill_col.get("w", 360), 360) - 12)
+            skill_x = content_x + self._safe_int(skill_col.get("x", 0), 0) + skill_pad_l
+            skill_w = max(1, self._safe_int(skill_col.get("w", 360), 360) - skill_pad_l - skill_pad_r)
             skill_button = QPushButton(table)
             skill_button.setGeometry(skill_x, y, skill_w, row_height)
             skill_button.setText(display_name)
@@ -5371,7 +5388,7 @@ class MainWindow(QMainWindow):
 
             slot_w = self._safe_int(attr_col.get("slot_w", 42), 42)
             slot_gap = self._safe_int(attr_col.get("slot_gap", 8), 8)
-            attr_x = self._safe_int(attr_col.get("x", 370), 370)
+            attr_x = content_x + self._safe_int(attr_col.get("x", 370), 370)
             attr_field_cfg = row_fields_cfg.get("attribute_slot", {}) if isinstance(row_fields_cfg.get("attribute_slot", {}), dict) else {}
             slot_box_w = max(1, self._safe_int(attr_field_cfg.get("w", slot_w), slot_w))
             slot_box_h = max(1, self._safe_int(attr_field_cfg.get("h", max(1, row_height - 10)), max(1, row_height - 10)))
@@ -5431,24 +5448,27 @@ class MainWindow(QMainWindow):
                     slot.setCursor(Qt.ArrowCursor)
                 slot.show()
 
-            value_x = self._safe_int(value_col.get("x", 600), 600)
+            value_x = content_x + self._safe_int(value_col.get("x", 600), 600)
             value_w = self._safe_int(value_col.get("w", 80), 80)
             value_field_cfg = row_fields_cfg.get("value", {}) if isinstance(row_fields_cfg.get("value", {}), dict) else {}
             value_box_w = max(1, self._safe_int(value_field_cfg.get("w", value_w), value_w))
             value_box_h = max(1, self._safe_int(value_field_cfg.get("h", max(1, row_height - 10)), max(1, row_height - 10)))
             value_box_x = value_x + int((value_w - value_box_w) / 2)
             value_box_y = y + int((row_height - value_box_h) / 2)
+            value_text_offset_x = self._safe_int(value_field_cfg.get("text_offset_x", 0), 0)
+            value_text_offset_y = self._safe_int(value_field_cfg.get("text_offset_y", 0), 0)
+            value_text_align = str(value_field_cfg.get("text_align", "center") or "center")
             value_frame_active = skills_section.apply_skills_row_field_frame_if_enabled(
                 self,
                 table,
                 row_fields_cfg,
                 "value",
-                {"x": value_box_x, "y": value_box_y, "w": value_box_w, "h": value_box_h},
+                {"x": value_x, "y": y, "w": value_w, "h": row_height},
             )
             value_button = QPushButton(table)
             value_button.setGeometry(
-                value_box_x if value_frame_active else value_x,
-                value_box_y if value_frame_active else y,
+                (value_box_x + value_text_offset_x) if value_frame_active else value_x,
+                (value_box_y + value_text_offset_y) if value_frame_active else y,
                 value_box_w if value_frame_active else value_w,
                 value_box_h if value_frame_active else row_height,
             )
@@ -5462,7 +5482,7 @@ class MainWindow(QMainWindow):
                 f"color: {str(table_cfg.get('value_color', '#7fd0ff'))};"
                 f"font-size: {font_size}px;"
                 "font-weight: 700;"
-                "text-align: center;"
+                f"text-align: {value_text_align};"
                 "padding: 0px;"
                 "}"
                 "QPushButton:hover { border: 1px solid rgba(127, 208, 255, 60); }"
@@ -5471,6 +5491,7 @@ class MainWindow(QMainWindow):
                 lambda checked=False, sk=source_key: self.on_skill_row_roll_clicked(sk)
             )
             value_button.show()
+            value_button.raise_()
             spec_text = str(display_specialization)
             spec_frame_active = skills_section.apply_skills_row_field_frame_if_enabled(
                 self,

@@ -42,16 +42,22 @@
       "value_color": "#7fd0ff",
       "specialization_color": "#ffffff",
       "note_color": "#d8d0b0",
+      "content_inset": {
+        "left": 18,
+        "top": 10,
+        "right": 18,
+        "bottom": 12
+      },
       "frame": {
         "enabled": true,
         "asset": "panels/shared_skils_panel_frame.png",
         "slice": {
-          "left": 64,
-          "top": 64,
-          "right": 64,
-          "bottom": 64
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
         },
-        "draw_center": true,
+        "draw_center": false,
         "fallback_border": true,
         "remove_old_border_when_active": true,
         "transparent_panel_background_when_active": true,
@@ -80,8 +86,8 @@
           }
         },
         "value": {
-          "w": 44,
-          "h": 28,
+          "w": 64,
+          "h": 26,
           "frame": {
             "enabled": true,
             "asset": "frames/256x122_box.png",
@@ -94,7 +100,10 @@
             "smooth_scaling": true,
             "opacity": 1.0,
             "fallback_border": true
-          }
+          },
+          "text_align": "center",
+          "text_offset_x": 0,
+          "text_offset_y": 0
         },
         "specialization": {
           "frame": {
@@ -137,7 +146,9 @@
         "skill": {
           "title": "Fertigkeiten",
           "x": 0,
-          "w": 360
+          "w": 360,
+          "text_padding_left": 8,
+          "text_padding_right": 6
         },
         "attributes": {
           "title": "Attribute",
@@ -149,17 +160,23 @@
         "value": {
           "title": "Wert",
           "x": 600,
-          "w": 80
+          "w": 80,
+          "text_padding_left": 0,
+          "text_padding_right": 0
         },
         "specialization": {
           "title": "Spezialisierung",
           "x": 690,
-          "w": 470
+          "w": 470,
+          "text_padding_left": 8,
+          "text_padding_right": 8
         },
         "note": {
           "title": "Notiz",
           "x": 1170,
-          "w": 210
+          "w": 210,
+          "text_padding_left": 8,
+          "text_padding_right": 8
         }
       },
       "min_row_h": 42,

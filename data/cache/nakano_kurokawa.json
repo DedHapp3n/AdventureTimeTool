@@ -699,7 +699,7 @@
         "error": null
       },
       "G24": {
-        "value": "",
+        "value": "X",
         "formula": null,
         "references": [],
         "error": null
@@ -1310,6 +1310,12 @@
         "error": null
       },
       "M24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M26": {
         "value": "",
         "formula": null,
         "references": [],
