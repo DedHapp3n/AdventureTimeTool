@@ -5161,6 +5161,8 @@ class MainWindow(QMainWindow):
         self.show_main_section(section_id)
 
     def render_skills_table(self, parent, table_cfg, category, attribute_map):
+        frame_state = skills_section.apply_skills_table_frame_if_enabled(self, parent, table_cfg)
+        frame_active = bool(frame_state.get("active", False))
         table = QFrame(parent)
         table.setGeometry(
             self._safe_int(table_cfg.get("x", 20), 20),
@@ -5168,11 +5170,19 @@ class MainWindow(QMainWindow):
             self._safe_int(table_cfg.get("w", 1380), 1380),
             self._safe_int(table_cfg.get("h", 700), 700),
         )
-        table.setStyleSheet(
-            "background: rgba(5, 5, 5, 95);"
-            "border: 1px solid rgba(242, 210, 139, 70);"
-            "border-radius: 4px;"
-        )
+        if frame_active and bool(frame_state.get("remove_old_border_when_active", True)):
+            table_background = "transparent" if bool(frame_state.get("transparent_panel_background_when_active", True)) else "rgba(5, 5, 5, 95)"
+            table.setStyleSheet(
+                f"background: {table_background};"
+                "border: none;"
+                "border-radius: 0px;"
+            )
+        else:
+            table.setStyleSheet(
+                "background: rgba(5, 5, 5, 95);"
+                "border: 1px solid rgba(242, 210, 139, 70);"
+                "border-radius: 4px;"
+            )
         table.show()
 
         header_h = self._safe_int(table_cfg.get("header_h", 42), 42)
@@ -5184,6 +5194,9 @@ class MainWindow(QMainWindow):
         columns = table_cfg.get("columns", {})
         if not isinstance(columns, dict):
             columns = {}
+        row_fields_cfg = table_cfg.get("row_fields", {})
+        if not isinstance(row_fields_cfg, dict):
+            row_fields_cfg = {}
 
         header_bg = QFrame(table)
         header_bg.setGeometry(0, 0, table.width(), header_h)
@@ -5359,26 +5372,37 @@ class MainWindow(QMainWindow):
             slot_w = self._safe_int(attr_col.get("slot_w", 42), 42)
             slot_gap = self._safe_int(attr_col.get("slot_gap", 8), 8)
             attr_x = self._safe_int(attr_col.get("x", 370), 370)
+            attr_field_cfg = row_fields_cfg.get("attribute_slot", {}) if isinstance(row_fields_cfg.get("attribute_slot", {}), dict) else {}
+            slot_box_w = max(1, self._safe_int(attr_field_cfg.get("w", slot_w), slot_w))
+            slot_box_h = max(1, self._safe_int(attr_field_cfg.get("h", max(1, row_height - 10)), max(1, row_height - 10)))
             attribute_cells = source_info.get("attribute_cells", [])
             if not isinstance(attribute_cells, list):
                 attribute_cells = []
             for slot_index in range(4):
                 letter = str(slot_values[slot_index] or "")
                 slot_x = attr_x + slot_index * (slot_w + slot_gap)
-                slot_h = max(1, row_height - 10)
-                slot_y = y + 5
+                slot_h = slot_box_h
+                slot_y = y + int((row_height - slot_h) / 2)
+                slot_frame_x = slot_x + int((slot_w - slot_box_w) / 2)
+                slot_frame_active = skills_section.apply_skills_row_field_frame_if_enabled(
+                    self,
+                    table,
+                    row_fields_cfg,
+                    "attribute_slot",
+                    {"x": slot_frame_x, "y": slot_y, "w": slot_box_w, "h": slot_h},
+                )
                 slot = QPushButton(table)
                 slot.setGeometry(
-                    slot_x,
+                    slot_frame_x,
                     slot_y,
-                    slot_w,
+                    slot_box_w,
                     slot_h,
                 )
                 slot.setStyleSheet(
                     "QPushButton {"
-                    "background: rgba(0, 0, 0, 105);"
-                    "border: 1px solid rgba(255, 255, 255, 42);"
-                    "border-radius: 3px;"
+                    f"background: {'transparent' if slot_frame_active else 'rgba(0, 0, 0, 105)'};"
+                    f"border: {'none' if slot_frame_active else '1px solid rgba(255, 255, 255, 42)'};"
+                    f"border-radius: {'0px' if slot_frame_active else '3px'};"
                     f"color: {str(table_cfg.get('attribute_color', '#ffffff'))};"
                     f"font-size: {font_size}px;"
                     "font-weight: 700;"
@@ -5409,8 +5433,25 @@ class MainWindow(QMainWindow):
 
             value_x = self._safe_int(value_col.get("x", 600), 600)
             value_w = self._safe_int(value_col.get("w", 80), 80)
+            value_field_cfg = row_fields_cfg.get("value", {}) if isinstance(row_fields_cfg.get("value", {}), dict) else {}
+            value_box_w = max(1, self._safe_int(value_field_cfg.get("w", value_w), value_w))
+            value_box_h = max(1, self._safe_int(value_field_cfg.get("h", max(1, row_height - 10)), max(1, row_height - 10)))
+            value_box_x = value_x + int((value_w - value_box_w) / 2)
+            value_box_y = y + int((row_height - value_box_h) / 2)
+            value_frame_active = skills_section.apply_skills_row_field_frame_if_enabled(
+                self,
+                table,
+                row_fields_cfg,
+                "value",
+                {"x": value_box_x, "y": value_box_y, "w": value_box_w, "h": value_box_h},
+            )
             value_button = QPushButton(table)
-            value_button.setGeometry(value_x, y, value_w, row_height)
+            value_button.setGeometry(
+                value_box_x if value_frame_active else value_x,
+                value_box_y if value_frame_active else y,
+                value_box_w if value_frame_active else value_w,
+                value_box_h if value_frame_active else row_height,
+            )
             value_button.setText(display_value)
             value_button.setFlat(True)
             value_button.setCursor(Qt.PointingHandCursor)
@@ -5431,6 +5472,13 @@ class MainWindow(QMainWindow):
             )
             value_button.show()
             spec_text = str(display_specialization)
+            spec_frame_active = skills_section.apply_skills_row_field_frame_if_enabled(
+                self,
+                table,
+                row_fields_cfg,
+                "specialization",
+                {"x": spec_x, "y": y + 2, "w": spec_w, "h": max(24, row_height - 4)},
+            )
             if self.is_skill_specialization_editable(source_info):
                 spec_editor = InlineTextEdit(
                     on_commit=lambda new_text, old_text, sk=source_key: self.save_skill_text_cell_value(
@@ -5445,7 +5493,7 @@ class MainWindow(QMainWindow):
                 spec_editor.setStyleSheet(
                     "QTextEdit {"
                     "background: transparent;"
-                    "border: 1px solid rgba(242, 210, 139, 40);"
+                    f"border: {'none' if spec_frame_active else '1px solid rgba(242, 210, 139, 40)'};"
                     f"color: {str(table_cfg.get('specialization_color', '#ffffff'))};"
                     f"font-size: {font_size}px;"
                     "font-weight: 500;"
@@ -5470,6 +5518,13 @@ class MainWindow(QMainWindow):
                 )
                 spec_label.setToolTip(spec_text if spec_text else "")
             note_text = str(display_note)
+            note_frame_active = skills_section.apply_skills_row_field_frame_if_enabled(
+                self,
+                table,
+                row_fields_cfg,
+                "note",
+                {"x": note_x, "y": y + 2, "w": note_w, "h": max(24, row_height - 4)},
+            )
             if self.is_skill_note_editable(source_info):
                 note_editor = InlineTextEdit(
                     on_commit=lambda new_text, old_text, sk=source_key: self.save_skill_text_cell_value(
@@ -5485,7 +5540,7 @@ class MainWindow(QMainWindow):
                 note_editor.setStyleSheet(
                     "QTextEdit {"
                     "background: transparent;"
-                    "border: 1px solid rgba(216, 208, 176, 35);"
+                    f"border: {'none' if note_frame_active else '1px solid rgba(216, 208, 176, 35)'};"
                     f"color: {str(table_cfg.get('note_color', '#d8d0b0'))};"
                     f"font-size: {font_size}px;"
                     "font-weight: 400;"

@@ -1,7 +1,254 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem, QTextEdit
+from PySide6.QtGui import QPainter, QPixmap
+from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QWidget
 
 from app_logger import log_debug
+
+
+def _optional_theme_ui_pixmap(window, asset_rel_path):
+    asset_name = str(asset_rel_path or "").strip()
+    if not asset_name:
+        return None
+    try:
+        primary = window.theme_asset_base_path / asset_name
+        if primary.exists():
+            pixmap = QPixmap(str(primary))
+            if not pixmap.isNull():
+                return pixmap
+        fallback = window.assets_dir / "themes" / "diablo" / "ui" / asset_name
+        if fallback.exists():
+            pixmap = QPixmap(str(fallback))
+            if not pixmap.isNull():
+                return pixmap
+    except Exception:
+        return None
+    return None
+
+
+def _apply_source_crop(window, src, frame_cfg):
+    crop_cfg = frame_cfg.get("source_crop") if isinstance(frame_cfg, dict) else None
+    if not isinstance(crop_cfg, dict):
+        return src
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    x = max(0, min(window._safe_int(crop_cfg.get("x", 0), 0), src_w - 1))
+    y = max(0, min(window._safe_int(crop_cfg.get("y", 0), 0), src_h - 1))
+    w = max(1, min(window._safe_int(crop_cfg.get("w", src_w - x), src_w - x), src_w - x))
+    h = max(1, min(window._safe_int(crop_cfg.get("h", src_h - y), src_h - y), src_h - y))
+    cropped = src.copy(x, y, w, h)
+    return cropped if not cropped.isNull() else src
+
+
+def _frame_opacity(frame_cfg):
+    try:
+        opacity = float(frame_cfg.get("opacity", 1.0))
+    except Exception:
+        opacity = 1.0
+    return max(0.0, min(1.0, opacity))
+
+
+def _render_fit_pixmap(src, target_w, target_h, frame_cfg):
+    target_w = max(1, target_w)
+    target_h = max(1, target_h)
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    keep_aspect = bool(frame_cfg.get("keep_aspect", True))
+    fit_mode = str(frame_cfg.get("fit_mode", "contain") or "contain").strip().lower()
+    transform = Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation
+    aspect_mode = Qt.KeepAspectRatio if keep_aspect and fit_mode != "stretch" else Qt.IgnoreAspectRatio
+    scaled = src.scaled(target_w, target_h, aspect_mode, transform)
+
+    rendered = QPixmap(target_w, target_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    painter.setOpacity(_frame_opacity(frame_cfg))
+    dx = int((target_w - scaled.width()) / 2) if keep_aspect and fit_mode != "stretch" else 0
+    dy = int((target_h - scaled.height()) / 2) if keep_aspect and fit_mode != "stretch" else 0
+    painter.drawPixmap(dx, dy, scaled)
+    painter.end()
+    return rendered
+
+
+def _render_nine_slice_pixmap(window, src, target_w, target_h, frame_cfg):
+    slice_cfg = frame_cfg.get("slice", {}) if isinstance(frame_cfg.get("slice", {}), dict) else {}
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    left = max(0, min(window._safe_int(slice_cfg.get("left", 32), 32), src_w))
+    right = max(0, min(window._safe_int(slice_cfg.get("right", 32), 32), src_w - left))
+    top = max(0, min(window._safe_int(slice_cfg.get("top", 32), 32), src_h))
+    bottom = max(0, min(window._safe_int(slice_cfg.get("bottom", 32), 32), src_h - top))
+
+    target_w = max(1, target_w)
+    target_h = max(1, target_h)
+    if left + right > target_w:
+        overflow = left + right - target_w
+        shrink_left = min(left, overflow // 2)
+        left -= shrink_left
+        right = max(0, right - (overflow - shrink_left))
+    if top + bottom > target_h:
+        overflow = top + bottom - target_h
+        shrink_top = min(top, overflow // 2)
+        top -= shrink_top
+        bottom = max(0, bottom - (overflow - shrink_top))
+
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    try:
+        render_scale = float(frame_cfg.get("render_scale", 1.0))
+    except Exception:
+        render_scale = 1.0
+    render_scale = max(1.0, min(4.0, render_scale))
+    opacity = _frame_opacity(frame_cfg)
+
+    center_src_w = max(0, src_w - left - right)
+    center_src_h = max(0, src_h - top - bottom)
+    scaled_w = max(1, int(round(target_w * render_scale)))
+    scaled_h = max(1, int(round(target_h * render_scale)))
+    scaled_left = max(0, int(round(left * render_scale)))
+    scaled_right = max(0, int(round(right * render_scale)))
+    scaled_top = max(0, int(round(top * render_scale)))
+    scaled_bottom = max(0, int(round(bottom * render_scale)))
+    scaled_center_dst_w = max(0, scaled_w - scaled_left - scaled_right)
+    scaled_center_dst_h = max(0, scaled_h - scaled_top - scaled_bottom)
+
+    rendered = QPixmap(scaled_w, scaled_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if smooth_scaling:
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    painter.setOpacity(opacity)
+
+    def draw_slice(dx, dy, dw, dh, sx, sy, sw, sh):
+        if dw <= 0 or dh <= 0 or sw <= 0 or sh <= 0:
+            return
+        painter.drawPixmap(dx, dy, dw, dh, src, sx, sy, sw, sh)
+
+    draw_slice(0, 0, scaled_left, scaled_top, 0, 0, left, top)
+    draw_slice(scaled_w - scaled_right, 0, scaled_right, scaled_top, src_w - right, 0, right, top)
+    draw_slice(0, scaled_h - scaled_bottom, scaled_left, scaled_bottom, 0, src_h - bottom, left, bottom)
+    draw_slice(scaled_w - scaled_right, scaled_h - scaled_bottom, scaled_right, scaled_bottom, src_w - right, src_h - bottom, right, bottom)
+    draw_slice(scaled_left, 0, scaled_center_dst_w, scaled_top, left, 0, center_src_w, top)
+    draw_slice(scaled_left, scaled_h - scaled_bottom, scaled_center_dst_w, scaled_bottom, left, src_h - bottom, center_src_w, bottom)
+    draw_slice(0, scaled_top, scaled_left, scaled_center_dst_h, 0, top, left, center_src_h)
+    draw_slice(scaled_w - scaled_right, scaled_top, scaled_right, scaled_center_dst_h, src_w - right, top, right, center_src_h)
+    if bool(frame_cfg.get("draw_center", True)):
+        draw_slice(scaled_left, scaled_top, scaled_center_dst_w, scaled_center_dst_h, left, top, center_src_w, center_src_h)
+    painter.end()
+
+    if render_scale > 1.0:
+        rendered = rendered.scaled(
+            target_w,
+            target_h,
+            Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation,
+        )
+    return rendered
+
+
+def apply_skills_table_frame_if_enabled(window, parent, table_cfg):
+    frame_cfg = table_cfg.get("frame", {}) if isinstance(table_cfg, dict) else {}
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return {"active": False}
+    src = _optional_theme_ui_pixmap(window, frame_cfg.get("asset", ""))
+    if src is None:
+        return {"active": False}
+
+    x = window._safe_int(table_cfg.get("x", 20), 20)
+    y = window._safe_int(table_cfg.get("y", 80), 80)
+    w = max(1, window._safe_int(table_cfg.get("w", 1380), 1380))
+    h = max(1, window._safe_int(table_cfg.get("h", 700), 700))
+    bg = QLabel(parent)
+    bg.setGeometry(x, y, w, h)
+    bg.setPixmap(_render_nine_slice_pixmap(window, _apply_source_crop(window, src, frame_cfg), w, h, frame_cfg))
+    bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    bg.show()
+    return {
+        "active": True,
+        "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)),
+        "transparent_panel_background_when_active": bool(frame_cfg.get("transparent_panel_background_when_active", True)),
+        "fallback_border": bool(frame_cfg.get("fallback_border", True)),
+    }
+
+
+def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg):
+    field_cfg = row_fields_cfg.get(field_id, {}) if isinstance(row_fields_cfg, dict) else {}
+    frame_cfg = field_cfg.get("frame", {}) if isinstance(field_cfg, dict) else {}
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return False
+    src = _optional_theme_ui_pixmap(window, frame_cfg.get("asset", ""))
+    if src is None:
+        return False
+
+    rect_x = window._safe_int(rect_cfg.get("x", 0), 0)
+    rect_y = window._safe_int(rect_cfg.get("y", 0), 0)
+    rect_w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
+    rect_h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+    w = max(1, window._safe_int(field_cfg.get("w", frame_cfg.get("image_w", rect_w)), rect_w))
+    h = max(1, window._safe_int(field_cfg.get("h", frame_cfg.get("image_h", rect_h)), rect_h))
+    offset_x = window._safe_int(frame_cfg.get("image_offset_x", 0), 0)
+    offset_y = window._safe_int(frame_cfg.get("image_offset_y", 0), 0)
+    x = rect_x + int((rect_w - w) / 2) + offset_x
+    y = rect_y + int((rect_h - h) / 2) + offset_y
+    src = _apply_source_crop(window, src, frame_cfg)
+    render_mode = str(frame_cfg.get("render_mode", "") or "").strip().lower()
+    if not render_mode:
+        render_mode = "nine_slice" if field_id in ("specialization", "note") else "fit"
+    bg = QLabel(parent)
+    bg.setGeometry(x, y, w, h)
+    if render_mode == "nine_slice":
+        bg.setPixmap(_render_nine_slice_pixmap(window, src, w, h, frame_cfg))
+    else:
+        bg.setPixmap(_render_fit_pixmap(src, w, h, frame_cfg))
+    bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    bg.show()
+    return True
+
+
+def _create_asset_category_button(window, parent, cfg, title, is_active, callback):
+    button_cfg = cfg.get("button", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(button_cfg, dict) or not bool(button_cfg.get("enabled", False)):
+        return None
+
+    asset_key = "active_asset" if is_active else "inactive_asset"
+    asset = str(button_cfg.get(asset_key, button_cfg.get("asset", "")) or "").strip()
+    pixmap = _optional_theme_ui_pixmap(window, asset)
+    if pixmap is None:
+        return None
+
+    w = window._safe_int(cfg.get("button_w", 220), 220)
+    h = window._safe_int(cfg.get("button_h", 42), 42)
+    container = QWidget(parent)
+    container.setGeometry(0, 0, w, h)
+
+    bg_label = QLabel(container)
+    bg_label.setGeometry(0, 0, w, h)
+    bg_label.setPixmap(pixmap.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+    bg_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    bg_label.show()
+
+    font_size = window._safe_int(button_cfg.get("font_size", cfg.get("font_size", 20)), 20)
+    active_color = str(button_cfg.get("active_color", cfg.get("active_color", "#f2d28b")))
+    inactive_color = str(button_cfg.get("inactive_color", cfg.get("inactive_color", "#9a8560")))
+    color = active_color if is_active else inactive_color
+    border = "1px solid rgba(242, 210, 139, 170)" if is_active and bool(button_cfg.get("selected_border", True)) else "none"
+
+    click_button = QPushButton(container)
+    click_button.setGeometry(0, 0, w, h)
+    click_button.setText(title)
+    click_button.setCursor(Qt.PointingHandCursor)
+    click_button.setStyleSheet(
+        "QPushButton {"
+        "background: transparent;"
+        f"border: {border};"
+        f"color: {color};"
+        f"font-size: {font_size}px;"
+        "font-weight: 700;"
+        "padding: 0px;"
+        "}"
+        "QPushButton:hover { color: #ffffff; border: 1px solid rgba(242, 210, 139, 210); }"
+    )
+    click_button.clicked.connect(callback)
+    click_button.show()
+    container.show()
+    return container
 
 
 def render_skills_section(window):
@@ -72,7 +319,8 @@ def render_skills_section(window):
     button_w = window._safe_int(tabs_cfg.get("button_w", 220), 220)
     button_h = window._safe_int(tabs_cfg.get("button_h", 42), 42)
     button_gap = window._safe_int(tabs_cfg.get("gap", 18), 18)
-    tab_font_size = window._safe_int(tabs_cfg.get("font_size", 20), 20)
+    button_cfg = tabs_cfg.get("button", {}) if isinstance(tabs_cfg.get("button", {}), dict) else {}
+    tab_font_size = window._safe_int(button_cfg.get("font_size", tabs_cfg.get("font_size", 20)), 20)
     active_color = str(tabs_cfg.get("active_color", "#f2d28b"))
     inactive_color = str(tabs_cfg.get("inactive_color", "#9a8560"))
 
@@ -84,6 +332,18 @@ def render_skills_section(window):
             continue
         title = str(category.get("title", category_id))
         is_active = category_id == window.current_skill_category
+        callback = lambda checked=False, cid=category_id: window.on_skill_category_clicked(cid)
+        asset_button = _create_asset_category_button(
+            window,
+            tabs_container,
+            tabs_cfg,
+            title,
+            is_active,
+            callback,
+        )
+        if asset_button is not None:
+            asset_button.move(index * (button_w + button_gap), 0)
+            continue
         button = QPushButton(tabs_container)
         button.setGeometry(index * (button_w + button_gap), 0, button_w, button_h)
         button.setText(title)
@@ -103,9 +363,7 @@ def render_skills_section(window):
             "}"
             "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
         )
-        button.clicked.connect(
-            lambda checked=False, cid=category_id: window.on_skill_category_clicked(cid)
-        )
+        button.clicked.connect(callback)
         button.show()
 
     active_category = None

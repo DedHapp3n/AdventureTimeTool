@@ -14,7 +14,17 @@
       "gap": 18,
       "font_size": 20,
       "active_color": "#f2d28b",
-      "inactive_color": "#9a8560"
+      "inactive_color": "#9a8560",
+      "button": {
+        "enabled": true,
+        "asset": "buttons/menu_button_medium.png",
+        "active_asset": "buttons/menu_button_medium.png",
+        "inactive_asset": "buttons/menu_button_medium.png",
+        "font_size": 18,
+        "active_color": "#f2d28b",
+        "inactive_color": "#9a8560",
+        "selected_border": true
+      }
     },
     "table": {
       "x": 20,
@@ -35,6 +45,97 @@
       "value_color": "#7fd0ff",
       "specialization_color": "#ffffff",
       "note_color": "#d8d0b0",
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_skils_panel_frame.png",
+        "slice": {
+          "left": 64,
+          "top": 64,
+          "right": 64,
+          "bottom": 64
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0
+      },
+      "row_fields": {
+        "attribute_slot": {
+          "w": 34,
+          "h": 34,
+          "frame": {
+            "enabled": true,
+            "asset": "frames/122x122_box.png",
+            "render_mode": "fit",
+            "keep_aspect": true,
+            "fit_mode": "contain",
+            "image_w": 34,
+            "image_h": 34,
+            "image_offset_x": 0,
+            "image_offset_y": 0,
+            "source_crop": null,
+            "smooth_scaling": true,
+            "opacity": 1.0,
+            "fallback_border": true
+          }
+        },
+        "value": {
+          "w": 44,
+          "h": 28,
+          "frame": {
+            "enabled": true,
+            "asset": "frames/256x122_box.png",
+            "render_mode": "fit",
+            "keep_aspect": false,
+            "fit_mode": "stretch",
+            "image_offset_x": 0,
+            "image_offset_y": 0,
+            "source_crop": null,
+            "smooth_scaling": true,
+            "opacity": 1.0,
+            "fallback_border": true
+          }
+        },
+        "specialization": {
+          "frame": {
+            "enabled": true,
+            "asset": "frames/256x122_box.png",
+            "render_mode": "nine_slice",
+            "slice": {
+              "left": 32,
+              "top": 24,
+              "right": 32,
+              "bottom": 24
+            },
+            "draw_center": true,
+            "source_crop": null,
+            "smooth_scaling": true,
+            "opacity": 1.0,
+            "fallback_border": true
+          }
+        },
+        "note": {
+          "frame": {
+            "enabled": true,
+            "asset": "frames/256x122_box.png",
+            "render_mode": "nine_slice",
+            "slice": {
+              "left": 32,
+              "top": 24,
+              "right": 32,
+              "bottom": 24
+            },
+            "draw_center": true,
+            "source_crop": null,
+            "smooth_scaling": true,
+            "opacity": 1.0,
+            "fallback_border": true
+          }
+        }
+      },
       "columns": {
         "skill": {
           "title": "Fertigkeiten",

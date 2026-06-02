@@ -40,8 +40,15 @@ def _apply_character_panel_frame_if_enabled(window, panel, panel_cfg):
     top = max(0, min(window._safe_int(slice_cfg.get("top", 32), 32), src_h))
     bottom = max(0, min(window._safe_int(slice_cfg.get("bottom", 32), 32), src_h - top))
 
-    target_w = max(1, panel.width())
-    target_h = max(1, panel.height())
+    inset_cfg = frame_cfg.get("frame_inset", {}) if isinstance(frame_cfg.get("frame_inset", {}), dict) else {}
+    inset_left = window._safe_int(inset_cfg.get("left", 0), 0)
+    inset_top = window._safe_int(inset_cfg.get("top", 0), 0)
+    inset_right = window._safe_int(inset_cfg.get("right", 0), 0)
+    inset_bottom = window._safe_int(inset_cfg.get("bottom", 0), 0)
+    target_x = inset_left
+    target_y = inset_top
+    target_w = max(1, panel.width() - inset_left - inset_right)
+    target_h = max(1, panel.height() - inset_top - inset_bottom)
     smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
     try:
         render_scale = float(frame_cfg.get("render_scale", 1.0))
@@ -110,7 +117,7 @@ def _apply_character_panel_frame_if_enabled(window, panel, panel_cfg):
         )
 
     bg = QLabel(panel)
-    bg.setGeometry(0, 0, target_w, target_h)
+    bg.setGeometry(target_x, target_y, target_w, target_h)
     bg.setPixmap(rendered)
     bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
     bg.lower()
@@ -120,6 +127,7 @@ def _apply_character_panel_frame_if_enabled(window, panel, panel_cfg):
         "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)),
         "transparent_panel_background_when_active": bool(frame_cfg.get("transparent_panel_background_when_active", True)),
         "fallback_border": bool(frame_cfg.get("fallback_border", True)),
+        "content_margin": frame_cfg.get("content_margin", {}),
     }
 
 
@@ -133,8 +141,17 @@ def _apply_nine_slice_frame_for_rect(window, parent, rect_cfg, frame_cfg):
 
     x = window._safe_int(rect_cfg.get("x", 0), 0)
     y = window._safe_int(rect_cfg.get("y", 0), 0)
-    target_w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
-    target_h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+    rect_w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
+    rect_h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+    inset_cfg = frame_cfg.get("frame_inset", {}) if isinstance(frame_cfg.get("frame_inset", {}), dict) else {}
+    inset_left = window._safe_int(inset_cfg.get("left", 0), 0)
+    inset_top = window._safe_int(inset_cfg.get("top", 0), 0)
+    inset_right = window._safe_int(inset_cfg.get("right", 0), 0)
+    inset_bottom = window._safe_int(inset_cfg.get("bottom", 0), 0)
+    target_x = x + inset_left
+    target_y = y + inset_top
+    target_w = max(1, rect_w - inset_left - inset_right)
+    target_h = max(1, rect_h - inset_top - inset_bottom)
 
     slice_cfg = frame_cfg.get("slice", {}) if isinstance(frame_cfg.get("slice", {}), dict) else {}
     src_w = max(1, src.width())
@@ -211,7 +228,7 @@ def _apply_nine_slice_frame_for_rect(window, parent, rect_cfg, frame_cfg):
         )
 
     bg = QLabel(parent)
-    bg.setGeometry(x, y, target_w, target_h)
+    bg.setGeometry(target_x, target_y, target_w, target_h)
     bg.setPixmap(rendered)
     bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
     # Keep tiny frame above panel background frame; header label is created after and stays above this.
@@ -221,6 +238,7 @@ def _apply_nine_slice_frame_for_rect(window, parent, rect_cfg, frame_cfg):
         "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)),
         "transparent_background_when_active": bool(frame_cfg.get("transparent_background_when_active", True)),
         "fallback_border": bool(frame_cfg.get("fallback_border", True)),
+        "content_margin": frame_cfg.get("content_margin", {}),
     }
 
 
@@ -513,6 +531,10 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
     marker_box_gap = window._safe_int(marker_cfg.get("box_gap", marker_gap), marker_gap)
     marker_column_offset_x = window._safe_int(marker_cfg.get("column_offset_x", 0), 0)
     marker_grid_y = window._safe_int(marker_cfg.get("grid_y", row_y_start), row_y_start)
+    marker_grid_offset_y = window._safe_int(marker_cfg.get("grid_offset_y", 0), 0)
+    marker_row_label_offset_y = window._safe_int(marker_cfg.get("row_label_offset_y", 0), 0)
+    marker_row_label_x = window._safe_int(marker_cfg.get("row_label_x", padding), padding)
+    marker_row_label_w = window._safe_int(marker_cfg.get("row_label_w", max(10, label_w - 8)), max(10, label_w - 8))
     marker_center_under_header = bool(marker_cfg.get("grid_center_under_header", True))
 
     headers_cfg = panel_cfg.get("column_headers", {})
@@ -637,7 +659,7 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
                 active = str(value or "").strip().lower() == "x"
                 marker = QLabel(panel)
                 mx = marker_base_x + marker_idx * (marker_box_w + marker_box_gap)
-                my = marker_grid_y + row_idx * marker_row_gap + max(0, (row_h - marker_box_h) // 2)
+                my = marker_grid_y + marker_grid_offset_y + row_idx * marker_row_gap + max(0, (row_h - marker_box_h) // 2)
                 marker.setGeometry(mx, my, marker_box_w, marker_box_h)
                 marker.setAlignment(Qt.AlignCenter)
                 marker.setText("")
@@ -707,7 +729,12 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
         row_label = str(row_cfg.get("label", row_cfg.get("id", "")))
         window.create_panel_text(
             panel,
-            {"x": padding, "y": row_y_start + row_idx * row_h, "w": max(10, label_w - 8), "h": row_h},
+            {
+                "x": marker_row_label_x,
+                "y": marker_grid_y + marker_grid_offset_y + row_idx * marker_row_gap + marker_row_label_offset_y,
+                "w": max(10, marker_row_label_w),
+                "h": row_h,
+            },
             row_label,
             window._safe_int(panel_cfg.get("font_size", 14), 14),
             str(panel_cfg.get("label_color", default_color)),

@@ -389,16 +389,22 @@
         "enabled": true,
         "asset": "panels/shared_character_panel_frame.png",
         "slice": {
-          "left": 32,
-          "top": 32,
-          "right": 32,
-          "bottom": 32
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
         },
         "content_margin": {
           "left": 10,
           "top": 10,
           "right": 10,
           "bottom": 10
+        },
+        "frame_inset": {
+          "left": 0,
+          "top": 0,
+          "right": 0,
+          "bottom": 0
         },
         "draw_center": true,
         "fallback_border": true,
@@ -1103,6 +1109,8 @@
         "row_gap": 30,
         "box_gap": 3,
         "grid_y": 80,
+        "grid_offset_y": -8,
+        "row_label_offset_y": -8,
         "column_offset_x": 0,
         "grid_center_under_header": true
       },
@@ -1110,16 +1118,22 @@
         "enabled": true,
         "asset": "panels/shared_character_panel_frame.png",
         "slice": {
-          "left": 32,
-          "top": 32,
-          "right": 32,
-          "bottom": 32
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
         },
         "content_margin": {
           "left": 10,
           "top": 10,
           "right": 10,
           "bottom": 10
+        },
+        "frame_inset": {
+          "left": 0,
+          "top": 0,
+          "right": 0,
+          "bottom": 0
         },
         "draw_center": true,
         "fallback_border": true,
@@ -1264,16 +1278,22 @@
         "enabled": true,
         "asset": "panels/shared_character_panel_frame.png",
         "slice": {
-          "left": 32,
-          "top": 32,
-          "right": 32,
-          "bottom": 32
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
         },
         "content_margin": {
           "left": 10,
           "top": 10,
           "right": 10,
           "bottom": 10
+        },
+        "frame_inset": {
+          "left": 0,
+          "top": 0,
+          "right": 0,
+          "bottom": 0
         },
         "draw_center": true,
         "fallback_border": true,
