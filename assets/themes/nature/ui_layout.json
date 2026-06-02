@@ -88,6 +88,15 @@
       "h": 40
     },
     {
+      "id": "browser",
+      "text": "",
+      "shape": "d20",
+      "x": 744,
+      "y": 65,
+      "w": 50,
+      "h": 50
+    },
+    {
       "id": "equipment",
       "text": "Ausrüstung",
       "asset": "buttons/menu_button_small.png",
@@ -123,6 +132,13 @@
   },
   "notes_screen": {
     "layout_file": "notes_layout.json"
+  },
+  "browser_screen": {
+    "x": 20,
+    "y": 20,
+    "w": 1420,
+    "h": 820,
+    "default_url": "https://www.google.com"
   },
   "content_area": {
     "x": 32,

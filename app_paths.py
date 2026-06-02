@@ -18,6 +18,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "width": 1500,
         "height": 900,
     },
+    "browser": {
+        "last_url": "https://roll20.net/",
+    },
     "debug": DEFAULT_DEBUG_SETTINGS,
 }
 
@@ -82,6 +85,7 @@ def load_settings() -> tuple[dict[str, Any], bool]:
     created = False
     settings = dict(DEFAULT_SETTINGS)
     settings["window"] = dict(DEFAULT_SETTINGS["window"])
+    settings["browser"] = dict(DEFAULT_SETTINGS["browser"])
     settings["debug"] = {
         "enabled": DEFAULT_DEBUG_SETTINGS["enabled"],
         "categories": dict(DEFAULT_DEBUG_SETTINGS["categories"]),
@@ -122,6 +126,12 @@ def load_settings() -> tuple[dict[str, Any], bool]:
         except Exception:
             settings["window"]["height"] = DEFAULT_SETTINGS["window"]["height"]
 
+    browser_loaded = loaded.get("browser", {})
+    if isinstance(browser_loaded, dict):
+        last_url = str(browser_loaded.get("last_url", "") or "").strip()
+        if last_url:
+            settings["browser"]["last_url"] = last_url
+
     settings["debug"], debug_changed = normalize_debug_settings(loaded.get("debug"))
     changed = changed or debug_changed
     if changed:
@@ -142,6 +152,9 @@ def save_settings(settings: dict[str, Any]) -> None:
         "window": {
             "width": int(settings.get("window", {}).get("width", DEFAULT_SETTINGS["window"]["width"])),
             "height": int(settings.get("window", {}).get("height", DEFAULT_SETTINGS["window"]["height"])),
+        },
+        "browser": {
+            "last_url": str(settings.get("browser", {}).get("last_url", DEFAULT_SETTINGS["browser"]["last_url"]) or DEFAULT_SETTINGS["browser"]["last_url"]),
         },
     }
     payload["debug"], _changed = normalize_debug_settings(settings.get("debug"))

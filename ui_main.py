@@ -5,8 +5,12 @@ from PySide6.QtWidgets import (
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog, QGroupBox,
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
-from PySide6.QtCore import Qt, QEvent, QRect
-from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush
+from PySide6.QtCore import Qt, QEvent, QRect, QUrl, QPoint
+from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush, QPainter, QPolygon, QLinearGradient, QDesktopServices
+try:
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+except Exception:
+    QWebEngineView = None
 import re
 import os
 import json
@@ -254,6 +258,68 @@ class MainWindow(QMainWindow):
             if not pixmap.isNull():
                 return pixmap
         return None
+
+    def create_d20_nav_pixmap(self, width, height, active=False, hover=False):
+        pixmap = QPixmap(max(1, width), max(1, height))
+        pixmap.fill(Qt.transparent)
+
+        nav_style = self.theme_style.get("nav_button", {})
+        color_text = str(nav_style.get("active_color" if active else "inactive_color", "#f2d28b"))
+        if hover:
+            color_text = str(nav_style.get("hover_color", "#ffffff"))
+        edge_color = QColor(color_text)
+        shadow_color = QColor(str(nav_style.get("shadow_color", "#000000")))
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        pad = max(3, min(width, height) // 9)
+        cx = width // 2
+        top = pad
+        bottom = height - pad
+        left = pad
+        right = width - pad
+        mid_y = height // 2
+        upper_y = int(height * 0.32)
+        lower_y = int(height * 0.69)
+
+        outline = QPolygon([
+            QPoint(cx, top),
+            QPoint(right, upper_y),
+            QPoint(int(width * 0.82), lower_y),
+            QPoint(cx, bottom),
+            QPoint(int(width * 0.18), lower_y),
+            QPoint(left, upper_y),
+        ])
+        gradient = QLinearGradient(0, top, 0, bottom)
+        gradient.setColorAt(0.0, QColor(80, 68, 50, 235))
+        gradient.setColorAt(0.45, QColor(24, 22, 21, 235))
+        gradient.setColorAt(1.0, QColor(8, 7, 7, 245))
+
+        painter.setPen(QPen(shadow_color, 3))
+        painter.setBrush(gradient)
+        painter.drawPolygon(outline)
+        painter.setPen(QPen(edge_color, 2))
+        painter.drawPolygon(outline)
+
+        painter.setPen(QPen(QColor(edge_color.red(), edge_color.green(), edge_color.blue(), 150), 1))
+        painter.drawLine(cx, top, cx, bottom)
+        painter.drawLine(left, upper_y, right, upper_y)
+        painter.drawLine(left, upper_y, cx, bottom)
+        painter.drawLine(right, upper_y, cx, bottom)
+        painter.drawLine(int(width * 0.18), lower_y, int(width * 0.82), lower_y)
+        painter.drawLine(left, upper_y, cx, mid_y)
+        painter.drawLine(right, upper_y, cx, mid_y)
+
+        font = painter.font()
+        font.setBold(True)
+        font.setPixelSize(max(10, min(width, height) // 3))
+        painter.setFont(font)
+        painter.setPen(QPen(shadow_color, 2))
+        painter.drawText(QRect(1, 2, width, height), Qt.AlignCenter, "20")
+        painter.setPen(edge_color)
+        painter.drawText(QRect(0, 0, width, height), Qt.AlignCenter, "20")
+        painter.end()
+        return pixmap
 
     def load_main_ui_layout_config(self):
         layout_path = self.get_theme_layout_path()
@@ -522,6 +588,7 @@ class MainWindow(QMainWindow):
                     continue
                 nav_text = str(nav_item.get("text", ""))
                 nav_asset = str(nav_item.get("asset", "")).strip()
+                nav_shape = str(nav_item.get("shape", "")).strip().lower()
                 nav_x = int(nav_item.get("x", 0))
                 nav_y = int(nav_item.get("y", 0))
                 nav_w = int(nav_item.get("w", 120))
@@ -534,7 +601,9 @@ class MainWindow(QMainWindow):
                 bg_label.setStyleSheet("background: transparent;")
 
                 nav_asset_path = self.resolve_ui_asset_path(nav_asset) if nav_asset else None
-                if nav_asset_path is not None and nav_asset_path.exists():
+                if nav_shape == "d20":
+                    bg_label.setPixmap(self.create_d20_nav_pixmap(nav_w, nav_h))
+                elif nav_asset_path is not None and nav_asset_path.exists():
                     nav_pixmap = QPixmap(str(nav_asset_path))
                     if not nav_pixmap.isNull():
                         bg_label.setPixmap(
@@ -571,6 +640,7 @@ class MainWindow(QMainWindow):
                     "bg": bg_label,
                     "text": text_label,
                     "button": click_button,
+                    "shape": nav_shape,
                 }
 
         self.update_main_nav_button_styles()
@@ -672,25 +742,35 @@ class MainWindow(QMainWindow):
             child.deleteLater()
 
     def show_main_section(self, section_id):
+        is_browser_section = section_id in ("browser", "webbrowser")
+        if is_browser_section:
+            self.game_canvas.setUpdatesEnabled(False)
         self.current_main_section = section_id
-        self.update_main_nav_button_styles()
-        self.clear_content_layer()
-        if section_id == "settings":
-            self.render_settings_page()
-        elif section_id == "character":
-            self.render_character_screen()
-        elif section_id in ("skills", "fertigkeiten"):
-            self.render_skills_screen()
-        elif section_id == "inventory":
-            self.render_inventory_screen()
-        elif section_id in ("equipment", "ausruestung", "ausrüstung"):
-            self.render_equipment_screen()
-        elif section_id == "magic":
-            self.render_magic_screen()
-        elif section_id == "notes":
-            self.render_notes_screen()
-        self.window_close_button.raise_()
-        self.settings_button.raise_()
+        try:
+            self.update_main_nav_button_styles()
+            self.clear_content_layer()
+            if section_id == "settings":
+                self.render_settings_page()
+            elif section_id == "character":
+                self.render_character_screen()
+            elif section_id in ("skills", "fertigkeiten"):
+                self.render_skills_screen()
+            elif section_id == "inventory":
+                self.render_inventory_screen()
+            elif section_id in ("equipment", "ausruestung", "ausrüstung"):
+                self.render_equipment_screen()
+            elif section_id == "magic":
+                self.render_magic_screen()
+            elif section_id == "notes":
+                self.render_notes_screen()
+            elif is_browser_section:
+                self.render_browser_screen()
+            self.window_close_button.raise_()
+            self.settings_button.raise_()
+        finally:
+            if is_browser_section:
+                self.game_canvas.setUpdatesEnabled(True)
+                self.game_canvas.update()
 
     def create_asset_text_button(self, parent, cfg, default_text, callback):
         x = int(cfg.get("x", 0))
@@ -4570,6 +4650,114 @@ class MainWindow(QMainWindow):
             },
         )
 
+    def render_browser_screen(self):
+        if self.content_layer is None:
+            return
+
+        browser_cfg = self.main_ui_layout_config.get("browser_screen", {})
+        if not isinstance(browser_cfg, dict):
+            browser_cfg = {}
+        x = self._safe_int(browser_cfg.get("x", 20), 20)
+        y = self._safe_int(browser_cfg.get("y", 20), 20)
+        w = self._safe_int(browser_cfg.get("w", 1420), 1420)
+        h = self._safe_int(browser_cfg.get("h", 820), 820)
+        configured_url = str(browser_cfg.get("default_url", "https://roll20.net/") or "https://roll20.net/")
+        browser_settings = self.settings.setdefault("browser", {})
+        if not isinstance(browser_settings, dict):
+            browser_settings = {}
+            self.settings["browser"] = browser_settings
+        default_url = str(browser_settings.get("last_url", configured_url) or configured_url)
+
+        frame = QFrame(self.content_layer)
+        frame.setGeometry(x, y, w, h)
+        frame.setStyleSheet(
+            "QFrame { background: rgba(5, 5, 5, 125); "
+            "border: 1px solid rgba(242, 210, 139, 95); }"
+        )
+        frame.show()
+
+        toolbar = QWidget(frame)
+        toolbar.setGeometry(12, 10, max(1, w - 24), 42)
+        toolbar.setStyleSheet("background: transparent; border: none;")
+        toolbar.show()
+
+        url_edit = QLineEdit(toolbar)
+        url_edit.setGeometry(0, 0, max(1, toolbar.width() - 104), 36)
+        url_edit.setText(default_url)
+        url_edit.setStyleSheet(
+            "QLineEdit { background: rgba(0, 0, 0, 150); color: #ffffff; "
+            "border: 1px solid rgba(242, 210, 139, 120); padding: 5px 8px; font-size: 14px; }"
+        )
+        url_edit.show()
+
+        go_button = QPushButton(toolbar)
+        go_button.setGeometry(max(0, toolbar.width() - 94), 0, 94, 36)
+        go_button.setText("Laden")
+        go_button.setCursor(Qt.PointingHandCursor)
+        go_button.setStyleSheet(
+            "QPushButton { background: rgba(55, 24, 16, 180); color: #f2d28b; "
+            "border: 1px solid rgba(242, 210, 139, 130); font-weight: 700; } "
+            "QPushButton:hover { color: #ffffff; }"
+        )
+        go_button.show()
+
+        def normalize_url():
+            text = str(url_edit.text() or "").strip()
+            if not text:
+                text = default_url
+                url_edit.setText(text)
+            if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", text):
+                text = "https://" + text
+                url_edit.setText(text)
+            return QUrl(text)
+
+        def remember_url(url):
+            text = url.toString() if isinstance(url, QUrl) else str(url or "")
+            text = text.strip()
+            if not text:
+                return
+            browser_settings["last_url"] = text
+            try:
+                save_settings(self.settings)
+            except Exception as exc:
+                log_warning("browser", f"browser url save failed: {exc}")
+
+        if QWebEngineView is not None:
+            web_view = QWebEngineView(frame)
+            web_view.setGeometry(12, 62, max(1, w - 24), max(1, h - 74))
+            web_view.setUrl(QUrl(default_url))
+            web_view.show()
+
+            def load_url():
+                url = normalize_url()
+                remember_url(url)
+                web_view.setUrl(url)
+
+            go_button.clicked.connect(load_url)
+            url_edit.returnPressed.connect(load_url)
+            web_view.urlChanged.connect(lambda url: (url_edit.setText(url.toString()), remember_url(url)))
+        else:
+            fallback = QLabel(frame)
+            fallback.setGeometry(24, 90, max(1, w - 48), 120)
+            fallback.setWordWrap(True)
+            fallback.setText(
+                "QtWebEngine ist in dieser PySide6-Installation nicht verfuegbar. "
+                "Der Tab ist angelegt; der Button oeffnet die Adresse extern."
+            )
+            fallback.setAlignment(Qt.AlignCenter)
+            fallback.setStyleSheet(
+                "background: transparent; border: none; color: #e8e0c8; font-size: 18px;"
+            )
+            fallback.show()
+
+            def open_external_url():
+                url = normalize_url()
+                remember_url(url)
+                QDesktopServices.openUrl(url)
+
+            go_button.clicked.connect(open_external_url)
+            url_edit.returnPressed.connect(open_external_url)
+
     def render_magic_screen(self):
         if self.content_layer is None:
             return
@@ -6547,6 +6735,10 @@ class MainWindow(QMainWindow):
             text_label = nav["text"]
             click_button = nav["button"]
             if section_id == self.current_main_section:
+                if nav.get("shape") == "d20":
+                    nav["bg"].setPixmap(
+                        self.create_d20_nav_pixmap(container.width(), container.height(), active=True)
+                    )
                 text_label.setStyleSheet(
                     f"background: transparent; color: {active_color}; font-weight: 700;"
                 )
@@ -6555,6 +6747,10 @@ class MainWindow(QMainWindow):
                     "QPushButton { border: none; background: transparent; padding: 0px; }"
                 )
             else:
+                if nav.get("shape") == "d20":
+                    nav["bg"].setPixmap(
+                        self.create_d20_nav_pixmap(container.width(), container.height(), active=False)
+                    )
                 text_label.setStyleSheet(
                     f"background: transparent; color: {inactive_color}; font-weight: 400;"
                 )
@@ -6577,11 +6773,28 @@ class MainWindow(QMainWindow):
                 hover_color = str(nav_style.get("hover_color", "#ffffff"))
                 inactive_color = str(nav_style.get("inactive_color", "#9a8560"))
                 text_label = self.nav_buttons[section_id]["text"]
+                nav = self.nav_buttons[section_id]
                 if event.type() == QEvent.Enter and section_id != self.current_main_section:
+                    if nav.get("shape") == "d20":
+                        nav["bg"].setPixmap(
+                            self.create_d20_nav_pixmap(
+                                nav["container"].width(),
+                                nav["container"].height(),
+                                hover=True,
+                            )
+                        )
                     text_label.setStyleSheet(
                         f"background: transparent; color: {hover_color}; font-weight: 400;"
                     )
                 elif event.type() == QEvent.Leave and section_id != self.current_main_section:
+                    if nav.get("shape") == "d20":
+                        nav["bg"].setPixmap(
+                            self.create_d20_nav_pixmap(
+                                nav["container"].width(),
+                                nav["container"].height(),
+                                active=False,
+                            )
+                        )
                     text_label.setStyleSheet(
                         f"background: transparent; color: {inactive_color}; font-weight: 400;"
                     )
