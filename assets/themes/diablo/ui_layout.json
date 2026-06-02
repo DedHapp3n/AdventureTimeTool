@@ -386,7 +386,7 @@
         }
       ],
       "frame": {
-        "enabled": false,
+        "enabled": true,
         "asset": "panels/shared_character_panel_frame.png",
         "slice": {
           "left": 32,
@@ -1093,7 +1093,7 @@
         "box_h": 25,
         "asset_w": 25,
         "asset_h": 25,
-        "true_asset_scale": 1.0,
+        "true_asset_scale": 0.75,
         "false_asset_scale": 1.0,
         "true_asset_offset_x": 0,
         "true_asset_offset_y": 0,
@@ -1261,7 +1261,7 @@
         "h": 28
       },
       "frame": {
-        "enabled": false,
+        "enabled": true,
         "asset": "panels/shared_character_panel_frame.png",
         "slice": {
           "left": 32,
