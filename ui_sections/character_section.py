@@ -488,14 +488,42 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
     marker_use_icon = bool(marker_cfg.get("use_icon", True))
     marker_active_asset = str(marker_cfg.get("active_asset", "icons/x.jpg") or "").strip()
     marker_fallback_text = str(marker_cfg.get("fallback_text", "X"))
+    marker_inactive_asset = str(marker_cfg.get("inactive_asset", "icons/checkmark_false.png") or "").strip()
     marker_icon_padding = max(0, window._safe_int(marker_cfg.get("icon_padding", 4), 4))
+    marker_box_w = max(1, window._safe_int(marker_cfg.get("box_w", marker_w), marker_w))
+    marker_box_h = max(1, window._safe_int(marker_cfg.get("box_h", marker_h), marker_h))
+    marker_asset_w = max(1, window._safe_int(marker_cfg.get("asset_w", marker_box_w), marker_box_w))
+    marker_asset_h = max(1, window._safe_int(marker_cfg.get("asset_h", marker_box_h), marker_box_h))
+    try:
+        marker_true_asset_scale = float(marker_cfg.get("true_asset_scale", 1.0) or 1.0)
+    except Exception:
+        marker_true_asset_scale = 1.0
+    try:
+        marker_false_asset_scale = float(marker_cfg.get("false_asset_scale", 1.0) or 1.0)
+    except Exception:
+        marker_false_asset_scale = 1.0
+    marker_true_asset_scale = max(0.1, min(3.0, marker_true_asset_scale))
+    marker_false_asset_scale = max(0.1, min(3.0, marker_false_asset_scale))
+    marker_true_offset_x = window._safe_int(marker_cfg.get("true_asset_offset_x", 0), 0)
+    marker_true_offset_y = window._safe_int(marker_cfg.get("true_asset_offset_y", 0), 0)
+    marker_false_offset_x = window._safe_int(marker_cfg.get("false_asset_offset_x", 0), 0)
+    marker_false_offset_y = window._safe_int(marker_cfg.get("false_asset_offset_y", 0), 0)
+    marker_draw_inactive_under_active = bool(marker_cfg.get("draw_inactive_under_active", True))
+    marker_row_gap = window._safe_int(marker_cfg.get("row_gap", row_h), row_h)
+    marker_box_gap = window._safe_int(marker_cfg.get("box_gap", marker_gap), marker_gap)
+    marker_column_offset_x = window._safe_int(marker_cfg.get("column_offset_x", 0), 0)
+    marker_grid_y = window._safe_int(marker_cfg.get("grid_y", row_y_start), row_y_start)
+    marker_center_under_header = bool(marker_cfg.get("grid_center_under_header", True))
 
     headers_cfg = panel_cfg.get("column_headers", {})
     headers_enabled = isinstance(headers_cfg, dict) and bool(headers_cfg.get("enabled", False))
     use_data_text = not isinstance(headers_cfg, dict) or bool(headers_cfg.get("use_data_text", True))
     raw_header_items = headers_cfg.get("items", {})
     header_items_cfg = raw_header_items if isinstance(raw_header_items, dict) else {}
-    header_frame_cfg = headers_cfg.get("frame", {}) if isinstance(headers_cfg.get("frame", {}), dict) else {}
+    header_button_cfg = headers_cfg.get("button", {}) if isinstance(headers_cfg.get("button", {}), dict) else {}
+    header_button_enabled = bool(header_button_cfg.get("enabled", False))
+    header_button_asset = str(header_button_cfg.get("asset", "buttons/menu_button_small.png") or "").strip()
+    header_button_pixmap = window.load_ui_pixmap(header_button_asset) if header_button_enabled and header_button_asset else None
     header_items = []
     if headers_enabled:
         if isinstance(raw_header_items, list):
@@ -516,6 +544,7 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
         name_cell = str(col_info.get("name_cell", ""))
         name_text = str(col_info.get("name", ""))
         item_cfg = header_items[idx] if idx < len(header_items) and isinstance(header_items[idx], dict) else None
+        header_rect = {"x": col_x, "y": header_y, "w": col_w, "h": name_h}
         if headers_enabled:
             if not isinstance(item_cfg, dict) or not bool(item_cfg.get("enabled", False)):
                 name_label = None
@@ -534,20 +563,35 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
                     "w": window._safe_int(item_cfg.get("w", col_w), col_w),
                     "h": window._safe_int(item_cfg.get("h", name_h), name_h),
                 }
-                mini_frame_state = _apply_nine_slice_frame_for_rect(window, panel, header_rect, header_frame_cfg)
-                frame_active = bool(mini_frame_state.get("active", False))
-                if frame_active and bool(mini_frame_state.get("remove_old_border_when_active", True)):
-                    base_bg = "transparent" if bool(mini_frame_state.get("transparent_background_when_active", True)) else "rgba(0,0,0,35)"
+                text_color = str(item_cfg.get("color", header_button_cfg.get("color", panel_cfg.get("text_color", "#ffffff"))))
+                text_font_size = window._safe_int(
+                    item_cfg.get("font_size", header_button_cfg.get("font_size", panel_cfg.get("font_size", 14))),
+                    14,
+                )
+                button_active = header_button_enabled and header_button_pixmap is not None and not header_button_pixmap.isNull()
+                if button_active:
+                    bg = QLabel(panel)
+                    bg.setGeometry(header_rect["x"], header_rect["y"], header_rect["w"], header_rect["h"])
+                    bg.setPixmap(
+                        header_button_pixmap.scaled(
+                            max(1, header_rect["w"]),
+                            max(1, header_rect["h"]),
+                            Qt.IgnoreAspectRatio,
+                            Qt.SmoothTransformation,
+                        )
+                    )
+                    bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+                    bg.show()
                     name_label = QLabel(panel)
                     name_label.setGeometry(header_rect["x"], header_rect["y"], header_rect["w"], header_rect["h"])
                     name_label.setText(visible_text)
                     name_label.setAlignment(Qt.AlignCenter)
                     name_label.setStyleSheet(
                         "QLabel {"
-                        f"background: {base_bg};"
+                        "background: transparent;"
                         "border: none;"
-                        f"color: {str(item_cfg.get('color', panel_cfg.get('text_color', '#ffffff')))};"
-                        f"font-size: {window._safe_int(item_cfg.get('font_size', panel_cfg.get('font_size', 14)), 14)}px;"
+                        f"color: {text_color};"
+                        f"font-size: {text_font_size}px;"
                         "font-weight: 700;"
                         "}"
                     )
@@ -561,8 +605,8 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
                         "QLabel {"
                         "background: rgba(0,0,0,35);"
                         "border: 1px solid rgba(232, 224, 200, 70);"
-                        f"color: {str(item_cfg.get('color', panel_cfg.get('text_color', '#ffffff')))};"
-                        f"font-size: {window._safe_int(item_cfg.get('font_size', panel_cfg.get('font_size', 14)), 14)}px;"
+                        f"color: {text_color};"
+                        f"font-size: {text_font_size}px;"
                         "font-weight: 700;"
                         "}"
                     )
@@ -582,38 +626,68 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
             cells = col_info.get(f"{row_id}_cells", [])
             if not isinstance(cells, list):
                 cells = []
-            marker_base_x = col_x + 2
+            marker_group_w = max(1, len(cells) * marker_box_w + max(0, len(cells) - 1) * marker_box_gap)
+            if marker_center_under_header:
+                header_center_x = header_rect["x"] + (header_rect["w"] // 2)
+                marker_base_x = header_center_x - (marker_group_w // 2) + marker_column_offset_x
+            else:
+                marker_base_x = col_x + 2 + marker_column_offset_x
             for marker_idx, cell_ref in enumerate(cells):
                 value = window.get_cache_display_value(str(analysis.get("sheet", "Charakterbogen")), cell_ref, "")
                 active = str(value or "").strip().lower() == "x"
                 marker = QLabel(panel)
-                mx = marker_base_x + marker_idx * (marker_w + marker_gap)
-                my = row_y_start + row_idx * row_h + max(0, (row_h - marker_h) // 2)
-                marker.setGeometry(mx, my, marker_w, marker_h)
+                mx = marker_base_x + marker_idx * (marker_box_w + marker_box_gap)
+                my = marker_grid_y + row_idx * marker_row_gap + max(0, (row_h - marker_box_h) // 2)
+                marker.setGeometry(mx, my, marker_box_w, marker_box_h)
                 marker.setAlignment(Qt.AlignCenter)
                 marker.setText("")
-                if active:
-                    icon_set = False
-                    if marker_use_icon and marker_active_asset:
-                        pixmap = window.load_ui_pixmap(marker_active_asset)
-                        if pixmap is not None and not pixmap.isNull():
-                            target_w = max(1, marker_w - marker_icon_padding * 2)
-                            target_h = max(1, marker_h - marker_icon_padding * 2)
-                            marker.setPixmap(
-                                pixmap.scaled(
-                                    target_w,
-                                    target_h,
-                                    Qt.KeepAspectRatio,
-                                    Qt.SmoothTransformation,
-                                )
-                            )
-                            icon_set = True
-                    if not icon_set:
-                        marker.setText(marker_fallback_text)
+                icon_set = False
+                false_pixmap = None
+                active_pixmap = None
+
+                if marker_use_icon and marker_inactive_asset:
+                    src_false = window.load_ui_pixmap(marker_inactive_asset)
+                    if src_false is not None and not src_false.isNull():
+                        false_w = max(1, int(round(marker_asset_w * marker_false_asset_scale)) - marker_icon_padding * 2)
+                        false_h = max(1, int(round(marker_asset_h * marker_false_asset_scale)) - marker_icon_padding * 2)
+                        false_pixmap = src_false.scaled(false_w, false_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+                if marker_use_icon and active and marker_active_asset:
+                    src_true = window.load_ui_pixmap(marker_active_asset)
+                    if src_true is not None and not src_true.isNull():
+                        true_w = max(1, int(round(marker_asset_w * marker_true_asset_scale)) - marker_icon_padding * 2)
+                        true_h = max(1, int(round(marker_asset_h * marker_true_asset_scale)) - marker_icon_padding * 2)
+                        active_pixmap = src_true.scaled(true_w, true_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+                if active and marker_draw_inactive_under_active and false_pixmap is not None:
+                    composed = QPixmap(max(1, marker_box_w), max(1, marker_box_h))
+                    composed.fill(Qt.transparent)
+                    painter = QPainter(composed)
+                    fx = ((marker_box_w - false_pixmap.width()) // 2) + marker_false_offset_x
+                    fy = ((marker_box_h - false_pixmap.height()) // 2) + marker_false_offset_y
+                    painter.drawPixmap(fx, fy, false_pixmap)
+                    if active_pixmap is not None:
+                        tx = ((marker_box_w - active_pixmap.width()) // 2) + marker_true_offset_x
+                        ty = ((marker_box_h - active_pixmap.height()) // 2) + marker_true_offset_y
+                        painter.drawPixmap(tx, ty, active_pixmap)
+                    painter.end()
+                    marker.setPixmap(composed)
+                    icon_set = True
+                elif active and active_pixmap is not None:
+                    marker.setPixmap(active_pixmap)
+                    icon_set = True
+                elif (not active) and false_pixmap is not None:
+                    marker.setPixmap(false_pixmap)
+                    icon_set = True
+
+                if active and not icon_set:
+                    marker.setText(marker_fallback_text)
+                marker_bg = "transparent" if icon_set else "rgba(0,0,0,80)"
+                marker_border = "none" if icon_set else "1px solid rgba(232, 224, 200, 70)"
                 marker.setStyleSheet(
                     "QLabel {"
-                    "background: rgba(0,0,0,80);"
-                    "border: 1px solid rgba(232, 224, 200, 70);"
+                    f"background: {marker_bg};"
+                    f"border: {marker_border};"
                     f"color: {str(panel_cfg.get('value_color', '#7fd0ff'))};"
                     "font-weight: 700;"
                     "}"

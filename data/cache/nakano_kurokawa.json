@@ -705,7 +705,7 @@
         "error": null
       },
       "K24": {
-        "value": "X",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -1298,6 +1298,18 @@
         "error": null
       },
       "F25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "L24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M24": {
         "value": "",
         "formula": null,
         "references": [],

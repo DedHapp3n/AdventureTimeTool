@@ -1085,10 +1085,26 @@
       ],
       "marker": {
         "active_asset": "icons/x.jpg",
-        "inactive_asset": null,
+        "inactive_asset": "icons/checkmark_false.png",
         "use_icon": true,
         "fallback_text": "X",
-        "icon_padding": 4
+        "icon_padding": 0,
+        "box_w": 25,
+        "box_h": 25,
+        "asset_w": 25,
+        "asset_h": 25,
+        "true_asset_scale": 1.0,
+        "false_asset_scale": 1.0,
+        "true_asset_offset_x": 0,
+        "true_asset_offset_y": 0,
+        "false_asset_offset_x": 0,
+        "false_asset_offset_y": 0,
+        "draw_inactive_under_active": true,
+        "row_gap": 30,
+        "box_gap": 3,
+        "grid_y": 80,
+        "column_offset_x": 0,
+        "grid_center_under_header": true
       },
       "frame": {
         "enabled": false,
@@ -1115,21 +1131,11 @@
       },
       "column_headers": {
         "enabled": true,
-        "frame": {
+        "button": {
           "enabled": true,
-          "asset": "frames/tini_frame.png",
-          "slice": {
-            "left": 24,
-            "top": 24,
-            "right": 24,
-            "bottom": 24
-          },
-          "draw_center": true,
-          "remove_old_border_when_active": true,
-          "transparent_background_when_active": true,
-          "smooth_scaling": true,
-          "render_scale": 1.0,
-          "opacity": 1.0,
+          "asset": "buttons/menu_button_small.png",
+          "font_size": 13,
+          "color": "#ffffff",
           "fallback_border": true
         },
         "items": {
