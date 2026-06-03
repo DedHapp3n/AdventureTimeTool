@@ -19,7 +19,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "height": 900,
     },
     "browser": {
-        "last_url": "https://roll20.net/",
+        "last_url": "",
+        "debug": {
+            "enabled": False,
+            "console_messages": False,
+        },
     },
     "debug": DEFAULT_DEBUG_SETTINGS,
 }
@@ -78,6 +82,31 @@ def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def normalize_browser_settings(value: Any) -> tuple[dict[str, Any], bool]:
+    changed = False
+    browser = dict(value) if isinstance(value, dict) else {}
+    if not isinstance(value, dict):
+        changed = True
+
+    last_url = browser.get("last_url", DEFAULT_SETTINGS["browser"]["last_url"])
+    normalized_last_url = str(last_url or "")
+    if browser.get("last_url") != normalized_last_url:
+        changed = True
+    browser["last_url"] = normalized_last_url
+
+    debug_loaded = browser.get("debug", {})
+    debug = dict(debug_loaded) if isinstance(debug_loaded, dict) else {}
+    if not isinstance(debug_loaded, dict):
+        changed = True
+    for key, default_value in DEFAULT_SETTINGS["browser"]["debug"].items():
+        normalized_value = bool(debug.get(key, default_value))
+        if debug.get(key) != normalized_value:
+            changed = True
+        debug[key] = normalized_value
+    browser["debug"] = debug
+    return browser, changed
+
+
 def load_settings() -> tuple[dict[str, Any], bool]:
     settings_file = data_path("settings.json")
     loaded = _safe_json_load(settings_file)
@@ -85,7 +114,10 @@ def load_settings() -> tuple[dict[str, Any], bool]:
     created = False
     settings = dict(DEFAULT_SETTINGS)
     settings["window"] = dict(DEFAULT_SETTINGS["window"])
-    settings["browser"] = dict(DEFAULT_SETTINGS["browser"])
+    settings["browser"] = {
+        "last_url": DEFAULT_SETTINGS["browser"]["last_url"],
+        "debug": dict(DEFAULT_SETTINGS["browser"]["debug"]),
+    }
     settings["debug"] = {
         "enabled": DEFAULT_DEBUG_SETTINGS["enabled"],
         "categories": dict(DEFAULT_DEBUG_SETTINGS["categories"]),
@@ -126,11 +158,8 @@ def load_settings() -> tuple[dict[str, Any], bool]:
         except Exception:
             settings["window"]["height"] = DEFAULT_SETTINGS["window"]["height"]
 
-    browser_loaded = loaded.get("browser", {})
-    if isinstance(browser_loaded, dict):
-        last_url = str(browser_loaded.get("last_url", "") or "").strip()
-        if last_url:
-            settings["browser"]["last_url"] = last_url
+    settings["browser"], browser_changed = normalize_browser_settings(loaded.get("browser"))
+    changed = changed or browser_changed
 
     settings["debug"], debug_changed = normalize_debug_settings(loaded.get("debug"))
     changed = changed or debug_changed
@@ -153,10 +182,8 @@ def save_settings(settings: dict[str, Any]) -> None:
             "width": int(settings.get("window", {}).get("width", DEFAULT_SETTINGS["window"]["width"])),
             "height": int(settings.get("window", {}).get("height", DEFAULT_SETTINGS["window"]["height"])),
         },
-        "browser": {
-            "last_url": str(settings.get("browser", {}).get("last_url", DEFAULT_SETTINGS["browser"]["last_url"]) or DEFAULT_SETTINGS["browser"]["last_url"]),
-        },
     }
+    payload["browser"], _browser_changed = normalize_browser_settings(settings.get("browser"))
     payload["debug"], _changed = normalize_debug_settings(settings.get("debug"))
     _write_json_atomic(data_path("settings.json"), payload)
 

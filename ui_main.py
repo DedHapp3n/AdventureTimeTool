@@ -5,12 +5,8 @@ from PySide6.QtWidgets import (
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog, QGroupBox,
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
-from PySide6.QtCore import Qt, QEvent, QRect, QUrl, QPoint
-from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush, QPainter, QPolygon, QLinearGradient, QDesktopServices
-try:
-    from PySide6.QtWebEngineWidgets import QWebEngineView
-except Exception:
-    QWebEngineView = None
+from PySide6.QtCore import Qt, QEvent, QRect, QPoint
+from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush, QPainter, QPolygon, QLinearGradient
 import re
 import os
 import json
@@ -40,6 +36,7 @@ from ui_sections.notes_section import notes_debug_enabled, render_notes_section
 from ui_sections import settings_section
 from ui_sections import skills_section
 from ui_sections import character_section
+from ui_sections import browser_section
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -174,6 +171,11 @@ class MainWindow(QMainWindow):
         self.magic_layout_config = {}
         self._magic_table_bindings = {}
         self._magic_rendering = False
+        self._browser_container = None
+        self._browser_web_view = None
+        self._browser_url_edit = None
+        self._browser_initialized = False
+        self._browser_last_url = ""
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -418,6 +420,7 @@ class MainWindow(QMainWindow):
         self.nav_buttons = {}
         self.content_layer = None
 
+        self.reset_browser_runtime_state(destroy_webview=True)
         for child in self.game_canvas.findChildren(QWidget):
             child.deleteLater()
 
@@ -737,40 +740,35 @@ class MainWindow(QMainWindow):
     def clear_content_layer(self):
         if self.content_layer is None:
             return
-        for child in self.content_layer.findChildren(QWidget):
+        for child in self.content_layer.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
+            if child is getattr(self, "_browser_container", None):
+                child.hide()
+                continue
             child.setParent(None)
             child.deleteLater()
 
     def show_main_section(self, section_id):
-        is_browser_section = section_id in ("browser", "webbrowser")
-        if is_browser_section:
-            self.game_canvas.setUpdatesEnabled(False)
         self.current_main_section = section_id
-        try:
-            self.update_main_nav_button_styles()
-            self.clear_content_layer()
-            if section_id == "settings":
-                self.render_settings_page()
-            elif section_id == "character":
-                self.render_character_screen()
-            elif section_id in ("skills", "fertigkeiten"):
-                self.render_skills_screen()
-            elif section_id == "inventory":
-                self.render_inventory_screen()
-            elif section_id in ("equipment", "ausruestung", "ausrüstung"):
-                self.render_equipment_screen()
-            elif section_id == "magic":
-                self.render_magic_screen()
-            elif section_id == "notes":
-                self.render_notes_screen()
-            elif is_browser_section:
-                self.render_browser_screen()
-            self.window_close_button.raise_()
-            self.settings_button.raise_()
-        finally:
-            if is_browser_section:
-                self.game_canvas.setUpdatesEnabled(True)
-                self.game_canvas.update()
+        self.update_main_nav_button_styles()
+        self.clear_content_layer()
+        if section_id == "settings":
+            self.render_settings_page()
+        elif section_id == "character":
+            self.render_character_screen()
+        elif section_id in ("skills", "fertigkeiten"):
+            self.render_skills_screen()
+        elif section_id == "inventory":
+            self.render_inventory_screen()
+        elif section_id in ("equipment", "ausruestung", "ausrüstung"):
+            self.render_equipment_screen()
+        elif section_id == "magic":
+            self.render_magic_screen()
+        elif section_id == "notes":
+            self.render_notes_screen()
+        elif section_id in ("browser", "webbrowser"):
+            self.render_browser_screen()
+        self.window_close_button.raise_()
+        self.settings_button.raise_()
 
     def create_asset_text_button(self, parent, cfg, default_text, callback):
         x = int(cfg.get("x", 0))
@@ -4651,112 +4649,47 @@ class MainWindow(QMainWindow):
         )
 
     def render_browser_screen(self):
-        if self.content_layer is None:
-            return
+        return browser_section.render_browser_section(self)
 
-        browser_cfg = self.main_ui_layout_config.get("browser_screen", {})
-        if not isinstance(browser_cfg, dict):
-            browser_cfg = {}
-        x = self._safe_int(browser_cfg.get("x", 20), 20)
-        y = self._safe_int(browser_cfg.get("y", 20), 20)
-        w = self._safe_int(browser_cfg.get("w", 1420), 1420)
-        h = self._safe_int(browser_cfg.get("h", 820), 820)
-        configured_url = str(browser_cfg.get("default_url", "https://roll20.net/") or "https://roll20.net/")
-        browser_settings = self.settings.setdefault("browser", {})
-        if not isinstance(browser_settings, dict):
-            browser_settings = {}
-            self.settings["browser"] = browser_settings
-        default_url = str(browser_settings.get("last_url", configured_url) or configured_url)
-
-        frame = QFrame(self.content_layer)
-        frame.setGeometry(x, y, w, h)
-        frame.setStyleSheet(
-            "QFrame { background: rgba(5, 5, 5, 125); "
-            "border: 1px solid rgba(242, 210, 139, 95); }"
-        )
-        frame.show()
-
-        toolbar = QWidget(frame)
-        toolbar.setGeometry(12, 10, max(1, w - 24), 42)
-        toolbar.setStyleSheet("background: transparent; border: none;")
-        toolbar.show()
-
-        url_edit = QLineEdit(toolbar)
-        url_edit.setGeometry(0, 0, max(1, toolbar.width() - 104), 36)
-        url_edit.setText(default_url)
-        url_edit.setStyleSheet(
-            "QLineEdit { background: rgba(0, 0, 0, 150); color: #ffffff; "
-            "border: 1px solid rgba(242, 210, 139, 120); padding: 5px 8px; font-size: 14px; }"
-        )
-        url_edit.show()
-
-        go_button = QPushButton(toolbar)
-        go_button.setGeometry(max(0, toolbar.width() - 94), 0, 94, 36)
-        go_button.setText("Laden")
-        go_button.setCursor(Qt.PointingHandCursor)
-        go_button.setStyleSheet(
-            "QPushButton { background: rgba(55, 24, 16, 180); color: #f2d28b; "
-            "border: 1px solid rgba(242, 210, 139, 130); font-weight: 700; } "
-            "QPushButton:hover { color: #ffffff; }"
-        )
-        go_button.show()
-
-        def normalize_url():
-            text = str(url_edit.text() or "").strip()
-            if not text:
-                text = default_url
-                url_edit.setText(text)
-            if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", text):
-                text = "https://" + text
-                url_edit.setText(text)
-            return QUrl(text)
-
-        def remember_url(url):
-            text = url.toString() if isinstance(url, QUrl) else str(url or "")
-            text = text.strip()
-            if not text:
-                return
-            browser_settings["last_url"] = text
+    def reset_browser_runtime_state(self, destroy_webview=True):
+        for attr in (
+            "_browser_url_edit",
+            "_browser_web_view",
+            "_browser_fallback_label",
+            "_browser_container",
+        ):
+            widget = getattr(self, attr, None)
+            if widget is None:
+                continue
             try:
-                save_settings(self.settings)
-            except Exception as exc:
-                log_warning("browser", f"browser url save failed: {exc}")
+                if hasattr(widget, "url"):
+                    current_url = widget.url()
+                    if current_url is not None:
+                        self._browser_last_url = current_url.toString()
+            except RuntimeError:
+                pass
+            except Exception:
+                pass
+            if destroy_webview:
+                try:
+                    widget.hide()
+                except RuntimeError:
+                    pass
+                except Exception:
+                    pass
+                try:
+                    widget.setParent(None)
+                    widget.deleteLater()
+                except RuntimeError:
+                    pass
+                except Exception:
+                    pass
 
-        if QWebEngineView is not None:
-            web_view = QWebEngineView(frame)
-            web_view.setGeometry(12, 62, max(1, w - 24), max(1, h - 74))
-            web_view.setUrl(QUrl(default_url))
-            web_view.show()
-
-            def load_url():
-                url = normalize_url()
-                remember_url(url)
-                web_view.setUrl(url)
-
-            go_button.clicked.connect(load_url)
-            url_edit.returnPressed.connect(load_url)
-            web_view.urlChanged.connect(lambda url: (url_edit.setText(url.toString()), remember_url(url)))
-        else:
-            fallback = QLabel(frame)
-            fallback.setGeometry(24, 90, max(1, w - 48), 120)
-            fallback.setWordWrap(True)
-            fallback.setText(
-                "QtWebEngine ist in dieser PySide6-Installation nicht verfuegbar. "
-                "Der Tab ist angelegt; der Button oeffnet die Adresse extern."
-            )
-            fallback.setAlignment(Qt.AlignCenter)
-            fallback.setStyleSheet(
-                "background: transparent; border: none; color: #e8e0c8; font-size: 18px;"
-            )
-            fallback.show()
-
-            def open_external_url():
-                url = normalize_url()
-                remember_url(url)
-                QDesktopServices.openUrl(url)
-
-            go_button.clicked.connect(open_external_url)
-            url_edit.returnPressed.connect(open_external_url)
+        self._browser_container = None
+        self._browser_web_view = None
+        self._browser_url_edit = None
+        self._browser_fallback_label = None
+        self._browser_initialized = False
 
     def render_magic_screen(self):
         if self.content_layer is None:

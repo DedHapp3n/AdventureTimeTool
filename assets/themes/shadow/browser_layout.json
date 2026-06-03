@@ -1,0 +1,18 @@
+{
+  "browser_screen": {
+    "enabled": true,
+    "fill_content_area": true,
+    "margin": 8,
+    "default_url": "https://app.roll20.net/login",
+    "show_url_bar": true,
+    "url_bar_h": 36,
+    "gap": 8,
+    "inner_margin": 10,
+    "background": "rgba(5, 5, 5, 125)",
+    "border_color": "rgba(242, 210, 139, 95)",
+    "debug": {
+      "enabled": false,
+      "console_messages": false
+    }
+  }
+}

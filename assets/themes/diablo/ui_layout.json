@@ -134,11 +134,7 @@
     "layout_file": "notes_layout.json"
   },
   "browser_screen": {
-    "x": 20,
-    "y": 20,
-    "w": 1420,
-    "h": 820,
-    "default_url": "https://www.google.com"
+    "layout_file": "browser_layout.json"
   },
   "content_area": {
     "x": 32,
