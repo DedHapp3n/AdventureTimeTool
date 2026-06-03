@@ -23,16 +23,25 @@
         "font_size": 18,
         "active_color": "#f2d28b",
         "inactive_color": "#9a8560",
-        "selected_border": true
+        "selected_border": true,
+        "shadow": {
+          "enabled": true,
+          "x": 2,
+          "y": 3,
+          "color": "rgba(0, 0, 0, 115)"
+        }
       }
     },
     "table": {
       "x": 20,
-      "y": 80,
+      "y": 75,
       "w": 1380,
       "h": 700,
       "header_h": 42,
       "row_h": 42,
+      "min_row_h": 42,
+      "max_row_h": 72,
+      "wrap_text": true,
       "max_visible_rows": 15,
       "font_size": 17,
       "header_font_size": 19,
@@ -57,13 +66,19 @@
           "right": 24,
           "bottom": 24
         },
-        "draw_center": false,
+        "draw_center": true,
         "fallback_border": true,
         "remove_old_border_when_active": true,
         "transparent_panel_background_when_active": true,
         "smooth_scaling": true,
         "render_scale": 1.0,
-        "opacity": 1.0
+        "opacity": 1.0,
+        "shadow": {
+          "enabled": true,
+          "x": 3,
+          "y": 4,
+          "color": "rgba(0, 0, 0, 120)"
+        }
       },
       "row_fields": {
         "attribute_slot": {
@@ -175,20 +190,17 @@
           "text_padding_left": 8,
           "text_padding_right": 8
         }
-      },
-      "min_row_h": 42,
-      "max_row_h": 72,
-      "wrap_text": true
+      }
     },
     "se_tab": {
       "enabled": true,
       "button_text": "SE",
       "xp_info": {
         "enabled": true,
-        "x": 410,
-        "y": 110,
-        "w": 260,
-        "h": 150,
+        "x": 1210,
+        "y": 88,
+        "w": 160,
+        "h": 120,
         "title": "XP Info",
         "font_size": 16,
         "title_font_size": 18,
@@ -198,6 +210,85 @@
         "border_color": "rgba(242, 210, 139, 90)",
         "background": "rgba(5, 5, 5, 95)",
         "readonly": true,
+        "frame": {
+          "enabled": true,
+          "asset": "panels/shared_skils_panel_frame.png",
+          "render_mode": "nine_slice",
+          "slice": {
+            "left": 24,
+            "top": 24,
+            "right": 24,
+            "bottom": 24
+          },
+          "draw_center": false,
+          "fallback_border": true,
+          "remove_old_border_when_active": true,
+          "transparent_panel_background_when_active": true,
+          "smooth_scaling": true,
+          "render_scale": 1.0,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 2,
+            "y": 3,
+            "color": "rgba(0, 0, 0, 120)"
+          }
+        },
+        "title_frame": {
+          "enabled": true,
+          "asset": "frames/512x122_box.png",
+          "render_mode": "fit",
+          "keep_aspect": false,
+          "fit_mode": "stretch",
+          "smooth_scaling": true,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 1,
+            "y": 2,
+            "color": "rgba(0, 0, 0, 120)"
+          }
+        },
+        "row_fields": {
+          "label": {
+            "w": 64,
+            "h": 26,
+            "frame": {
+              "enabled": true,
+              "asset": "frames/256x122_box.png",
+              "render_mode": "fit",
+              "keep_aspect": false,
+              "fit_mode": "stretch",
+              "smooth_scaling": true,
+              "opacity": 1.0,
+              "shadow": {
+                "enabled": true,
+                "x": 1,
+                "y": 2,
+                "color": "rgba(0, 0, 0, 120)"
+              }
+            }
+          },
+          "value": {
+            "w": 64,
+            "h": 26,
+            "frame": {
+              "enabled": true,
+              "asset": "frames/256x122_box.png",
+              "render_mode": "fit",
+              "keep_aspect": false,
+              "fit_mode": "stretch",
+              "smooth_scaling": true,
+              "opacity": 1.0,
+              "shadow": {
+                "enabled": true,
+                "x": 1,
+                "y": 2,
+                "color": "rgba(0, 0, 0, 120)"
+              }
+            }
+          }
+        },
         "labels": {
           "current": "Current",
           "max": "Max"
@@ -205,28 +296,97 @@
       },
       "table": {
         "x": 40,
-        "y": 110,
-        "w": 320,
-        "h": 520,
-        "min_rows": 16,
+        "y": 80,
+        "w": 437,
+        "h": 618,
+        "min_rows": 20,
         "add_rows_when_last_filled": 3,
+        "frame": {
+          "enabled": true,
+          "asset": "panels/shared_skils_panel_frame.png",
+          "render_mode": "nine_slice",
+          "slice": {
+            "left": 24,
+            "top": 24,
+            "right": 24,
+            "bottom": 24
+          },
+          "draw_center": false,
+          "fallback_border": true,
+          "remove_old_border_when_active": true,
+          "transparent_panel_background_when_active": true,
+          "smooth_scaling": true,
+          "render_scale": 1.0,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 2,
+            "y": 3,
+            "color": "rgba(0, 0, 0, 120)"
+          }
+        },
+        "header_frame": {
+          "enabled": true,
+          "asset": "frames/512x122_box.png",
+          "render_mode": "fit",
+          "keep_aspect": false,
+          "fit_mode": "stretch",
+          "smooth_scaling": true,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 1,
+            "y": 2,
+            "color": "rgba(0, 0, 0, 120)"
+          }
+        },
         "columns": {
           "text": {
             "title": "Fertigkeit",
-            "w": 240
+            "w": 340,
+            "header_frame": {
+              "enabled": true,
+              "asset": "frames/512x122_box.png",
+              "render_mode": "fit",
+              "keep_aspect": false,
+              "fit_mode": "stretch",
+              "smooth_scaling": true,
+              "opacity": 1.0,
+              "shadow": {
+                "enabled": true,
+                "x": 1,
+                "y": 2,
+                "color": "rgba(0, 0, 0, 120)"
+              }
+            }
           },
           "value": {
             "title": "SE",
-            "w": 80
+            "w": 80,
+            "header_frame": {
+              "enabled": true,
+              "asset": "frames/256x122_box.png",
+              "render_mode": "fit",
+              "keep_aspect": false,
+              "fit_mode": "stretch",
+              "smooth_scaling": true,
+              "opacity": 1.0,
+              "shadow": {
+                "enabled": true,
+                "x": 1,
+                "y": 2,
+                "color": "rgba(0, 0, 0, 120)"
+              }
+            }
           }
         }
       },
       "skill_upgrade_info": {
         "enabled": true,
-        "x": 420,
-        "y": 285,
+        "x": 520,
+        "y": 75,
         "w": 680,
-        "h": 360,
+        "h": 660,
         "title": "Skill Upgrade",
         "max_items": 999,
         "font_size": 15,
@@ -237,8 +397,90 @@
         "border_color": "rgba(242, 210, 139, 90)",
         "background": "rgba(5, 5, 5, 95)",
         "readonly": true,
+        "content_background": "rgba(5, 5, 5, 135)",
+        "frame": {
+          "enabled": false,
+          "asset": "panels/shared_skils_panel_frame.png",
+          "render_mode": "nine_slice",
+          "slice": {
+            "left": 24,
+            "top": 24,
+            "right": 24,
+            "bottom": 24
+          },
+          "draw_center": false,
+          "fallback_border": true,
+          "remove_old_border_when_active": true,
+          "transparent_panel_background_when_active": true,
+          "smooth_scaling": true,
+          "render_scale": 1.0,
+          "opacity": 1.0
+        },
+        "title_frame": {
+          "enabled": true,
+          "asset": "frames/512x122_box.png",
+          "render_mode": "fit",
+          "keep_aspect": false,
+          "fit_mode": "stretch",
+          "w": 260,
+          "h": 34,
+          "smooth_scaling": true,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 1,
+            "y": 2,
+            "color": "rgba(0, 0, 0, 120)"
+          }
+        },
+        "content_frame": {
+          "enabled": true,
+          "asset": "panels/shared_skils_panel_frame.png",
+          "render_mode": "nine_slice",
+          "slice": {
+            "left": 24,
+            "top": 24,
+            "right": 24,
+            "bottom": 24
+          },
+          "draw_center": false,
+          "smooth_scaling": true,
+          "render_scale": 1.0,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 2,
+            "y": 3,
+            "color": "rgba(0, 0, 0, 120)"
+          }
+        },
         "word_wrap": true,
-        "scrollable": true
+        "scrollable": true,
+        "title_inside_content": true,
+        "se_total_box": {
+          "enabled": true,
+          "x": 465,
+          "y": 8,
+          "w": 180,
+          "h": 32,
+          "asset": "frames/512x122_box.png",
+          "render_mode": "fit",
+          "keep_aspect": false,
+          "fit_mode": "stretch",
+          "smooth_scaling": true,
+          "opacity": 1.0,
+          "shadow": {
+            "enabled": true,
+            "x": 1,
+            "y": 2,
+            "color": "rgba(0, 0, 0, 120)"
+          },
+          "text": "SE Gesamt: {total}",
+          "font_size": 15,
+          "color": "#f2d28b",
+          "value_color": "#7fd0ff",
+          "align": "center"
+        }
       }
     }
   }

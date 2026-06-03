@@ -173,6 +173,17 @@ def apply_skills_table_frame_if_enabled(window, parent, table_cfg):
     y = window._safe_int(table_cfg.get("y", 80), 80)
     w = max(1, window._safe_int(table_cfg.get("w", 1380), 1380))
     h = max(1, window._safe_int(table_cfg.get("h", 700), 700))
+    shadow_cfg = frame_cfg.get("shadow", {}) if isinstance(frame_cfg.get("shadow", {}), dict) else {}
+    if bool(shadow_cfg.get("enabled", False)):
+        shadow_x = window._safe_int(shadow_cfg.get("x", 3), 3)
+        shadow_y = window._safe_int(shadow_cfg.get("y", 4), 4)
+        shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 120)"))
+        shadow_radius = window._safe_int(shadow_cfg.get("border_radius", 4), 4)
+        shadow = QLabel(parent)
+        shadow.setGeometry(x + shadow_x, y + shadow_y, w, h)
+        shadow.setStyleSheet(f"background: {shadow_color}; border-radius: {shadow_radius}px;")
+        shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        shadow.show()
     bg = QLabel(parent)
     bg.setGeometry(x, y, w, h)
     bg.setPixmap(_render_nine_slice_pixmap(window, _apply_source_crop(window, src, frame_cfg), w, h, frame_cfg))
@@ -184,6 +195,80 @@ def apply_skills_table_frame_if_enabled(window, parent, table_cfg):
         "transparent_panel_background_when_active": bool(frame_cfg.get("transparent_panel_background_when_active", True)),
         "fallback_border": bool(frame_cfg.get("fallback_border", True)),
     }
+
+
+def create_frame_label(window, parent, frame_cfg, rect_cfg, raise_frame=False):
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return None
+    src = _optional_theme_ui_pixmap(window, frame_cfg.get("asset", ""))
+    if src is None:
+        return None
+    x = window._safe_int(rect_cfg.get("x", 0), 0)
+    y = window._safe_int(rect_cfg.get("y", 0), 0)
+    w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
+    h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+    src = _apply_source_crop(window, src, frame_cfg)
+    render_mode = str(frame_cfg.get("render_mode", "fit") or "fit").strip().lower()
+    shadow_cfg = frame_cfg.get("shadow", {}) if isinstance(frame_cfg.get("shadow", {}), dict) else {}
+    shadow_label = None
+    if bool(shadow_cfg.get("enabled", False)):
+        shadow_x = window._safe_int(shadow_cfg.get("x", 2), 2)
+        shadow_y = window._safe_int(shadow_cfg.get("y", 3), 3)
+        shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 120)"))
+        shadow_radius = window._safe_int(shadow_cfg.get("border_radius", 3), 3)
+        shadow_label = QLabel(parent)
+        shadow_label.setGeometry(x + shadow_x, y + shadow_y, w, h)
+        shadow_label.setStyleSheet(f"background: {shadow_color}; border-radius: {shadow_radius}px;")
+        shadow_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        shadow_label.show()
+    label = QLabel(parent)
+    label.setGeometry(x, y, w, h)
+    if render_mode == "nine_slice":
+        label.setPixmap(_render_nine_slice_pixmap(window, src, w, h, frame_cfg))
+    else:
+        label.setPixmap(_render_fit_pixmap(src, w, h, frame_cfg))
+    label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    label.show()
+    if raise_frame:
+        if shadow_label is not None:
+            shadow_label.raise_()
+        label.raise_()
+    return label
+
+
+def apply_se_panel_frame_if_enabled(window, parent, panel_cfg, rect_cfg):
+    frame_cfg = panel_cfg.get("frame", {}) if isinstance(panel_cfg, dict) else {}
+    label = create_frame_label(window, parent, frame_cfg, rect_cfg)
+    return {
+        "active": label is not None,
+        "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)) if isinstance(frame_cfg, dict) else True,
+        "transparent_panel_background_when_active": bool(frame_cfg.get("transparent_panel_background_when_active", True)) if isinstance(frame_cfg, dict) else True,
+    }
+
+
+def create_framed_label(window, parent, rect_cfg, text, font_size, color, frame_cfg, bold=False, align="center"):
+    frame_label = create_frame_label(window, parent, frame_cfg, rect_cfg)
+    label = window.create_panel_text(parent, rect_cfg, text, font_size, color, bold=bold, align=align)
+    label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    if frame_label is not None:
+        frame_label.raise_()
+    label.raise_()
+    return label
+
+
+def calculate_se_total(rows):
+    total = 0.0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        raw = str(row.get("value", "") or "").strip().replace(",", ".")
+        if not raw:
+            continue
+        try:
+            total += float(raw)
+        except Exception:
+            continue
+    return int(total) if total.is_integer() else total
 
 
 def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg, raise_frame=False):
@@ -237,6 +322,17 @@ def _create_asset_category_button(window, parent, cfg, title, is_active, callbac
     h = window._safe_int(cfg.get("button_h", 42), 42)
     container = QWidget(parent)
     container.setGeometry(0, 0, w, h)
+
+    shadow_cfg = button_cfg.get("shadow", {}) if isinstance(button_cfg.get("shadow", {}), dict) else {}
+    if bool(shadow_cfg.get("enabled", False)):
+        shadow_x = window._safe_int(shadow_cfg.get("x", 2), 2)
+        shadow_y = window._safe_int(shadow_cfg.get("y", 3), 3)
+        shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 115)"))
+        shadow = QLabel(container)
+        shadow.setGeometry(shadow_x, shadow_y, w, h)
+        shadow.setStyleSheet(f"background: {shadow_color}; border: none;")
+        shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        shadow.show()
 
     bg_label = QLabel(container)
     bg_label.setGeometry(0, 0, w, h)
@@ -424,12 +520,25 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
     if not isinstance(value_col_cfg, dict):
         value_col_cfg = {}
 
+    table_frame_state = apply_se_panel_frame_if_enabled(
+        window,
+        parent,
+        se_table_cfg,
+        {"x": x, "y": y, "w": w, "h": h},
+    )
+    table_frame_active = bool(table_frame_state.get("active", False))
     frame = QFrame(parent)
     frame.setGeometry(x, y, w, h)
+    table_background = (
+        "transparent"
+        if table_frame_active and bool(table_frame_state.get("transparent_panel_background_when_active", True))
+        else "rgba(5, 5, 5, 95)"
+    )
+    table_border = "none" if table_frame_active and bool(table_frame_state.get("remove_old_border_when_active", True)) else "1px solid rgba(242, 210, 139, 70)"
     frame.setStyleSheet(
-        "background: rgba(5, 5, 5, 95);"
-        "border: 1px solid rgba(242, 210, 139, 70);"
-        "border-radius: 4px;"
+        f"background: {table_background};"
+        f"border: {table_border};"
+        f"border-radius: {'0px' if table_frame_active else '4px'};"
     )
     frame.show()
 
@@ -508,6 +617,37 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
         se_table.blockSignals(False)
         window._skills_se_loading = False
 
+    header_frame_cfg = se_table_cfg.get("header_frame", {}) if isinstance(se_table_cfg.get("header_frame", {}), dict) else {}
+    text_header_frame_cfg = text_col_cfg.get("header_frame", header_frame_cfg) if isinstance(text_col_cfg.get("header_frame", header_frame_cfg), dict) else header_frame_cfg
+    value_header_frame_cfg = value_col_cfg.get("header_frame", header_frame_cfg) if isinstance(value_col_cfg.get("header_frame", header_frame_cfg), dict) else header_frame_cfg
+    header_h = max(1, se_table.horizontalHeader().height())
+    text_header_x = se_table.columnViewportPosition(0)
+    value_header_x = se_table.columnViewportPosition(1)
+    text_header_w = max(1, se_table.columnWidth(0))
+    value_header_w = max(1, se_table.columnWidth(1))
+    create_framed_label(
+        window,
+        se_table,
+        {"x": text_header_x, "y": 0, "w": text_header_w, "h": header_h},
+        str(text_col_cfg.get("title", "Fertigkeit")),
+        14,
+        "#f2d28b",
+        text_header_frame_cfg,
+        bold=True,
+        align="center",
+    )
+    create_framed_label(
+        window,
+        se_table,
+        {"x": value_header_x, "y": 0, "w": value_header_w, "h": header_h},
+        str(value_col_cfg.get("title", "SE")),
+        14,
+        "#f2d28b",
+        value_header_frame_cfg,
+        bold=True,
+        align="center",
+    )
+
     se_table.cellChanged.connect(
         lambda row, col, widget=se_table, mr=min_rows, ar=add_rows: window.on_skills_se_table_cell_changed(
             widget, mr, ar
@@ -584,64 +724,96 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
     label_current = str(labels_cfg.get("current", "Current"))
     label_max = str(labels_cfg.get("max", "Max"))
 
+    xp_frame_state = apply_se_panel_frame_if_enabled(
+        window,
+        parent,
+        xp_cfg,
+        {"x": xp_x, "y": xp_y, "w": xp_w, "h": xp_h},
+    )
+    xp_frame_active = bool(xp_frame_state.get("active", False))
     xp_frame = QFrame(parent)
     xp_frame.setGeometry(xp_x, xp_y, xp_w, xp_h)
+    xp_frame_bg = (
+        "transparent"
+        if xp_frame_active and bool(xp_frame_state.get("transparent_panel_background_when_active", True))
+        else xp_bg
+    )
+    xp_frame_border = "none" if xp_frame_active and bool(xp_frame_state.get("remove_old_border_when_active", True)) else f"1px solid {xp_border_color}"
     xp_frame.setStyleSheet(
-        f"background: {xp_bg};"
-        f"border: 1px solid {xp_border_color};"
-        "border-radius: 4px;"
+        f"background: {xp_frame_bg};"
+        f"border: {xp_frame_border};"
+        f"border-radius: {'0px' if xp_frame_active else '4px'};"
     )
     xp_frame.show()
 
-    window.create_panel_text(
+    xp_title_frame_cfg = xp_cfg.get("title_frame", {}) if isinstance(xp_cfg.get("title_frame", {}), dict) else {}
+    create_framed_label(
+        window,
         xp_frame,
         {"x": 10, "y": 8, "w": max(1, xp_w - 20), "h": 28},
         xp_title,
         xp_title_font_size,
         xp_label_color,
+        xp_title_frame_cfg,
         bold=True,
-        align="left",
+        align="center",
     )
 
     line_y = 44
     line_h = 28
-    window.create_panel_text(
+    xp_row_fields_cfg = xp_cfg.get("row_fields", {}) if isinstance(xp_cfg.get("row_fields", {}), dict) else {}
+    xp_label_field_cfg = xp_row_fields_cfg.get("label", {}) if isinstance(xp_row_fields_cfg.get("label", {}), dict) else {}
+    xp_value_field_cfg = xp_row_fields_cfg.get("value", {}) if isinstance(xp_row_fields_cfg.get("value", {}), dict) else {}
+    xp_label_frame_cfg = xp_label_field_cfg.get("frame", {}) if isinstance(xp_label_field_cfg.get("frame", {}), dict) else {}
+    xp_value_frame_cfg = xp_value_field_cfg.get("frame", {}) if isinstance(xp_value_field_cfg.get("frame", {}), dict) else {}
+    label_box_w = max(1, window._safe_int(xp_label_field_cfg.get("w", 72), 72))
+    value_box_w = max(1, window._safe_int(xp_value_field_cfg.get("w", max(1, xp_w - 104)), max(1, xp_w - 104)))
+    row_box_h = max(1, window._safe_int(xp_value_field_cfg.get("h", xp_label_field_cfg.get("h", line_h)), line_h))
+    create_framed_label(
+        window,
         xp_frame,
-        {"x": 10, "y": line_y, "w": 70, "h": line_h},
+        {"x": 10, "y": line_y, "w": label_box_w, "h": row_box_h},
         f"{label_current}:",
         xp_font_size,
         xp_text_color,
+        xp_label_frame_cfg,
         bold=False,
-        align="left",
+        align="center",
     )
-    window.create_panel_text(
+    create_framed_label(
+        window,
         xp_frame,
-        {"x": 85, "y": line_y, "w": max(1, xp_w - 110), "h": line_h},
+        {"x": 18 + label_box_w, "y": line_y, "w": value_box_w, "h": row_box_h},
         str(exp_current),
         xp_font_size,
         xp_value_color,
+        xp_value_frame_cfg,
         bold=True,
-        align="left",
+        align="center",
     )
 
     line_y += line_h
-    window.create_panel_text(
+    create_framed_label(
+        window,
         xp_frame,
-        {"x": 10, "y": line_y, "w": 70, "h": line_h},
+        {"x": 10, "y": line_y, "w": label_box_w, "h": row_box_h},
         f"{label_max}:",
         xp_font_size,
         xp_text_color,
+        xp_label_frame_cfg,
         bold=False,
-        align="left",
+        align="center",
     )
-    window.create_panel_text(
+    create_framed_label(
+        window,
         xp_frame,
-        {"x": 85, "y": line_y, "w": max(1, xp_w - 110), "h": line_h},
+        {"x": 18 + label_box_w, "y": line_y, "w": value_box_w, "h": row_box_h},
         str(exp_max),
         xp_font_size,
         xp_value_color,
+        xp_value_frame_cfg,
         bold=True,
-        align="left",
+        align="center",
     )
 
     upgrade_cfg = {}
@@ -664,26 +836,60 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
         up_text_color = str(upgrade_cfg.get("text_color", xp_text_color))
         up_border_color = str(upgrade_cfg.get("border_color", xp_border_color))
         up_bg = str(upgrade_cfg.get("background", xp_bg))
+        content_bg = str(upgrade_cfg.get("content_background", "rgba(5, 5, 5, 135)"))
         muted_color = str(upgrade_cfg.get("muted_color", "#d8d0b0"))
+        title_inside_content = bool(upgrade_cfg.get("title_inside_content", False))
+        se_total_box_cfg = upgrade_cfg.get("se_total_box", {}) if isinstance(upgrade_cfg.get("se_total_box", {}), dict) else {}
+        se_total = calculate_se_total(rows)
 
+        upgrade_frame_state = apply_se_panel_frame_if_enabled(
+            window,
+            parent,
+            upgrade_cfg,
+            {"x": up_x, "y": up_y, "w": up_w, "h": up_h},
+        )
+        upgrade_frame_active = bool(upgrade_frame_state.get("active", False))
         upgrade_frame = QFrame(parent)
         upgrade_frame.setGeometry(up_x, up_y, up_w, up_h)
+        if upgrade_frame_active:
+            upgrade_frame_bg = (
+                "transparent"
+                if bool(upgrade_frame_state.get("transparent_panel_background_when_active", True))
+                else up_bg
+            )
+            upgrade_frame_border = (
+                "none"
+                if bool(upgrade_frame_state.get("remove_old_border_when_active", True))
+                else f"1px solid {up_border_color}"
+            )
+            upgrade_frame_radius = "0px" if upgrade_frame_border == "none" else "4px"
+        else:
+            upgrade_frame_bg = "transparent"
+            upgrade_frame_border = "none"
+            upgrade_frame_radius = "0px"
         upgrade_frame.setStyleSheet(
-            f"background: {up_bg};"
-            f"border: 1px solid {up_border_color};"
-            "border-radius: 4px;"
+            f"background: {upgrade_frame_bg};"
+            f"border: {upgrade_frame_border};"
+            f"border-radius: {upgrade_frame_radius};"
         )
         upgrade_frame.show()
 
-        window.create_panel_text(
-            upgrade_frame,
-            {"x": 10, "y": 8, "w": max(1, up_w - 20), "h": 28},
-            up_title,
-            up_title_font_size,
-            up_label_color,
-            bold=True,
-            align="left",
-        )
+        up_title_frame_cfg = upgrade_cfg.get("title_frame", {}) if isinstance(upgrade_cfg.get("title_frame", {}), dict) else {}
+        title_h = window._safe_int(up_title_frame_cfg.get("h", 34), 34)
+        title_w = min(max(1, up_w - 20), window._safe_int(up_title_frame_cfg.get("w", 260), 260))
+        if not title_inside_content:
+            title_x = int((up_w - title_w) / 2)
+            create_framed_label(
+                window,
+                upgrade_frame,
+                {"x": title_x, "y": 8, "w": title_w, "h": title_h},
+                up_title,
+                up_title_font_size,
+                up_label_color,
+                up_title_frame_cfg,
+                bold=True,
+                align="center",
+            )
 
         upgrade_result = window.build_se_upgrade_candidates(rows, exp_current)
         status = str(upgrade_result.get("status", "no_upgrade_data"))
@@ -753,8 +959,97 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
                 f'<div style="color:{color}; font-size:{up_font_size}px; font-weight:{weight}; margin:2px 0;">{safe_text}</div>'
             )
 
+        content_rect = (
+            {"x": 10, "y": 8, "w": max(1, up_w - 20), "h": max(1, up_h - 18)}
+            if title_inside_content
+            else {"x": 10, "y": 48, "w": max(1, up_w - 20), "h": max(1, up_h - 58)}
+        )
+        content_frame_cfg = upgrade_cfg.get("content_frame", {}) if isinstance(upgrade_cfg.get("content_frame", {}), dict) else {}
+        content_bg_label = QLabel(upgrade_frame)
+        content_bg_label.setGeometry(content_rect["x"], content_rect["y"], content_rect["w"], content_rect["h"])
+        content_bg_label.setStyleSheet(f"background: {content_bg}; border: none;")
+        content_bg_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        content_bg_label.show()
+        content_frame_active = create_frame_label(window, upgrade_frame, content_frame_cfg, content_rect) is not None
+
+        text_rect = dict(content_rect)
+        if title_inside_content:
+            title_w = min(max(1, content_rect["w"] - 20), window._safe_int(up_title_frame_cfg.get("w", 260), 260))
+            title_x = content_rect["x"] + int((content_rect["w"] - title_w) / 2)
+            title_y = content_rect["y"] + 8
+            create_framed_label(
+                window,
+                upgrade_frame,
+                {"x": title_x, "y": title_y, "w": title_w, "h": title_h},
+                up_title,
+                up_title_font_size,
+                up_label_color,
+                up_title_frame_cfg,
+                bold=True,
+                align="center",
+            )
+            header_bottom = title_y + title_h
+            if bool(se_total_box_cfg.get("enabled", False)):
+                total_box_x = content_rect["x"] + window._safe_int(se_total_box_cfg.get("x", 455), 455)
+                total_box_y = content_rect["y"] + window._safe_int(se_total_box_cfg.get("y", 8), 8)
+                total_box_w = max(1, window._safe_int(se_total_box_cfg.get("w", 190), 190))
+                total_box_h = max(1, window._safe_int(se_total_box_cfg.get("h", 32), 32))
+                total_text_template = str(se_total_box_cfg.get("text", "SE Gesamt: {total}"))
+                total_text = total_text_template.replace("{total}", str(se_total))
+                total_font_size = window._safe_int(se_total_box_cfg.get("font_size", up_font_size), up_font_size)
+                total_color = str(se_total_box_cfg.get("color", up_label_color))
+                total_value_color = str(se_total_box_cfg.get("value_color", total_color))
+                total_align = str(se_total_box_cfg.get("align", "center"))
+                create_frame_label(
+                    window,
+                    upgrade_frame,
+                    se_total_box_cfg,
+                    {"x": total_box_x, "y": total_box_y, "w": total_box_w, "h": total_box_h},
+                )
+                total_label = QLabel(upgrade_frame)
+                total_label.setGeometry(total_box_x, total_box_y, total_box_w, total_box_h)
+                safe_total_text = (
+                    total_text
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                )
+                safe_total_value = (
+                    str(se_total)
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                )
+                safe_total_text = safe_total_text.replace(
+                    safe_total_value,
+                    f'<span style="color:{total_value_color};">{safe_total_value}</span>',
+                    1,
+                )
+                total_label.setText(f'<span style="color:{total_color};">{safe_total_text}</span>')
+                total_label.setTextFormat(Qt.RichText)
+                total_label.setAlignment(Qt.AlignCenter if total_align == "center" else Qt.AlignLeft)
+                total_label.setStyleSheet(
+                    "background: transparent;"
+                    "border: none;"
+                    f"font-size: {total_font_size}px;"
+                    "font-weight: 700;"
+                    "padding: 0px;"
+                )
+                total_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+                total_label.show()
+                total_label.raise_()
+                header_bottom = max(header_bottom, total_box_y + total_box_h)
+            text_margin = 10
+            text_y = header_bottom + 8
+            text_rect = {
+                "x": content_rect["x"] + text_margin,
+                "y": text_y,
+                "w": max(1, content_rect["w"] - (text_margin * 2)),
+                "h": max(1, content_rect["y"] + content_rect["h"] - text_y - text_margin),
+            }
+
         content = QTextEdit(upgrade_frame)
-        content.setGeometry(10, 42, max(1, up_w - 20), max(1, up_h - 52))
+        content.setGeometry(text_rect["x"], text_rect["y"], text_rect["w"], text_rect["h"])
         content.setReadOnly(True)
         content.setLineWrapMode(QTextEdit.WidgetWidth if word_wrap else QTextEdit.NoWrap)
         if not scrollable:
@@ -762,10 +1057,10 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
             content.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         content.setStyleSheet(
             "QTextEdit {"
-            f"background: {up_bg};"
+            "background: transparent;"
             f"color: {up_text_color};"
-            f"border: 1px solid {up_border_color};"
-            "border-radius: 3px;"
+            "border: none;"
+            "border-radius: 0px;"
             "padding: 4px;"
             "}"
         )
