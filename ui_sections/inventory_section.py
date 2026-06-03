@@ -2,13 +2,252 @@ import html
 import math
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QTextDocument, QFont, QFontMetrics
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTextDocument, QFont, QFontMetrics
 from PySide6.QtWidgets import (
-    QAbstractItemView, QFrame, QInputDialog, QLineEdit, QPushButton,
+    QLabel, QAbstractItemView, QFrame, QInputDialog, QLineEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QTextEdit,
 )
 
 from app_logger import log_debug, log_error
+
+
+def _optional_inventory_ui_pixmap(window, asset_rel_path):
+    asset_name = str(asset_rel_path or "").strip()
+    if not asset_name:
+        return None
+    try:
+        primary = window.theme_asset_base_path / asset_name
+        if primary.exists():
+            pixmap = QPixmap(str(primary))
+            if not pixmap.isNull():
+                return pixmap
+        fallback = window.assets_dir / "themes" / "diablo" / "ui" / asset_name
+        if fallback.exists():
+            pixmap = QPixmap(str(fallback))
+            if not pixmap.isNull():
+                return pixmap
+    except Exception:
+        return None
+    return None
+
+
+def _apply_inventory_source_crop(window, src, frame_cfg):
+    crop_cfg = frame_cfg.get("source_crop") if isinstance(frame_cfg, dict) else None
+    if not isinstance(crop_cfg, dict):
+        return src
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    x = max(0, min(window._safe_int(crop_cfg.get("x", 0), 0), src_w - 1))
+    y = max(0, min(window._safe_int(crop_cfg.get("y", 0), 0), src_h - 1))
+    w = max(1, min(window._safe_int(crop_cfg.get("w", src_w - x), src_w - x), src_w - x))
+    h = max(1, min(window._safe_int(crop_cfg.get("h", src_h - y), src_h - y), src_h - y))
+    cropped = src.copy(x, y, w, h)
+    return cropped if not cropped.isNull() else src
+
+
+def _inventory_frame_opacity(frame_cfg):
+    try:
+        opacity = float(frame_cfg.get("opacity", 1.0))
+    except Exception:
+        opacity = 1.0
+    return max(0.0, min(1.0, opacity))
+
+
+def _render_inventory_fit_pixmap(src, target_w, target_h, frame_cfg):
+    target_w = max(1, target_w)
+    target_h = max(1, target_h)
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    keep_aspect = bool(frame_cfg.get("keep_aspect", True))
+    fit_mode = str(frame_cfg.get("fit_mode", "contain") or "contain").strip().lower()
+    transform = Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation
+    aspect_mode = Qt.KeepAspectRatio if keep_aspect and fit_mode != "stretch" else Qt.IgnoreAspectRatio
+    scaled = src.scaled(target_w, target_h, aspect_mode, transform)
+
+    rendered = QPixmap(target_w, target_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    painter.setOpacity(_inventory_frame_opacity(frame_cfg))
+    dx = int((target_w - scaled.width()) / 2) if keep_aspect and fit_mode != "stretch" else 0
+    dy = int((target_h - scaled.height()) / 2) if keep_aspect and fit_mode != "stretch" else 0
+    painter.drawPixmap(dx, dy, scaled)
+    painter.end()
+    return rendered
+
+
+def _render_inventory_nine_slice_pixmap(window, src, target_w, target_h, frame_cfg):
+    slice_cfg = frame_cfg.get("slice", {}) if isinstance(frame_cfg.get("slice", {}), dict) else {}
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    left = max(0, min(window._safe_int(slice_cfg.get("left", 24), 24), src_w))
+    right = max(0, min(window._safe_int(slice_cfg.get("right", 24), 24), src_w - left))
+    top = max(0, min(window._safe_int(slice_cfg.get("top", 24), 24), src_h))
+    bottom = max(0, min(window._safe_int(slice_cfg.get("bottom", 24), 24), src_h - top))
+
+    target_w = max(1, target_w)
+    target_h = max(1, target_h)
+    if left + right > target_w:
+        overflow = left + right - target_w
+        shrink_left = min(left, overflow // 2)
+        left -= shrink_left
+        right = max(0, right - (overflow - shrink_left))
+    if top + bottom > target_h:
+        overflow = top + bottom - target_h
+        shrink_top = min(top, overflow // 2)
+        top -= shrink_top
+        bottom = max(0, bottom - (overflow - shrink_top))
+
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    try:
+        render_scale = float(frame_cfg.get("render_scale", 1.0))
+    except Exception:
+        render_scale = 1.0
+    render_scale = max(1.0, min(4.0, render_scale))
+    opacity = _inventory_frame_opacity(frame_cfg)
+
+    center_src_w = max(0, src_w - left - right)
+    center_src_h = max(0, src_h - top - bottom)
+    scaled_w = max(1, int(round(target_w * render_scale)))
+    scaled_h = max(1, int(round(target_h * render_scale)))
+    scaled_left = max(0, int(round(left * render_scale)))
+    scaled_right = max(0, int(round(right * render_scale)))
+    scaled_top = max(0, int(round(top * render_scale)))
+    scaled_bottom = max(0, int(round(bottom * render_scale)))
+    scaled_center_dst_w = max(0, scaled_w - scaled_left - scaled_right)
+    scaled_center_dst_h = max(0, scaled_h - scaled_top - scaled_bottom)
+
+    rendered = QPixmap(scaled_w, scaled_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if smooth_scaling:
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    painter.setOpacity(opacity)
+
+    def draw_slice(dx, dy, dw, dh, sx, sy, sw, sh):
+        if dw <= 0 or dh <= 0 or sw <= 0 or sh <= 0:
+            return
+        painter.drawPixmap(dx, dy, dw, dh, src, sx, sy, sw, sh)
+
+    draw_slice(0, 0, scaled_left, scaled_top, 0, 0, left, top)
+    draw_slice(scaled_w - scaled_right, 0, scaled_right, scaled_top, src_w - right, 0, right, top)
+    draw_slice(0, scaled_h - scaled_bottom, scaled_left, scaled_bottom, 0, src_h - bottom, left, bottom)
+    draw_slice(scaled_w - scaled_right, scaled_h - scaled_bottom, scaled_right, scaled_bottom, src_w - right, src_h - bottom, right, bottom)
+    draw_slice(scaled_left, 0, scaled_center_dst_w, scaled_top, left, 0, center_src_w, top)
+    draw_slice(scaled_left, scaled_h - scaled_bottom, scaled_center_dst_w, scaled_bottom, left, src_h - bottom, center_src_w, bottom)
+    draw_slice(0, scaled_top, scaled_left, scaled_center_dst_h, 0, top, left, center_src_h)
+    draw_slice(scaled_w - scaled_right, scaled_top, scaled_right, scaled_center_dst_h, src_w - right, top, right, center_src_h)
+    if bool(frame_cfg.get("draw_center", True)):
+        draw_slice(scaled_left, scaled_top, scaled_center_dst_w, scaled_center_dst_h, left, top, center_src_w, center_src_h)
+    painter.end()
+
+    if render_scale > 1.0:
+        rendered = rendered.scaled(
+            target_w,
+            target_h,
+            Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation,
+        )
+    return rendered
+
+
+def create_inventory_frame_label(window, parent, frame_cfg, rect_cfg, raise_frame=False):
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return None
+    src = _optional_inventory_ui_pixmap(window, frame_cfg.get("asset", ""))
+    if src is None:
+        return None
+    x = window._safe_int(rect_cfg.get("x", 0), 0)
+    y = window._safe_int(rect_cfg.get("y", 0), 0)
+    w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
+    h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+    src = _apply_inventory_source_crop(window, src, frame_cfg)
+
+    shadow_cfg = frame_cfg.get("shadow", {}) if isinstance(frame_cfg.get("shadow", {}), dict) else {}
+    shadow_label = None
+    if bool(shadow_cfg.get("enabled", False)):
+        shadow_x = window._safe_int(shadow_cfg.get("x", 2), 2)
+        shadow_y = window._safe_int(shadow_cfg.get("y", 3), 3)
+        shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 120)"))
+        shadow_radius = window._safe_int(shadow_cfg.get("border_radius", 3), 3)
+        shadow_label = QLabel(parent)
+        shadow_label.setGeometry(x + shadow_x, y + shadow_y, w, h)
+        shadow_label.setStyleSheet(f"background: {shadow_color}; border-radius: {shadow_radius}px;")
+        shadow_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        shadow_label.show()
+
+    label = QLabel(parent)
+    label.setGeometry(x, y, w, h)
+    render_mode = str(frame_cfg.get("render_mode", "fit") or "fit").strip().lower()
+    if render_mode == "nine_slice":
+        label.setPixmap(_render_inventory_nine_slice_pixmap(window, src, w, h, frame_cfg))
+    else:
+        label.setPixmap(_render_inventory_fit_pixmap(src, w, h, frame_cfg))
+    label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    label.show()
+    if raise_frame:
+        if shadow_label is not None:
+            shadow_label.raise_()
+        label.raise_()
+    return label
+
+
+def create_inventory_framed_text_label(window, parent, rect_cfg, text, font_size, color, frame_cfg, bold=False, align="center"):
+    frame_label = create_inventory_frame_label(window, parent, frame_cfg, rect_cfg)
+    label = window.create_panel_text(parent, rect_cfg, text, font_size, color, bold=bold, align=align)
+    label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    if frame_label is not None:
+        frame_label.raise_()
+    label.raise_()
+    return label
+
+
+def apply_inventory_panel_frame_if_enabled(window, parent, panel_cfg, rect_cfg=None):
+    frame_cfg = panel_cfg.get("frame", {}) if isinstance(panel_cfg, dict) else {}
+    if rect_cfg is None:
+        rect_cfg = panel_cfg
+    label = create_inventory_frame_label(window, parent, frame_cfg, rect_cfg)
+    return {
+        "active": label is not None,
+        "remove_old_border_when_active": bool(frame_cfg.get("remove_old_border_when_active", True)) if isinstance(frame_cfg, dict) else True,
+        "transparent_panel_background_when_active": bool(frame_cfg.get("transparent_panel_background_when_active", True)) if isinstance(frame_cfg, dict) else True,
+        "fallback_border": bool(frame_cfg.get("fallback_border", True)) if isinstance(frame_cfg, dict) else True,
+    }
+
+
+def _apply_inventory_line_edit_frame(window, parent, edit, frame_cfg):
+    if create_inventory_frame_label(window, parent, frame_cfg, {
+        "x": edit.x(),
+        "y": edit.y(),
+        "w": edit.width(),
+        "h": edit.height(),
+    }) is None:
+        return False
+    return True
+
+
+def _inventory_asset_button_stylesheet(window, cfg, asset_key, color, hover_color, font_size):
+    if not bool(cfg.get("use_assets", False)):
+        return None
+    asset = str(cfg.get(asset_key, cfg.get("fallback_asset", "")) or "").strip()
+    if not asset:
+        asset = str(cfg.get("fallback_asset", "") or "").strip()
+    pixmap = _optional_inventory_ui_pixmap(window, asset)
+    if pixmap is None:
+        return None
+    asset_path = window.resolve_ui_asset_path(asset)
+    if asset_path is None or not asset_path.exists():
+        asset_path = window.assets_dir / "themes" / "diablo" / "ui" / asset
+    return (
+        "QPushButton {"
+        "background: transparent;"
+        "border: none;"
+        f"border-image: url({asset_path.as_posix()}) 0 0 0 0 stretch stretch;"
+        f"color: {color};"
+        f"font-size: {font_size}px;"
+        "font-weight: 700;"
+        "padding: 0px;"
+        "}"
+        f"QPushButton:hover {{ color: {hover_color}; }}"
+    )
 
 
 def render_inventory_screen(window):
@@ -118,6 +357,7 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
     default_asset = str(tabs_cfg.get("asset", "buttons/menu_button_small.png") or "").strip()
     active_asset = str(tabs_cfg.get("active_asset", default_asset) or "").strip()
     inactive_asset = str(tabs_cfg.get("inactive_asset", default_asset) or "").strip()
+    shadow_cfg = tabs_cfg.get("button_shadow", {}) if isinstance(tabs_cfg.get("button_shadow", {}), dict) else {}
 
     for index, category in enumerate(categories):
         if not isinstance(category, dict):
@@ -127,8 +367,18 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
             continue
         title = str(category.get("title", category_id))
         is_active = category_id == window.current_inventory_category
+        button_x = index * (button_w + button_gap)
+        if bool(shadow_cfg.get("enabled", False)):
+            shadow_x = window._safe_int(shadow_cfg.get("x", 2), 2)
+            shadow_y = window._safe_int(shadow_cfg.get("y", 3), 3)
+            shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 115)"))
+            shadow = QLabel(tabs_container)
+            shadow.setGeometry(button_x + shadow_x, shadow_y, button_w, button_h)
+            shadow.setStyleSheet(f"background: {shadow_color}; border: none;")
+            shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            shadow.show()
         button = QPushButton(tabs_container)
-        button.setGeometry(index * (button_w + button_gap), 0, button_w, button_h)
+        button.setGeometry(button_x, 0, button_w, button_h)
         button.setText(title)
         button.setCursor(Qt.PointingHandCursor)
         button.setProperty("inventory_category_id", category_id)
@@ -170,6 +420,7 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
         button.clicked.connect(
             lambda checked=False, cid=category_id: window.on_inventory_category_clicked(cid)
         )
+        button.raise_()
         button.show()
 
 
@@ -190,6 +441,7 @@ def render_inventory_active_category_table(window, parent, screen_cfg, categorie
 
 
 def render_inventory_single_table_widget(window, parent, table_cfg, category):
+    frame_state = apply_inventory_panel_frame_if_enabled(window, parent, table_cfg)
     table_frame = QFrame(parent)
     table_frame.setGeometry(
         window._safe_int(table_cfg.get("x", 20), 20),
@@ -199,8 +451,18 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
     )
     border_color = str(table_cfg.get("border_color", "rgba(242, 210, 139, 90)"))
     background = str(table_cfg.get("background", "rgba(5, 5, 5, 95)"))
+    table_frame_background = (
+        "transparent"
+        if frame_state.get("active") and frame_state.get("transparent_panel_background_when_active")
+        else background
+    )
+    table_frame_border = (
+        "none"
+        if frame_state.get("active") and frame_state.get("remove_old_border_when_active")
+        else f"1px solid {border_color}"
+    )
     table_frame.setStyleSheet(
-        f"background: {background}; border: 1px solid {border_color}; border-radius: 4px;"
+        f"background: {table_frame_background}; border: {table_frame_border}; border-radius: 4px;"
     )
     table_frame.show()
 
@@ -319,6 +581,32 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
     window._apply_inventory_row_heights(table, min_row_h, max_row_h)
     table.blockSignals(False)
 
+    header_frame_cfg = table_cfg.get("header_frame", {}) if isinstance(table_cfg.get("header_frame", {}), dict) else {}
+    header = table.horizontalHeader()
+    header_h = max(1, header.height())
+    for column_index, (column_cfg, title) in enumerate((
+        (name_col, header_title),
+        (pl_col, str(pl_col.get("title", "PL"))),
+        (count_col, str(count_col.get("title", "Anzahl"))),
+    )):
+        column_header_cfg = column_cfg.get("header_frame", {}) if isinstance(column_cfg.get("header_frame", {}), dict) else {}
+        effective_header_cfg = column_header_cfg if column_header_cfg else header_frame_cfg
+        if not isinstance(effective_header_cfg, dict) or not bool(effective_header_cfg.get("enabled", False)):
+            continue
+        header_x = table.columnViewportPosition(column_index)
+        header_w = max(1, table.columnWidth(column_index))
+        create_inventory_framed_text_label(
+            window,
+            header,
+            {"x": header_x, "y": 0, "w": header_w, "h": header_h},
+            title,
+            header_font_size,
+            header_color,
+            effective_header_cfg,
+            bold=True,
+            align="center",
+        )
+
     window._inventory_table_bindings[id(table)] = {
         "section_id": str(category.get("id", "")),
         "rows": rows,
@@ -336,6 +624,7 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
 def render_inventory_money_panel(window, parent, money_cfg, money):
     window._inventory_money_fields = {}
     window._inventory_money_delta_fields = {}
+    frame_state = apply_inventory_panel_frame_if_enabled(window, parent, money_cfg)
     panel = QFrame(parent)
     panel.setGeometry(
         window._safe_int(money_cfg.get("x", 20), 20),
@@ -343,9 +632,19 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
         window._safe_int(money_cfg.get("w", 420), 420),
         window._safe_int(money_cfg.get("h", 110), 110),
     )
+    panel_background = (
+        "transparent"
+        if frame_state.get("active") and frame_state.get("transparent_panel_background_when_active")
+        else "rgba(5, 5, 5, 95)"
+    )
+    panel_border = (
+        "none"
+        if frame_state.get("active") and frame_state.get("remove_old_border_when_active")
+        else "1px solid rgba(242, 210, 139, 70)"
+    )
     panel.setStyleSheet(
-        "background: rgba(5, 5, 5, 95);"
-        "border: 1px solid rgba(242, 210, 139, 70);"
+        f"background: {panel_background};"
+        f"border: {panel_border};"
         "border-radius: 4px;"
     )
     panel.show()
@@ -356,15 +655,20 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
     title_font = window._safe_int(money_cfg.get("font_size", 18), 18)
     label_font = window._safe_int(money_cfg.get("label_font_size", 14), 14)
     value_font = window._safe_int(money_cfg.get("value_font_size", 20), 20)
+    title_frame_cfg = money_cfg.get("title_frame", {}) if isinstance(money_cfg.get("title_frame", {}), dict) else {}
+    label_frame_cfg = money_cfg.get("label_frame", {}) if isinstance(money_cfg.get("label_frame", {}), dict) else {}
+    value_frame_cfg = money_cfg.get("value_frame", {}) if isinstance(money_cfg.get("value_frame", {}), dict) else {}
 
-    window.create_panel_text(
+    create_inventory_framed_text_label(
+        window,
         panel,
         {"x": 12, "y": 8, "w": max(1, panel.width() - 24), "h": 26},
         str(money_cfg.get("title", "Geldbeutel")),
         title_font,
         title_color,
+        title_frame_cfg,
         bold=True,
-        align="left",
+        align=str(money_cfg.get("title_align", "center")),
     )
 
     columns = money_cfg.get("columns", [])
@@ -382,22 +686,26 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
             continue
         x = 12 + index * column_w
         value_id = str(column.get("id", ""))
-        window.create_panel_text(
+        label_rect = {"x": x, "y": 44, "w": column_w - 8, "h": 22}
+        create_inventory_framed_text_label(
+            window,
             panel,
-            {"x": x, "y": 44, "w": column_w - 8, "h": 22},
+            label_rect,
             str(column.get("label", value_id)),
             label_font,
             label_color,
+            label_frame_cfg,
             bold=True,
             align="center",
         )
         money_edit = QLineEdit(panel)
         money_edit.setGeometry(x, 68, max(1, column_w - 8), 30)
         money_edit.setAlignment(Qt.AlignCenter)
+        money_value_has_frame = _apply_inventory_line_edit_frame(window, panel, money_edit, value_frame_cfg)
         money_edit.setStyleSheet(
             "QLineEdit {"
-            "background: rgba(8, 8, 8, 165);"
-            "border: 1px solid rgba(242, 210, 139, 70);"
+            f"background: {'transparent' if money_value_has_frame else 'rgba(8, 8, 8, 165)'};"
+            f"border: {'none' if money_value_has_frame else '1px solid rgba(242, 210, 139, 70)'};"
             f"color: {value_color};"
             f"font-size: {value_font}px;"
             "font-weight: 700;"
@@ -412,6 +720,7 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
             lambda field=money_edit: window.on_inventory_money_edit_finished(field)
         )
         window._inventory_money_fields[value_id] = money_edit
+        money_edit.raise_()
         money_edit.show()
 
     delta_row_cfg = money_cfg.get("delta_row", {})
@@ -420,6 +729,8 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
     delta_buttons_cfg = money_cfg.get("delta_buttons", {})
     if not isinstance(delta_buttons_cfg, dict):
         delta_buttons_cfg = {}
+    delta_label_frame_cfg = delta_row_cfg.get("label_frame", {}) if isinstance(delta_row_cfg.get("label_frame", {}), dict) else {}
+    delta_value_frame_cfg = delta_row_cfg.get("value_frame", {}) if isinstance(delta_row_cfg.get("value_frame", {}), dict) else {}
 
     delta_label = str(delta_row_cfg.get("label", "Änderung"))
     label_x = window._safe_int(delta_row_cfg.get("label_x", 12), 12)
@@ -431,14 +742,16 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
     field_gap = window._safe_int(delta_row_cfg.get("field_gap", 10), 10)
     reserve_button_space = bool(delta_row_cfg.get("reserve_button_space", False))
 
-    window.create_panel_text(
+    create_inventory_framed_text_label(
+        window,
         panel,
         {"x": label_x, "y": label_y, "w": label_w, "h": label_h},
         delta_label,
         label_font,
         label_color,
+        delta_label_frame_cfg,
         bold=True,
-        align="left",
+        align=str(delta_row_cfg.get("label_align", "left")),
     )
 
     button_w = window._safe_int(delta_row_cfg.get("buttons_w", delta_buttons_cfg.get("w", 32)), 32)
@@ -470,10 +783,11 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
         delta_edit.setGeometry(x, field_y, max(1, delta_field_w), max(1, field_h))
         delta_edit.setAlignment(Qt.AlignCenter)
         delta_edit.setText("0")
+        delta_value_has_frame = _apply_inventory_line_edit_frame(window, panel, delta_edit, delta_value_frame_cfg)
         delta_edit.setStyleSheet(
             "QLineEdit {"
-            "background: rgba(8, 8, 8, 165);"
-            "border: 1px solid rgba(242, 210, 139, 70);"
+            f"background: {'transparent' if delta_value_has_frame else 'rgba(8, 8, 8, 165)'};"
+            f"border: {'none' if delta_value_has_frame else '1px solid rgba(242, 210, 139, 70)'};"
             f"color: {value_color};"
             f"font-size: {value_font}px;"
             "font-weight: 700;"
@@ -481,6 +795,7 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
             "}"
         )
         window._inventory_money_delta_fields[value_id] = delta_edit
+        delta_edit.raise_()
         delta_edit.show()
 
     if "minus_x" in delta_buttons_cfg:
@@ -495,22 +810,54 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
     plus_button = QPushButton("+", panel)
     minus_button.setGeometry(max(0, minus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
     plus_button.setGeometry(max(0, plus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
-    for button in (minus_button, plus_button):
+    button_shadow_cfg = delta_buttons_cfg.get("shadow", {}) if isinstance(delta_buttons_cfg.get("shadow", {}), dict) else {}
+    if bool(button_shadow_cfg.get("enabled", False)):
+        shadow_x = window._safe_int(button_shadow_cfg.get("x", 2), 2)
+        shadow_y = window._safe_int(button_shadow_cfg.get("y", 3), 3)
+        shadow_color = str(button_shadow_cfg.get("color", "rgba(0, 0, 0, 120)"))
+        for button in (minus_button, plus_button):
+            shadow = QLabel(panel)
+            shadow.setGeometry(button.x() + shadow_x, button.y() + shadow_y, button.width(), button.height())
+            shadow.setStyleSheet(f"background: {shadow_color}; border: none;")
+            shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            shadow.show()
+    for button, asset_key, icon_key in (
+        (minus_button, "minus_asset", "minus_icon"),
+        (plus_button, "plus_asset", "plus_icon"),
+    ):
         button.setCursor(Qt.PointingHandCursor)
-        button.setStyleSheet(
-            "QPushButton {"
-            "background: rgba(35, 24, 12, 185);"
-            f"color: {title_color};"
-            "border: 1px solid rgba(242, 210, 139, 90);"
-            "border-radius: 4px;"
-            f"font-size: {button_font_size}px;"
-            "font-weight: 700;"
-            "padding: 0px;"
-            "}"
-            "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
+        asset_style = _inventory_asset_button_stylesheet(
+            window,
+            delta_buttons_cfg,
+            asset_key,
+            title_color,
+            "#ffffff",
+            button_font_size,
         )
+        if asset_style:
+            button.setStyleSheet(asset_style)
+        else:
+            button.setStyleSheet(
+                "QPushButton {"
+                "background: rgba(35, 24, 12, 185);"
+                f"color: {title_color};"
+                "border: 1px solid rgba(242, 210, 139, 90);"
+                "border-radius: 4px;"
+                f"font-size: {button_font_size}px;"
+                "font-weight: 700;"
+                "padding: 0px;"
+                "}"
+                "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
+            )
+        icon_pixmap = _optional_inventory_ui_pixmap(window, delta_buttons_cfg.get(icon_key, ""))
+        if icon_pixmap is not None:
+            button.setText("")
+            button.setIcon(QIcon(icon_pixmap))
+            button.setIconSize(button.size())
     minus_button.clicked.connect(lambda: window.on_inventory_money_delta_apply("-"))
     plus_button.clicked.connect(lambda: window.on_inventory_money_delta_apply("+"))
+    minus_button.raise_()
+    plus_button.raise_()
     minus_button.show()
     plus_button.show()
 

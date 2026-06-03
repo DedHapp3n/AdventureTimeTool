@@ -19,13 +19,56 @@
       "y": 60,
       "w": 420,
       "h": 165,
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_skils_panel_frame.png",
+        "render_mode": "nine_slice",
+        "slice": { "left": 24, "top": 24, "right": 24, "bottom": 24 },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0,
+        "shadow": {
+          "enabled": true,
+          "x": 3,
+          "y": 4,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      },
       "title": "Geldbeutel",
+      "title_frame": {
+        "enabled": true,
+        "asset": "frames/1024x122_box.png",
+        "render_mode": "fit",
+        "keep_aspect": false,
+        "smooth_scaling": true,
+        "opacity": 1.0
+      },
       "font_size": 18,
       "label_font_size": 14,
       "value_font_size": 20,
       "title_color": "#cdb7ff",
       "label_color": "#cdb7ff",
       "value_color": "#ffffff",
+      "label_frame": {
+        "enabled": true,
+        "asset": "frames/512x122_box.png",
+        "render_mode": "fit",
+        "keep_aspect": false,
+        "smooth_scaling": true,
+        "opacity": 1.0
+      },
+      "value_frame": {
+        "enabled": true,
+        "asset": "frames/512x122_box.png",
+        "render_mode": "fit",
+        "keep_aspect": false,
+        "smooth_scaling": true,
+        "opacity": 1.0
+      },
       "columns": [
         { "id": "gulden", "label": "Gulden" },
         { "id": "schilling", "label": "Schilling" },
@@ -46,7 +89,37 @@
         "buttons_gap": 6,
         "buttons_y": 124,
         "buttons_right_margin": 12,
-        "reserve_button_space": true
+        "reserve_button_space": true,
+        "label_frame": {
+          "enabled": true,
+          "asset": "frames/512x122_box.png",
+          "render_mode": "fit",
+          "keep_aspect": false,
+          "smooth_scaling": true,
+          "opacity": 1.0
+        },
+        "value_frame": {
+          "enabled": true,
+          "asset": "frames/512x122_box.png",
+          "render_mode": "fit",
+          "keep_aspect": false,
+          "smooth_scaling": true,
+          "opacity": 1.0
+        }
+      },
+      "delta_buttons": {
+        "use_assets": true,
+        "minus_icon": "icons/icon_minus.png",
+        "plus_icon": "icons/icon_plus.png",
+        "minus_asset": "buttons/menu_button_small.png",
+        "plus_asset": "buttons/menu_button_small.png",
+        "fallback_asset": "buttons/menu_button_small.png",
+        "shadow": {
+          "enabled": true,
+          "x": 2,
+          "y": 3,
+          "color": "rgba(0, 0, 0, 120)"
+        }
       }
     },
     "category_tabs": {
@@ -64,13 +137,46 @@
       "use_asset_buttons": true,
       "asset": "buttons/menu_button_small.png",
       "active_asset": "buttons/menu_button_small.png",
-      "inactive_asset": "buttons/menu_button_small.png"
+      "inactive_asset": "buttons/menu_button_small.png",
+      "button_shadow": {
+        "enabled": true,
+        "x": 2,
+        "y": 3,
+        "color": "rgba(0, 0, 0, 115)"
+      }
     },
     "table": {
       "x": 20,
       "y": 295,
       "w": 1380,
       "h": 500,
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_skils_panel_frame.png",
+        "render_mode": "nine_slice",
+        "slice": { "left": 24, "top": 24, "right": 24, "bottom": 24 },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0,
+        "shadow": {
+          "enabled": true,
+          "x": 3,
+          "y": 4,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      },
+      "header_frame": {
+        "enabled": true,
+        "asset": "frames/1024x122_box.png",
+        "render_mode": "fit",
+        "keep_aspect": false,
+        "smooth_scaling": true,
+        "opacity": 1.0
+      },
       "header_h": 42,
       "min_row_h": 34,
       "max_row_h": 180,
@@ -84,9 +190,42 @@
       "background": "rgba(5, 5, 5, 95)",
       "row_background": "rgba(0, 0, 0, 18)",
       "columns": {
-        "name": { "title": "Inventar", "w": 1140 },
-        "pl": { "title": "PL", "w": 80 },
-        "count": { "title": "Anzahl", "w": 120 }
+        "name": {
+          "title": "Inventar",
+          "w": 1140,
+          "header_frame": {
+            "enabled": true,
+            "asset": "frames/1024x122_box.png",
+            "render_mode": "fit",
+            "keep_aspect": false,
+            "smooth_scaling": true,
+            "opacity": 1.0
+          }
+        },
+        "pl": {
+          "title": "PL",
+          "w": 80,
+          "header_frame": {
+            "enabled": true,
+            "asset": "frames/512x122_box.png",
+            "render_mode": "fit",
+            "keep_aspect": false,
+            "smooth_scaling": true,
+            "opacity": 1.0
+          }
+        },
+        "count": {
+          "title": "Anzahl",
+          "w": 120,
+          "header_frame": {
+            "enabled": true,
+            "asset": "frames/512x122_box.png",
+            "render_mode": "fit",
+            "keep_aspect": false,
+            "smooth_scaling": true,
+            "opacity": 1.0
+          }
+        }
       }
     },
     "tables": {
