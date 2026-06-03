@@ -17,7 +17,7 @@
     "money": {
       "x": 20,
       "y": 10,
-      "w": 550,
+      "w": 450,
       "h": 165,
       "frame": {
         "enabled": true,
@@ -43,7 +43,7 @@
         "enabled": true,
         "asset": "frames/1024x122_box.png",
         "render_mode": "fit",
-        "keep_aspect": false,
+        "keep_aspect": true,
         "smooth_scaling": true,
         "opacity": 1.0
       },
@@ -76,7 +76,7 @@
         { "id": "pfifferling", "label": "Pfifferling" }
       ],
       "delta_row": {
-        "label": "Änderung",
+        "label": "   Änderung",
         "label_x": 12,
         "label_y": 101,
         "label_w": 100,
@@ -100,7 +100,7 @@
         },
         "value_frame": {
           "enabled": true,
-          "asset": "frames/512x122_box.png",
+          "asset": "frames/256x122_box.png",
           "render_mode": "fit",
           "keep_aspect": false,
           "smooth_scaling": true,
