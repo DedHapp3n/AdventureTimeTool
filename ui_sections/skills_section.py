@@ -186,7 +186,7 @@ def apply_skills_table_frame_if_enabled(window, parent, table_cfg):
     }
 
 
-def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg):
+def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg, raise_frame=False):
     field_cfg = row_fields_cfg.get(field_id, {}) if isinstance(row_fields_cfg, dict) else {}
     frame_cfg = field_cfg.get("frame", {}) if isinstance(field_cfg, dict) else {}
     if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
@@ -217,6 +217,8 @@ def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, fiel
         bg.setPixmap(_render_fit_pixmap(src, w, h, frame_cfg))
     bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
     bg.show()
+    if raise_frame:
+        bg.raise_()
     return True
 
 
@@ -1071,40 +1073,76 @@ def render_skills_table(window, parent, table_cfg, category, attribute_map):
         value_text_offset_x = window._safe_int(value_field_cfg.get("text_offset_x", 0), 0)
         value_text_offset_y = window._safe_int(value_field_cfg.get("text_offset_y", 0), 0)
         value_text_align = str(value_field_cfg.get("text_align", "center") or "center")
-        value_frame_active = apply_skills_row_field_frame_if_enabled(
-            window,
-            table,
-            row_fields_cfg,
-            "value",
-            {"x": value_x, "y": y, "w": value_w, "h": row_height},
+        value_frame_cfg = value_field_cfg.get("frame", {}) if isinstance(value_field_cfg.get("frame", {}), dict) else {}
+        value_frame_enabled = bool(value_frame_cfg.get("enabled", False))
+        value_frame_pixmap = (
+            _optional_theme_ui_pixmap(window, value_frame_cfg.get("asset", ""))
+            if value_frame_enabled
+            else None
         )
-        value_button = QPushButton(table)
-        value_button.setGeometry(
-            (value_box_x + value_text_offset_x) if value_frame_active else value_x,
-            (value_box_y + value_text_offset_y) if value_frame_active else y,
-            value_box_w if value_frame_active else value_w,
-            value_box_h if value_frame_active else row_height,
+        value_frame_active = value_frame_pixmap is not None
+        value_fallback_border = bool(value_frame_cfg.get("fallback_border", False))
+
+        value_container = QWidget(table)
+        value_container.setGeometry(value_box_x, value_box_y, value_box_w, value_box_h)
+        value_container.setStyleSheet("background: transparent; border: none;")
+
+        if value_frame_active:
+            value_bg = QLabel(value_container)
+            value_bg.setGeometry(0, 0, value_box_w, value_box_h)
+            src = _apply_source_crop(window, value_frame_pixmap, value_frame_cfg)
+            render_mode = str(value_frame_cfg.get("render_mode", "fit") or "fit").strip().lower()
+            if render_mode == "nine_slice":
+                value_bg.setPixmap(_render_nine_slice_pixmap(window, src, value_box_w, value_box_h, value_frame_cfg))
+            else:
+                value_bg.setPixmap(_render_fit_pixmap(src, value_box_w, value_box_h, value_frame_cfg))
+            value_bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            value_bg.show()
+
+        value_label = QLabel(value_container)
+        value_label.setGeometry(value_text_offset_x, value_text_offset_y, value_box_w, value_box_h)
+        value_label.setText(display_value)
+        align_key = value_text_align.strip().lower()
+        if align_key == "left":
+            value_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        elif align_key == "right":
+            value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        else:
+            value_label.setAlignment(Qt.AlignCenter)
+        value_label.setStyleSheet(
+            "QLabel {"
+            "background: transparent;"
+            f"border: {'none' if value_frame_active or not value_fallback_border else '1px solid rgba(127, 208, 255, 60)'};"
+            f"color: {str(table_cfg.get('value_color', '#7fd0ff'))};"
+            f"font-size: {font_size}px;"
+            "font-weight: 700;"
+            "padding: 0px;"
+            "}"
         )
-        value_button.setText(display_value)
+        value_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        value_label.show()
+
+        value_button = QPushButton(value_container)
+        value_button.setGeometry(0, 0, value_box_w, value_box_h)
+        value_button.setText("")
         value_button.setFlat(True)
         value_button.setCursor(Qt.PointingHandCursor)
         value_button.setStyleSheet(
             "QPushButton {"
             "background: transparent;"
             "border: none;"
-            f"color: {str(table_cfg.get('value_color', '#7fd0ff'))};"
-            f"font-size: {font_size}px;"
-            "font-weight: 700;"
-            f"text-align: {value_text_align};"
+            "color: transparent;"
             "padding: 0px;"
             "}"
-            "QPushButton:hover { border: 1px solid rgba(127, 208, 255, 60); }"
+            "QPushButton:hover { background: transparent; border: none; }"
         )
         value_button.clicked.connect(
             lambda checked=False, sk=source_key: window.on_skill_row_roll_clicked(sk)
         )
         value_button.show()
         value_button.raise_()
+        value_container.show()
+        value_container.raise_()
         spec_text = str(display_specialization)
         spec_frame_active = apply_skills_row_field_frame_if_enabled(
             window,
@@ -1152,50 +1190,17 @@ def render_skills_table(window, parent, table_cfg, category, attribute_map):
             )
             spec_label.setToolTip(spec_text if spec_text else "")
         note_text = str(display_note)
-        note_frame_active = apply_skills_row_field_frame_if_enabled(
-            window,
+        note_label = window.create_panel_text(
             table,
-            row_fields_cfg,
-            "note",
-            {"x": note_x, "y": y + 2, "w": note_w, "h": max(24, row_height - 4)},
+            {
+                "x": note_x,
+                "y": y,
+                "w": note_w,
+                "h": row_height,
+            },
+            note_text,
+            font_size,
+            str(table_cfg.get("note_color", "#d8d0b0")),
         )
-        if window.is_skill_note_editable(source_info):
-            note_editor = InlineTextEdit(
-                on_commit=lambda new_text, old_text, sk=source_key: window.save_skill_text_cell_value(
-                    sk, "note", new_text, old_text
-                ),
-                parent=table,
-            )
-            note_editor.setGeometry(note_x, y + 2, note_w, max(24, row_height - 4))
-            note_editor.set_initial_text(note_text)
-            note_editor.setLineWrapMode(QTextEdit.NoWrap)
-            note_editor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            note_editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            note_editor.setStyleSheet(
-                "QTextEdit {"
-                "background: transparent;"
-                f"border: {'none' if note_frame_active else '1px solid rgba(216, 208, 176, 35)'};"
-                f"color: {str(table_cfg.get('note_color', '#d8d0b0'))};"
-                f"font-size: {font_size}px;"
-                "font-weight: 400;"
-                "padding: 0px;"
-                "}"
-                "QTextEdit:focus { border: 1px solid rgba(216, 208, 176, 100); }"
-            )
-            note_editor.setToolTip(note_text if note_text else "Notiz bearbeiten")
-            note_editor.show()
-        else:
-            note_label = window.create_panel_text(
-                table,
-                {
-                    "x": note_x,
-                    "y": y,
-                    "w": note_w,
-                    "h": row_height,
-                },
-                note_text,
-                font_size,
-                str(table_cfg.get("note_color", "#d8d0b0")),
-            )
-            note_label.setToolTip(note_text if note_text else "")
+        note_label.setToolTip(note_text if note_text else "")
         current_y += row_height

@@ -111,15 +111,12 @@
         "specialization": {
           "frame": {
             "enabled": true,
-            "asset": "frames/256x122_box.png",
-            "render_mode": "nine_slice",
-            "slice": {
-              "left": 32,
-              "top": 24,
-              "right": 32,
-              "bottom": 24
-            },
-            "draw_center": true,
+            "asset": "frames/1024x122_box.png",
+            "render_mode": "fit",
+            "keep_aspect": false,
+            "image_offset_x": 0,
+            "image_offset_y": 0,
+            "fit_mode": "stretch",
             "source_crop": null,
             "smooth_scaling": true,
             "opacity": 1.0,
@@ -128,7 +125,7 @@
         },
         "note": {
           "frame": {
-            "enabled": true,
+            "enabled": false,
             "asset": "frames/256x122_box.png",
             "render_mode": "nine_slice",
             "slice": {
@@ -156,20 +153,20 @@
         "attributes": {
           "title": "Attribute",
           "x": 370,
-          "w": 220,
-          "slot_w": 42,
-          "slot_gap": 8
+          "w": 200,
+          "slot_w": 40,
+          "slot_gap": 6
         },
         "value": {
           "title": "Wert",
-          "x": 600,
+          "x": 565,
           "w": 80,
           "text_padding_left": 0,
           "text_padding_right": 0
         },
         "specialization": {
           "title": "Spezialisierung",
-          "x": 690,
+          "x": 665,
           "w": 470,
           "text_padding_left": 8,
           "text_padding_right": 8
