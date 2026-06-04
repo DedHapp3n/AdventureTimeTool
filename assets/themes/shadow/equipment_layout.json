@@ -101,14 +101,6 @@
       "min_row_h": 32,
       "max_row_h": 120,
       "min_rows": 12,
-      "dynamic_rows": {
-        "enabled": false,
-        "min_rows": 12,
-        "grow_by": 3,
-        "trigger_empty_rows_remaining": 1,
-        "trim_trailing_empty": true,
-        "scan_extra_mapped_rows": 24
-      },
       "columns": {
         "slot": {
           "title": "Wo",
@@ -371,14 +363,6 @@
       "min_row_h": 32,
       "max_row_h": 72,
       "min_rows": 12,
-      "dynamic_rows": {
-        "enabled": false,
-        "min_rows": 12,
-        "grow_by": 3,
-        "trigger_empty_rows_remaining": 1,
-        "trim_trailing_empty": true,
-        "scan_extra_mapped_rows": 24
-      },
       "columns": {
         "name": {
           "title": "Name",
@@ -438,6 +422,9 @@
         }
       },
       "column_backgrounds": {
+        "name": "rgba(0, 0, 0, 125)",
+        "weapon_type": "rgba(0, 0, 0, 125)",
+        "pl": "rgba(0, 0, 0, 125)",
         "damage_cut": "rgba(210, 210, 210, 110)",
         "damage_blunt": "rgba(210, 210, 210, 110)",
         "damage_pierce": "rgba(210, 210, 210, 110)",
@@ -447,9 +434,13 @@
         "elemental_elements": "rgba(255, 220, 120, 110)",
         "elemental_bonus": "rgba(255, 220, 120, 110)",
         "durability_current": "rgba(170, 170, 185, 120)",
-        "durability_max": "rgba(170, 170, 185, 120)"
+        "durability_max": "rgba(170, 170, 185, 120)",
+        "attributes": "rgba(0, 0, 0, 125)"
       },
       "header_backgrounds": {
+        "name": "rgba(0, 0, 0, 180)",
+        "weapon_type": "rgba(0, 0, 0, 180)",
+        "pl": "rgba(0, 0, 0, 180)",
         "damage_cut": "rgba(180, 180, 180, 180)",
         "damage_blunt": "rgba(180, 180, 180, 180)",
         "damage_pierce": "rgba(180, 180, 180, 180)",
@@ -459,7 +450,8 @@
         "elemental_elements": "rgba(210, 170, 70, 180)",
         "elemental_bonus": "rgba(210, 170, 70, 180)",
         "durability_current": "rgba(165, 165, 180, 180)",
-        "durability_max": "rgba(165, 165, 180, 180)"
+        "durability_max": "rgba(165, 165, 180, 180)",
+        "attributes": "rgba(0, 0, 0, 180)"
       },
       "cell_text_colors": {
         "damage_cut": "#000000",

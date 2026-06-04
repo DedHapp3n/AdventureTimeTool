@@ -4749,13 +4749,13 @@
         "error": null
       },
       "C27": {
-        "value": "Summe",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "M27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(M9,M11,M13,M15,M17,M21,M23,M25)",
         "references": [
           "M9",
@@ -4770,7 +4770,7 @@
         "error": null
       },
       "O27": {
-        "value": 2,
+        "value": "",
         "formula": "=SUM(O9,O11,O13,O15,O17,O21,O23,O25)",
         "references": [
           "O9",
@@ -4785,7 +4785,7 @@
         "error": null
       },
       "Q27": {
-        "value": 2,
+        "value": "",
         "formula": "=SUM(Q9,Q11,Q13,Q15,Q17,Q21,Q23,Q25)",
         "references": [
           "Q9",
@@ -4800,7 +4800,7 @@
         "error": null
       },
       "S27": {
-        "value": 2,
+        "value": "",
         "formula": "=SUM(S9,S11,S13,S15,S17,S21,S23,S25)",
         "references": [
           "S9",
@@ -4815,7 +4815,7 @@
         "error": null
       },
       "U27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(U9,U11,U13,U15,U17,U21,U23,U25)",
         "references": [
           "U9",
@@ -4830,7 +4830,7 @@
         "error": null
       },
       "W27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(W9,W11,W13,W17,W15,W21,W23,W25)",
         "references": [
           "W9",
@@ -4845,7 +4845,7 @@
         "error": null
       },
       "Y27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(Y9,Y11,Y13,Y15,Y17,Y21,Y23,Y25)",
         "references": [
           "Y9",
@@ -4860,7 +4860,7 @@
         "error": null
       },
       "AA27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(AA9,AA11,AA13,AA15,AA17,AA21,AA23,AA25)",
         "references": [
           "AA9",
@@ -4875,7 +4875,7 @@
         "error": null
       },
       "AC27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(AC9,AC11,AC13,AC15,AC17,AC21,AC23,AC25)",
         "references": [
           "AC9",
@@ -4890,7 +4890,7 @@
         "error": null
       },
       "AE27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(AE9,AE11,AE13,AE15,AE17,AE21,AE23,AE25)",
         "references": [
           "AE9",
@@ -4905,7 +4905,7 @@
         "error": null
       },
       "AG27": {
-        "value": 2,
+        "value": "",
         "formula": "=SUM(AG9,AG11,AG13,AG15,AG17,AG21,AG23,AG25)",
         "references": [
           "AG9",
@@ -4920,7 +4920,7 @@
         "error": null
       },
       "AI27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(AI9,AI11,AI13,AI15,AI17,AI21,AI23,AI25)",
         "references": [
           "AI9",
@@ -4935,7 +4935,7 @@
         "error": null
       },
       "AK27": {
-        "value": 0,
+        "value": "",
         "formula": "=SUM(AK9,AK11,AK13,AK15,AK17,AK21,AK23,AK25)",
         "references": [
           "AK9",
@@ -5346,6 +5346,138 @@
         "error": null
       },
       "C19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C43": {
         "value": "",
         "formula": null,
         "references": [],

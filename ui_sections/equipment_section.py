@@ -3,6 +3,12 @@ from PySide6.QtGui import QColor, QBrush, QPainter, QPixmap
 from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem
 
 from app_logger import log_debug, log_error, log_warning
+from ui_sections.equipment_analysis import (
+    analyze_equipment_sheet,
+    ensure_custom_equipment_min_rows,
+    grow_custom_equipment_rows_if_needed,
+    save_custom_equipment_cell,
+)
 
 
 def _optional_equipment_ui_pixmap(window, asset_rel_path):
@@ -335,17 +341,22 @@ def render_equipment_section(window, parent, layout_config):
             align="left",
         )
     render_equipment_category_tabs(window, screen, screen_cfg)
-    analysis = window.analyze_equipment_sheet()
+    analysis = analyze_equipment_sheet(window)
+    window.equipment_analysis = analysis
     if not isinstance(analysis, dict):
         analysis = {}
     armor_block = analysis.get("armor", {}) if isinstance(analysis, dict) else {}
     armor_rows = armor_block.get("rows", []) if isinstance(armor_block, dict) else []
     if not isinstance(armor_rows, list):
         armor_rows = []
+    if not any(bool(row.get("is_data_row")) for row in armor_rows if isinstance(row, dict)):
+        armor_rows = ensure_custom_equipment_min_rows(window, "armor", 12)
     weapons_block = analysis.get("weapons", {}) if isinstance(analysis, dict) else {}
     weapon_rows = weapons_block.get("rows", []) if isinstance(weapons_block, dict) else []
     if not isinstance(weapon_rows, list):
         weapon_rows = []
+    if not any(bool(row.get("is_data_row")) for row in weapon_rows if isinstance(row, dict)):
+        weapon_rows = ensure_custom_equipment_min_rows(window, "weapons", 12)
 
     if window.current_equipment_category == "weapons":
         try:
@@ -457,127 +468,6 @@ def apply_equipment_item_editability(item, editable):
         item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
 
-def _equipment_row_is_empty(row_data, meaningful_fields):
-    if not isinstance(row_data, dict):
-        return True
-    for field_key in meaningful_fields:
-        if str(row_data.get(field_key, "") or "").strip():
-            return False
-    return True
-
-
-def _equipment_dynamic_rows_config(window, table_cfg, fallback_min_rows):
-    dynamic_cfg = table_cfg.get("dynamic_rows", {}) if isinstance(table_cfg, dict) else {}
-    if not isinstance(dynamic_cfg, dict):
-        dynamic_cfg = {}
-    enabled = bool(dynamic_cfg.get("enabled", False))
-    min_rows = window._safe_int(dynamic_cfg.get("min_rows", fallback_min_rows), fallback_min_rows)
-    grow_by = window._safe_int(dynamic_cfg.get("grow_by", 3), 3)
-    trigger_remaining = window._safe_int(dynamic_cfg.get("trigger_empty_rows_remaining", 1), 1)
-    scan_extra_mapped_rows = window._safe_int(dynamic_cfg.get("scan_extra_mapped_rows", 0), 0)
-    return {
-        "enabled": enabled,
-        "min_rows": max(0, min_rows),
-        "grow_by": max(1, grow_by),
-        "trigger_empty_rows_remaining": max(0, trigger_remaining),
-        "trim_trailing_empty": bool(dynamic_cfg.get("trim_trailing_empty", True)),
-        "scan_extra_mapped_rows": max(0, scan_extra_mapped_rows),
-    }
-
-
-def _equipment_last_non_empty_row_index(rows, meaningful_fields):
-    if not isinstance(rows, list):
-        return -1
-    for row_index in range(len(rows) - 1, -1, -1):
-        if not _equipment_row_is_empty(rows[row_index], meaningful_fields):
-            return row_index
-    return -1
-
-
-def _equipment_dynamic_state(window):
-    state = getattr(window, "_equipment_dynamic_visible_rows", None)
-    if not isinstance(state, dict):
-        state = {}
-        window._equipment_dynamic_visible_rows = state
-    return state
-
-
-def _equipment_visible_data_row_count(window, table_type, rows, meaningful_fields, dynamic_cfg):
-    min_rows = int(dynamic_cfg.get("min_rows", 0))
-    last_non_empty = _equipment_last_non_empty_row_index(rows, meaningful_fields)
-    trigger_remaining = int(dynamic_cfg.get("trigger_empty_rows_remaining", 1))
-    base_count = max(min_rows, last_non_empty + 1 + trigger_remaining)
-    max_safe_display = max(min_rows, len(rows) if isinstance(rows, list) else 0)
-    state = _equipment_dynamic_state(window)
-    state_count = state.get(table_type)
-    try:
-        visible_count = int(state_count)
-    except Exception:
-        visible_count = base_count
-    visible_count = max(base_count, min(visible_count, max_safe_display))
-    state[table_type] = visible_count
-    return visible_count
-
-
-def _adjust_equipment_dynamic_rows_after_edit(window, binding):
-    dynamic_cfg = binding.get("dynamic_rows", {})
-    if not isinstance(dynamic_cfg, dict) or not bool(dynamic_cfg.get("enabled", False)):
-        return False
-    table_type = str(binding.get("table_type", ""))
-    rows = binding.get("rows", [])
-    if not isinstance(rows, list):
-        return False
-    meaningful_fields = binding.get("meaningful_fields", [])
-    if not isinstance(meaningful_fields, list):
-        meaningful_fields = []
-    current_count = int(binding.get("visible_data_row_count", len(rows)))
-    min_rows = int(dynamic_cfg.get("min_rows", 12))
-    grow_by = int(dynamic_cfg.get("grow_by", 3))
-    trigger_remaining = int(dynamic_cfg.get("trigger_empty_rows_remaining", 1))
-    max_safe_display = max(min_rows, len(rows))
-    mapped_visible_count = min(current_count, len(rows))
-    last_non_empty = _equipment_last_non_empty_row_index(rows[:mapped_visible_count], meaningful_fields)
-    filled_count = last_non_empty + 1
-    empty_remaining = max(0, mapped_visible_count - filled_count)
-    desired_count = current_count
-    if empty_remaining < trigger_remaining and current_count < max_safe_display:
-        desired_count = min(max_safe_display, current_count + grow_by)
-    elif bool(dynamic_cfg.get("trim_trailing_empty", True)):
-        spare_after_data = grow_by + trigger_remaining
-        trim_threshold = max(min_rows, filled_count + spare_after_data)
-        if current_count > trim_threshold:
-            desired_count = max(min_rows, filled_count + trigger_remaining)
-    desired_count = max(min_rows, min(desired_count, max_safe_display))
-    if desired_count == current_count:
-        return False
-    state = _equipment_dynamic_state(window)
-    state[table_type] = desired_count
-    return True
-
-
-def _log_equipment_dynamic_rows(window, table_type, rows, meaningful_fields, visible_data_row_count, dynamic_cfg):
-    if not window._equipment_debug_enabled():
-        return
-    if not isinstance(rows, list):
-        rows = []
-    filled = sum(1 for row_data in rows if not _equipment_row_is_empty(row_data, meaningful_fields))
-    mapped_empty = sum(1 for row_data in rows if _equipment_row_is_empty(row_data, meaningful_fields))
-    min_rows = int(dynamic_cfg.get("min_rows", 0))
-    grow_by = int(dynamic_cfg.get("grow_by", 3))
-    trigger_remaining = int(dynamic_cfg.get("trigger_empty_rows_remaining", 1))
-    max_safe_display = max(min_rows, len(rows))
-    growth_possible = visible_data_row_count < len(rows)
-    reason = "" if growth_possible else " reason=no_extra_mapped_rows"
-    filler_note = " filler_rows_non_editable=True" if visible_data_row_count > len(rows) else ""
-    log_debug(
-        "equipment",
-        f"EQUIPMENT DYNAMIC {table_type} analyzed={len(rows)} filled={filled} "
-        f"mapped_empty={mapped_empty} visible={visible_data_row_count} min_rows={min_rows} "
-        f"grow_by={grow_by} trigger_empty_rows_remaining={trigger_remaining} "
-        f"max_safe_display={max_safe_display} growth_possible={growth_possible}{reason}{filler_note}",
-    )
-
-
 def refresh_armor_summary_table_row(window, table):
     binding = window._equipment_table_bindings.get(id(table), {})
     if not isinstance(binding, dict):
@@ -636,18 +526,39 @@ def on_equipment_table_item_changed(window, table, row_index, column_index):
     if not isinstance(cells, dict):
         cells = {}
     cell_ref = str(cells.get(field_key, "") or "").strip()
-    if not cell_ref:
-        if binding.get("debug"):
-            log_debug("equipment", f"EQUIPMENT EDIT SKIP no cell_ref table={binding.get('table_type')} row={row_index} column={field_key}")
-        return
-
     new_value = str(item.text() or "")
     old_value = str(item.data(Qt.UserRole) or "")
     if new_value == old_value:
         return
 
-    sheet_name = str(window.equipment_analysis.get("sheet", "") or "Ausrüstung")
     table_type = str(binding.get("table_type", ""))
+    if str(row_data.get("storage", "") or "") == "custom":
+        custom_row_index = row_data.get("custom_row_index", data_row_index)
+        try:
+            custom_row_index = int(custom_row_index)
+        except Exception:
+            custom_row_index = data_row_index
+        if not save_custom_equipment_cell(window, table_type, custom_row_index, field_key, new_value):
+            return
+        row_data[field_key] = new_value
+        row_data["is_empty_row"] = False
+        row_data["is_data_row"] = True
+        item.setData(Qt.UserRole, new_value)
+        if binding.get("debug"):
+            log_debug("equipment", f"EQUIPMENT CUSTOM SAVE table={table_type} row={custom_row_index} column={field_key}")
+        grew = grow_custom_equipment_rows_if_needed(window, table_type, custom_row_index, min_rows=12, grow_by=3)
+        if table_type == "armor":
+            refresh_armor_summary_table_row(window, table)
+        if grew:
+            window.show_main_section("equipment")
+        return
+
+    if not cell_ref:
+        if binding.get("debug"):
+            log_debug("equipment", f"EQUIPMENT EDIT SKIP no cell_ref table={binding.get('table_type')} row={row_index} column={field_key}")
+        return
+
+    sheet_name = str(window.equipment_analysis.get("sheet", "") or "Ausrüstung")
     source_row = row_data.get("row_index", row_data.get("row", data_row_index))
     if binding.get("debug"):
         log_debug("equipment", f"EQUIPMENT EDIT table={table_type} ui_row={row_index} source_row={source_row} column={field_key} cell={cell_ref} old={old_value!r} new={new_value!r}")
@@ -661,9 +572,6 @@ def on_equipment_table_item_changed(window, table, row_index, column_index):
 
     if table_type == "armor":
         refresh_armor_summary_table_row(window, table)
-    dynamic_cfg = binding.get("dynamic_rows", {})
-    if isinstance(dynamic_cfg, dict) and bool(dynamic_cfg.get("enabled", False)) and _adjust_equipment_dynamic_rows_after_edit(window, binding):
-        window.show_main_section("equipment")
 
 
 def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
@@ -688,10 +596,6 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
     table_background = background if table_background_mode == "dark" else str(armor_cfg.get("table_background", background))
     min_row_h = window._safe_int(armor_cfg.get("min_row_h", 32), 32)
     max_row_h = window._safe_int(armor_cfg.get("max_row_h", 120), 120)
-    min_rows = window._safe_int(armor_cfg.get("min_rows", 10), 10)
-    dynamic_rows_cfg = _equipment_dynamic_rows_config(window, armor_cfg, min_rows)
-    if dynamic_rows_cfg.get("enabled"):
-        min_rows = int(dynamic_rows_cfg.get("min_rows", min_rows))
     summary_cfg = armor_cfg.get("summary", {})
     if not isinstance(summary_cfg, dict):
         summary_cfg = {}
@@ -773,8 +677,6 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
         ("durability_max", "Max"),
         ("attributes", "Attribute / Sonderfertigkeiten"),
     ]
-    meaningful_fields = [field_key for field_key, _ in column_order]
-
     table = QTableWidget(panel)
     table_top = 42 if show_panel_title else 10
     table.setGeometry(10, table_top, table_w - 20, table_h - table_top - 10)
@@ -784,16 +686,7 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
         summary_row["name"] = summary_label
     data_row_offset = 1 if summary_enabled else 0
     summary_row_index = 0 if summary_enabled else -1
-    if dynamic_rows_cfg.get("enabled"):
-        visible_data_row_count = _equipment_visible_data_row_count(
-            window, "armor", armor_rows, meaningful_fields, dynamic_rows_cfg
-        )
-        _log_equipment_dynamic_rows(
-            window, "armor", armor_rows, meaningful_fields, visible_data_row_count, dynamic_rows_cfg
-        )
-    else:
-        visible_data_row_count = max(len(armor_rows), min_rows)
-    table_row_count = visible_data_row_count + (1 if summary_enabled else 0)
+    table_row_count = len(armor_rows) + (1 if summary_enabled else 0)
     table.setRowCount(table_row_count)
     if editable:
         table.setEditTriggers(
@@ -1025,7 +918,10 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
                 and not is_summary_row
                 and data_row_index >= 0
                 and data_row_index < len(armor_rows)
-                and bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+                and (
+                    str(row_data.get("storage", "") or "") == "custom"
+                    or bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+                )
             )
             apply_equipment_item_editability(item, can_edit)
             table.setItem(row_index, col_index, item)
@@ -1052,11 +948,8 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
         "table_type": "armor",
         "rows": armor_rows,
         "column_order": column_order,
-        "meaningful_fields": meaningful_fields,
         "summary_row_index": summary_row_index,
         "data_row_offset": data_row_offset,
-        "visible_data_row_count": visible_data_row_count,
-        "dynamic_rows": dynamic_rows_cfg,
         "summary_row": summary_row,
         "summary_label": summary_label,
         "save_on_cell_change": save_on_cell_change,
@@ -1092,10 +985,6 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
     table_background = str(weapons_cfg.get("table_background", background)) if table_background_mode == "default" else background
     min_row_h = window._safe_int(weapons_cfg.get("min_row_h", 32), 32)
     max_row_h = window._safe_int(weapons_cfg.get("max_row_h", 72), 72)
-    min_rows = window._safe_int(weapons_cfg.get("min_rows", 8), 8)
-    dynamic_rows_cfg = _equipment_dynamic_rows_config(window, weapons_cfg, min_rows)
-    if dynamic_rows_cfg.get("enabled"):
-        min_rows = int(dynamic_rows_cfg.get("min_rows", min_rows))
     editable, save_on_cell_change, edit_debug = get_equipment_table_edit_settings(window, weapons_cfg)
 
     panel_frame_state = _apply_equipment_panel_frame_if_enabled(
@@ -1154,22 +1043,11 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
         ("durability_max", "Max"),
         ("attributes", "Attribute / Sonderfertigkeiten"),
     ]
-    meaningful_fields = [field_key for field_key, _ in column_order]
-
     table = QTableWidget(panel)
     table_top = 42 if show_panel_title else 10
     table.setGeometry(10, table_top, table_w - 20, table_h - table_top - 10)
     table.setColumnCount(len(column_order))
-    if dynamic_rows_cfg.get("enabled"):
-        visible_data_row_count = _equipment_visible_data_row_count(
-            window, "weapons", weapon_rows, meaningful_fields, dynamic_rows_cfg
-        )
-        _log_equipment_dynamic_rows(
-            window, "weapons", weapon_rows, meaningful_fields, visible_data_row_count, dynamic_rows_cfg
-        )
-    else:
-        visible_data_row_count = max(len(weapon_rows), min_rows)
-    table_row_count = visible_data_row_count
+    table_row_count = len(weapon_rows)
     table.setRowCount(table_row_count)
     if editable:
         table.setEditTriggers(
@@ -1220,6 +1098,7 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
         "}"
         "QTableWidget::item { padding: 4px; }"
     )
+    table.viewport().setStyleSheet(f"background: {table_background};")
 
     column_backgrounds = weapons_cfg.get("column_backgrounds", {})
     if not isinstance(column_backgrounds, dict):
@@ -1270,11 +1149,7 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
     table.blockSignals(True)
     window._equipment_rendering = True
     for row_index in range(table_row_count):
-        row_data = (
-            weapon_rows[row_index]
-            if row_index < len(weapon_rows) and isinstance(weapon_rows[row_index], dict)
-            else {}
-        )
+        row_data = weapon_rows[row_index] if isinstance(weapon_rows[row_index], dict) else {}
         for col_index, (field_key, _) in enumerate(column_order):
             raw_value = str(row_data.get(field_key, "") or "").strip()
             item = QTableWidgetItem(raw_value)
@@ -1296,7 +1171,10 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
             can_edit = (
                 editable
                 and row_index < len(weapon_rows)
-                and bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+                and (
+                    str(row_data.get("storage", "") or "") == "custom"
+                    or bool(str(row_data.get("cells", {}).get(field_key, "") or "").strip())
+                )
             )
             apply_equipment_item_editability(item, can_edit)
             table.setItem(row_index, col_index, item)
@@ -1320,11 +1198,8 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
         "table_type": "weapons",
         "rows": weapon_rows,
         "column_order": column_order,
-        "meaningful_fields": meaningful_fields,
         "summary_row_index": -1,
         "data_row_offset": 0,
-        "visible_data_row_count": visible_data_row_count,
-        "dynamic_rows": dynamic_rows_cfg,
         "save_on_cell_change": save_on_cell_change,
         "debug": edit_debug,
     }
