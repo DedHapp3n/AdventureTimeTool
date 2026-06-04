@@ -5332,6 +5332,24 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "C20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Magie": {

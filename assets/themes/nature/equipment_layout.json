@@ -20,12 +20,34 @@
       "print_rows": true,
       "show_label": false
     },
+    "category_tabs": {
+      "enabled": true,
+      "x": 20,
+      "y": 10,
+      "w": 520,
+      "h": 50,
+      "button_w": 220,
+      "button_h": 42,
+      "gap": 18,
+      "font_size": 20,
+      "active_color": "#f2d28b",
+      "inactive_color": "#9a8560",
+      "asset": "buttons/menu_button_medium.png",
+      "active_asset": "buttons/menu_button_medium.png",
+      "inactive_asset": "buttons/menu_button_medium.png",
+      "shadow": {
+        "enabled": true,
+        "x": 2,
+        "y": 3,
+        "color": "rgba(0, 0, 0, 120)"
+      }
+    },
     "armor": {
       "enabled": true,
       "x": 20,
-      "y": 40,
+      "y": 70,
       "w": 1380,
-      "h": 360,
+      "h": 700,
       "title": "Rüstung",
       "font_size": 14,
       "header_font_size": 14,
@@ -36,9 +58,57 @@
       "value_color": "#7fd0ff",
       "border_color": "rgba(242, 210, 139, 90)",
       "background": "rgba(5, 5, 5, 95)",
+      "table_background_mode": "dark",
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_skils_panel_frame.png",
+        "render_mode": "nine_slice",
+        "slice": {
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "opacity": 1.0,
+        "shadow": {
+          "enabled": true,
+          "x": 3,
+          "y": 4,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      },
+      "title_frame": {
+        "enabled": false,
+        "asset": "frames/1024x122_box.png",
+        "x": 10,
+        "y": 8,
+        "w": 1320,
+        "h": 32,
+        "align": "left",
+        "text_padding_x": 8,
+        "shadow": {
+          "enabled": true,
+          "x": 1,
+          "y": 2,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      },
       "min_row_h": 32,
       "max_row_h": 120,
-      "min_rows": 10,
+      "min_rows": 12,
+      "dynamic_rows": {
+        "enabled": false,
+        "min_rows": 12,
+        "grow_by": 3,
+        "trigger_empty_rows_remaining": 1,
+        "trim_trailing_empty": true,
+        "scan_extra_mapped_rows": 24
+      },
       "columns": {
         "slot": {
           "title": "Wo",
@@ -245,9 +315,9 @@
     "weapons": {
       "enabled": true,
       "x": 20,
-      "y": 424,
+      "y": 70,
       "w": 1380,
-      "h": 356,
+      "h": 700,
       "title": "Waffen",
       "font_size": 14,
       "header_font_size": 14,
@@ -258,9 +328,57 @@
       "value_color": "#7fd0ff",
       "border_color": "rgba(242, 210, 139, 90)",
       "background": "rgba(5, 5, 5, 95)",
+      "table_background_mode": "dark",
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_skils_panel_frame.png",
+        "render_mode": "nine_slice",
+        "slice": {
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "opacity": 1.0,
+        "shadow": {
+          "enabled": true,
+          "x": 3,
+          "y": 4,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      },
+      "title_frame": {
+        "enabled": false,
+        "asset": "frames/1024x122_box.png",
+        "x": 10,
+        "y": 8,
+        "w": 1320,
+        "h": 32,
+        "align": "left",
+        "text_padding_x": 8,
+        "shadow": {
+          "enabled": true,
+          "x": 1,
+          "y": 2,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      },
       "min_row_h": 32,
       "max_row_h": 72,
-      "min_rows": 8,
+      "min_rows": 12,
+      "dynamic_rows": {
+        "enabled": false,
+        "min_rows": 12,
+        "grow_by": 3,
+        "trigger_empty_rows_remaining": 1,
+        "trim_trailing_empty": true,
+        "scan_extra_mapped_rows": 24
+      },
       "columns": {
         "name": {
           "title": "Name",
