@@ -176,6 +176,7 @@ class MainWindow(QMainWindow):
         self._browser_url_edit = None
         self._browser_initialized = False
         self._browser_last_url = ""
+        self._browser_popup_pages = []
         self.game_canvas = QWidget()
         self.game_canvas.setStyleSheet("background-color: #101010;")
         self.setCentralWidget(self.game_canvas)
@@ -648,6 +649,7 @@ class MainWindow(QMainWindow):
 
         self.update_main_nav_button_styles()
         self.show_main_section(self.current_main_section)
+        self.preload_browser_if_enabled()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -4651,6 +4653,19 @@ class MainWindow(QMainWindow):
     def render_browser_screen(self):
         return browser_section.render_browser_section(self)
 
+    def preload_browser_if_enabled(self):
+        try:
+            cfg = browser_section.load_browser_layout_config(self).get("browser_screen", {})
+            if not isinstance(cfg, dict) or not bool(cfg.get("preload_on_start", False)):
+                return
+            if browser_section.ensure_browser_created(self):
+                if self.current_main_section in ("browser", "webbrowser") or bool(cfg.get("show_on_start", False)):
+                    browser_section.show_browser_section(self)
+                else:
+                    browser_section.hide_browser_section(self)
+        except Exception as exc:
+            log_warning("browser", f"browser preload failed: {exc}")
+
     def reset_browser_runtime_state(self, destroy_webview=True):
         for attr in (
             "_browser_url_edit",
@@ -4689,6 +4704,7 @@ class MainWindow(QMainWindow):
         self._browser_web_view = None
         self._browser_url_edit = None
         self._browser_fallback_label = None
+        self._browser_popup_pages = []
         self._browser_initialized = False
 
     def render_magic_screen(self):

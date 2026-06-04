@@ -23,6 +23,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "debug": {
             "enabled": False,
             "console_messages": False,
+            "navigation": False,
+            "suppress_engine_noise": True,
         },
     },
     "debug": DEFAULT_DEBUG_SETTINGS,

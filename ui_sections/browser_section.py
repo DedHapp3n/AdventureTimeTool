@@ -5,7 +5,7 @@ from PySide6.QtCore import QUrl, Qt
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFrame, QLabel, QLineEdit, QWidget
 
-from app_logger import log_debug, log_warning
+from app_logger import log_debug, log_warning_once
 from app_paths import data_path, load_settings, resource_path, save_settings
 
 try:
@@ -23,6 +23,10 @@ DEFAULT_BROWSER_LAYOUT = {
     "browser_screen": {
         "enabled": True,
         "fill_content_area": True,
+        "preload_on_start": True,
+        "show_on_start": False,
+        "external_links": False,
+        "allow_new_windows": False,
         "margin": 8,
         "default_url": DEFAULT_URL,
         "show_url_bar": True,
@@ -34,27 +38,64 @@ DEFAULT_BROWSER_LAYOUT = {
         "debug": {
             "enabled": False,
             "console_messages": False,
+            "navigation": False,
+            "suppress_engine_noise": True,
         },
     }
 }
 
 
-class BrowserPage(QWebEnginePage if QWebEnginePage is not None else object):
+class BrowserConsolePage(QWebEnginePage if QWebEnginePage is not None else object):
     def __init__(self, profile, window):
         super().__init__(profile)
         self.window = window
 
-    def javaScriptConsoleMessage(self, level, message, line_number, source_id):
+    def javaScriptConsoleMessage(self, *args):
         cfg = _browser_cfg(self.window).get("debug", {})
         if not isinstance(cfg, dict) or not bool(cfg.get("console_messages", False)):
             return
+        level = args[0] if len(args) > 0 else "-"
+        message = args[1] if len(args) > 1 else ""
+        line_number = args[2] if len(args) > 2 else "-"
+        source_id = args[3] if len(args) > 3 else ""
         log_debug("browser", f"console[{level}] {source_id}:{line_number}: {message}")
 
+
+class BrowserPage(BrowserConsolePage):
     def createWindow(self, _type):
+        cfg = _browser_cfg(self.window)
+        if bool(cfg.get("allow_new_windows", False)):
+            return super().createWindow(_type)
+        if QWebEngineProfile is not None:
+            popup_page = PopupRedirectPage(self.profile(), self.window)
+            popup_pages = getattr(self.window, "_browser_popup_pages", None)
+            if not isinstance(popup_pages, list):
+                popup_pages = []
+                self.window._browser_popup_pages = popup_pages
+            popup_pages.append(popup_page)
+            popup_page.destroyed.connect(lambda _obj=None, page=popup_page: _forget_popup_page(self.window, page))
+            return popup_page
+        return self
+
+
+class PopupRedirectPage(BrowserConsolePage):
+    def __init__(self, profile, window):
+        super().__init__(profile, window)
+        self.urlChanged.connect(self._redirect)
+
+    def _redirect(self, url):
+        if not isinstance(url, QUrl) or not url.isValid() or url.isEmpty():
+            return
         view = getattr(self.window, "_browser_web_view", None)
         if _is_qt_widget_alive(view):
-            return view.page()
-        return self
+            view.setUrl(url)
+        self.deleteLater()
+
+
+def _forget_popup_page(window, page):
+    popup_pages = getattr(window, "_browser_popup_pages", None)
+    if isinstance(popup_pages, list) and page in popup_pages:
+        popup_pages.remove(page)
 
 
 def _is_qt_widget_alive(widget):
@@ -74,6 +115,7 @@ def _browser_cfg(window):
 def load_browser_layout_config(window):
     main_cfg = getattr(window, "main_ui_layout_config", {}).get("browser_screen", {})
     if not isinstance(main_cfg, dict):
+        log_warning_once("browser", "invalid-browser-screen-config", "invalid browser_screen config, using defaults")
         main_cfg = {}
     layout_file = str(main_cfg.get("layout_file", "") or "").strip() or "browser_layout.json"
     active_theme = window.get_active_theme() if hasattr(window, "get_active_theme") else "diablo"
@@ -91,7 +133,7 @@ def load_browser_layout_config(window):
             if isinstance(data, dict) and isinstance(data.get("browser_screen"), dict):
                 return data
         except Exception as exc:
-            log_warning("browser", f"browser layout load failed: {layout_path}: {exc}")
+            log_warning_once("browser", f"layout:{layout_path}", f"browser layout load failed: {layout_path}: {exc}")
     return DEFAULT_BROWSER_LAYOUT
 
 
@@ -121,7 +163,16 @@ def _remember_url(window, url):
         save_settings(settings)
         window.settings = settings
     except Exception as exc:
-        log_warning("browser", f"browser url save failed: {exc}")
+        log_warning_once("browser", "url-save-failed", f"browser url save failed: {exc}")
+
+
+def _on_url_changed(window, url):
+    if _is_qt_widget_alive(getattr(window, "_browser_url_edit", None)):
+        window._browser_url_edit.setText(url.toString())
+    cfg = _browser_cfg(window).get("debug", {})
+    if isinstance(cfg, dict) and bool(cfg.get("navigation", False)):
+        log_debug("browser", f"navigation: {url.toString()}")
+    _remember_url(window, url)
 
 
 def _normalize_url(url_edit, fallback_url):
@@ -151,7 +202,7 @@ def _ensure_profile_paths():
         profile.setPersistentStoragePath(str(data_path("browser/profile")))
         profile.setCachePath(str(data_path("browser/cache")))
     except Exception as exc:
-        log_warning("browser", f"browser profile path setup failed: {exc}")
+        log_warning_once("browser", "profile-paths", f"browser profile path setup failed: {exc}")
     return profile
 
 
@@ -204,16 +255,20 @@ def _apply_browser_geometry(window, cfg):
         fallback.setGeometry(inner_margin, web_y, web_w, min(140, web_h))
 
 
-def render_browser_section(window):
-    if getattr(window, "content_layer", None) is None:
-        return
-
+def _clear_dead_browser_refs(window):
     if getattr(window, "_browser_container", None) is not None and not _is_qt_widget_alive(window._browser_container):
         window._browser_container = None
         window._browser_web_view = None
         window._browser_url_edit = None
         window._browser_fallback_label = None
         window._browser_initialized = False
+
+
+def ensure_browser_created(window):
+    if getattr(window, "content_layer", None) is None:
+        return False
+
+    _clear_dead_browser_refs(window)
 
     cfg = _browser_cfg(window)
     default_url = _initial_url(window, cfg)
@@ -240,12 +295,7 @@ def render_browser_section(window):
             web_view = QWebEngineView(container)
             if profile is not None and QWebEnginePage is not None:
                 web_view.setPage(BrowserPage(profile, window))
-            web_view.urlChanged.connect(
-                lambda url: (
-                    window._browser_url_edit.setText(url.toString()) if _is_qt_widget_alive(window._browser_url_edit) else None,
-                    _remember_url(window, url),
-                )
-            )
+            web_view.urlChanged.connect(lambda url: _on_url_changed(window, url))
             web_view.setUrl(QUrl(default_url))
             window._browser_web_view = web_view
 
@@ -256,6 +306,7 @@ def render_browser_section(window):
 
             url_edit.returnPressed.connect(load_url)
         else:
+            log_warning_once("browser", "webengine-unavailable", "QtWebEngine is unavailable; browser fallback will open URLs externally.")
             fallback = QLabel(container)
             fallback.setWordWrap(True)
             fallback.setAlignment(Qt.AlignCenter)
@@ -279,8 +330,23 @@ def render_browser_section(window):
 
     if _is_qt_widget_alive(window._browser_container) and window._browser_container.parent() is not window.content_layer:
         window._browser_container.setParent(window.content_layer)
+    _apply_browser_geometry(window, cfg)
+    return _is_qt_widget_alive(window._browser_container)
 
+
+def show_browser_section(window):
+    cfg = _browser_cfg(window)
     _apply_browser_geometry(window, cfg)
     if _is_qt_widget_alive(window._browser_container):
         window._browser_container.show()
         window._browser_container.raise_()
+
+
+def hide_browser_section(window):
+    if _is_qt_widget_alive(getattr(window, "_browser_container", None)):
+        window._browser_container.hide()
+
+
+def render_browser_section(window):
+    if ensure_browser_created(window):
+        show_browser_section(window)
