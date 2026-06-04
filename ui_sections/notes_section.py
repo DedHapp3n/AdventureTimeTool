@@ -1,4 +1,5 @@
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QLabel, QFrame, QPushButton, QTextEdit
 
 
@@ -6,6 +7,149 @@ def notes_debug_enabled(notes_layout):
     screen_cfg = notes_layout.get("notes_screen", {}) if isinstance(notes_layout, dict) else {}
     debug_cfg = screen_cfg.get("debug", {}) if isinstance(screen_cfg, dict) else {}
     return isinstance(debug_cfg, dict) and bool(debug_cfg.get("enabled", False))
+
+
+def _optional_notes_ui_pixmap(parent, asset_rel_path):
+    asset_name = str(asset_rel_path or "").strip()
+    if not asset_name:
+        return None
+    try:
+        window = parent.window()
+        primary_base = getattr(window, "theme_asset_base_path", None)
+        if primary_base is not None:
+            primary = primary_base / asset_name
+            if primary.exists():
+                pixmap = QPixmap(str(primary))
+                if not pixmap.isNull():
+                    return pixmap
+        assets_dir = getattr(window, "assets_dir", None)
+        if assets_dir is not None:
+            fallback = assets_dir / "themes" / "diablo" / "ui" / asset_name
+            if fallback.exists():
+                pixmap = QPixmap(str(fallback))
+                if not pixmap.isNull():
+                    return pixmap
+    except Exception:
+        return None
+    return None
+
+
+def _notes_frame_opacity(frame_cfg):
+    try:
+        opacity = float(frame_cfg.get("opacity", 1.0))
+    except Exception:
+        opacity = 1.0
+    return max(0.0, min(1.0, opacity))
+
+
+def _render_notes_fit_pixmap(src, target_w, target_h, frame_cfg):
+    target_w = max(1, target_w)
+    target_h = max(1, target_h)
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    transform = Qt.SmoothTransformation if smooth_scaling else Qt.FastTransformation
+    scaled = src.scaled(target_w, target_h, Qt.IgnoreAspectRatio, transform)
+
+    rendered = QPixmap(target_w, target_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    painter.setOpacity(_notes_frame_opacity(frame_cfg))
+    painter.drawPixmap(0, 0, scaled)
+    painter.end()
+    return rendered
+
+
+def _render_notes_nine_slice_pixmap(src, target_w, target_h, frame_cfg, safe_int):
+    slice_cfg = frame_cfg.get("slice", {}) if isinstance(frame_cfg.get("slice", {}), dict) else {}
+    src_w = max(1, src.width())
+    src_h = max(1, src.height())
+    left = max(0, min(safe_int(slice_cfg.get("left", 24), 24), src_w))
+    right = max(0, min(safe_int(slice_cfg.get("right", 24), 24), src_w - left))
+    top = max(0, min(safe_int(slice_cfg.get("top", 24), 24), src_h))
+    bottom = max(0, min(safe_int(slice_cfg.get("bottom", 24), 24), src_h - top))
+
+    target_w = max(1, target_w)
+    target_h = max(1, target_h)
+    if left + right > target_w:
+        overflow = left + right - target_w
+        shrink_left = min(left, overflow // 2)
+        left -= shrink_left
+        right = max(0, right - (overflow - shrink_left))
+    if top + bottom > target_h:
+        overflow = top + bottom - target_h
+        shrink_top = min(top, overflow // 2)
+        top -= shrink_top
+        bottom = max(0, bottom - (overflow - shrink_top))
+
+    smooth_scaling = bool(frame_cfg.get("smooth_scaling", True))
+    opacity = _notes_frame_opacity(frame_cfg)
+    center_src_w = max(0, src_w - left - right)
+    center_src_h = max(0, src_h - top - bottom)
+    center_dst_w = max(0, target_w - left - right)
+    center_dst_h = max(0, target_h - top - bottom)
+
+    rendered = QPixmap(target_w, target_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if smooth_scaling:
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    painter.setOpacity(opacity)
+
+    def draw_slice(dx, dy, dw, dh, sx, sy, sw, sh):
+        if dw <= 0 or dh <= 0 or sw <= 0 or sh <= 0:
+            return
+        painter.drawPixmap(dx, dy, dw, dh, src, sx, sy, sw, sh)
+
+    draw_slice(0, 0, left, top, 0, 0, left, top)
+    draw_slice(target_w - right, 0, right, top, src_w - right, 0, right, top)
+    draw_slice(0, target_h - bottom, left, bottom, 0, src_h - bottom, left, bottom)
+    draw_slice(target_w - right, target_h - bottom, right, bottom, src_w - right, src_h - bottom, right, bottom)
+    draw_slice(left, 0, center_dst_w, top, left, 0, center_src_w, top)
+    draw_slice(left, target_h - bottom, center_dst_w, bottom, left, src_h - bottom, center_src_w, bottom)
+    draw_slice(0, top, left, center_dst_h, 0, top, left, center_src_h)
+    draw_slice(target_w - right, top, right, center_dst_h, src_w - right, top, right, center_src_h)
+    if bool(frame_cfg.get("draw_center", True)):
+        draw_slice(left, top, center_dst_w, center_dst_h, left, top, center_src_w, center_src_h)
+    painter.end()
+    return rendered
+
+
+def _create_notes_editor_frame(parent, editor_cfg, frame_cfg, safe_int):
+    if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
+        return False
+    src = _optional_notes_ui_pixmap(parent, frame_cfg.get("asset", ""))
+    if src is None:
+        return False
+
+    margin = max(0, safe_int(frame_cfg.get("margin", 0), 0))
+    x = safe_int(editor_cfg.get("x", 20), 20) - margin
+    y = safe_int(editor_cfg.get("y", 60), 60) - margin
+    w = max(1, safe_int(editor_cfg.get("w", 1340), 1340) + margin * 2)
+    h = max(1, safe_int(editor_cfg.get("h", 620), 620) + margin * 2)
+
+    shadow_cfg = frame_cfg.get("shadow", {}) if isinstance(frame_cfg.get("shadow", {}), dict) else {}
+    if bool(shadow_cfg.get("enabled", False)):
+        shadow = QLabel(parent)
+        shadow.setGeometry(
+            x + safe_int(shadow_cfg.get("x", 3), 3),
+            y + safe_int(shadow_cfg.get("y", 4), 4),
+            w,
+            h,
+        )
+        shadow.setStyleSheet(f"background: {str(shadow_cfg.get('color', 'rgba(0, 0, 0, 120)'))};")
+        shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        shadow.show()
+        shadow.lower()
+
+    frame = QLabel(parent)
+    frame.setGeometry(x, y, w, h)
+    render_mode = str(frame_cfg.get("render_mode", "fit") or "fit").strip().lower()
+    if render_mode == "nine_slice":
+        frame.setPixmap(_render_notes_nine_slice_pixmap(src, w, h, frame_cfg, safe_int))
+    else:
+        frame.setPixmap(_render_notes_fit_pixmap(src, w, h, frame_cfg))
+    frame.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    frame.show()
+    return True
 
 
 def render_notes_section(parent, layout_config, default_screen_cfg, callbacks=None):
@@ -62,6 +206,9 @@ def render_notes_section(parent, layout_config, default_screen_cfg, callbacks=No
     editor_text_color = str(editor_cfg.get("text_color", "#ffffff"))
     editor_bg = str(editor_cfg.get("background", "rgba(5, 5, 5, 120)"))
     editor_border = str(editor_cfg.get("border_color", "rgba(242, 210, 139, 100)"))
+    frame_cfg = editor_cfg.get("frame", {}) if isinstance(editor_cfg.get("frame", {}), dict) else {}
+    editor_frame_active = _create_notes_editor_frame(screen, editor_cfg, frame_cfg, safe_int)
+    editor_border_style = "border: none;" if editor_frame_active and bool(frame_cfg.get("remove_editor_border_when_active", False)) else f"border: 1px solid {editor_border};"
 
     editor = QTextEdit(screen)
     editor.setGeometry(editor_x, editor_y, editor_w, editor_h)
@@ -73,13 +220,14 @@ def render_notes_section(parent, layout_config, default_screen_cfg, callbacks=No
     editor.setStyleSheet(
         "QTextEdit {"
         f"background: {editor_bg};"
-        f"border: 1px solid {editor_border};"
+        f"{editor_border_style}"
         f"color: {editor_text_color};"
         f"font-size: {editor_font_size}px;"
         "padding: 8px;"
         "}"
     )
     editor.show()
+    editor.raise_()
 
     status_cfg = screen_cfg.get("status", {})
     status_label = None

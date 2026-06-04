@@ -24,7 +24,29 @@
       "text_color": "#ffffff",
       "background": "rgba(5, 5, 5, 120)",
       "border_color": "rgba(242, 210, 139, 100)",
-      "placeholder": "Notizen..."
+      "placeholder": "Notizen...",
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_skils_panel_frame.png",
+        "render_mode": "nine_slice",
+        "slice": {
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
+        },
+        "draw_center": true,
+        "smooth_scaling": true,
+        "opacity": 1.0,
+        "margin": 8,
+        "remove_editor_border_when_active": true,
+        "shadow": {
+          "enabled": true,
+          "x": 3,
+          "y": 4,
+          "color": "rgba(0, 0, 0, 120)"
+        }
+      }
     },
     "save_button": {
       "enabled": false,

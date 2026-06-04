@@ -29,6 +29,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     if not callable(safe_int):
         safe_int = _safe_int
     build_command = callbacks.get("build_command")
+    open_roll20_browser = callbacks.get("open_roll20_browser")
     log_debug = callbacks.get("log_debug")
     log_info = callbacks.get("log_info")
     compact_text = callbacks.get("compact_text")
@@ -391,9 +392,14 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
 
     buttons_layout = QHBoxLayout()
     copy_button = QPushButton(str(buttons_cfg.get("copy_text", "Kopieren")), dialog)
+    copy_open_browser_button = QPushButton(
+        str(buttons_cfg.get("copy_open_browser_text", "Kopieren & Browser öffnen")),
+        dialog,
+    )
     close_button = QPushButton(str(buttons_cfg.get("close_text", "Schließen")), dialog)
     buttons_layout.addStretch()
     buttons_layout.addWidget(copy_button)
+    buttons_layout.addWidget(copy_open_browser_button)
     buttons_layout.addWidget(close_button)
     layout.addLayout(buttons_layout)
 
@@ -477,6 +483,15 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             log_info("roll20", "ROLL SEND PLACEHOLDER direct Roll20 send requested but not implemented")
         dialog.accept()
 
+    def copy_roll_command_and_open_browser():
+        command = roll_command_edit.text().strip()
+        QApplication.clipboard().setText(command)
+        if callable(log_debug):
+            log_debug("roll20", f"ROLL COPY OPEN_BROWSER {command}")
+        dialog.accept()
+        if callable(open_roll20_browser):
+            open_roll20_browser()
+
     def on_perk_suggestion_toggled(checkbox, checked):
         if checkbox is None:
             return
@@ -519,6 +534,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     for checkbox in wellbeing_suggestion_checkboxes:
         checkbox.toggled.connect(lambda checked=False, cb=checkbox: on_wellbeing_suggestion_toggled(cb, checked))
     copy_button.clicked.connect(copy_roll_command)
+    copy_open_browser_button.clicked.connect(copy_roll_command_and_open_browser)
     close_button.clicked.connect(dialog.close)
     update_roll_preview()
     return dialog.exec()

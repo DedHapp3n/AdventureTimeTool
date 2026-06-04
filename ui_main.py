@@ -1533,6 +1533,7 @@ class MainWindow(QMainWindow):
             },
             "buttons": {
                 "copy_text": "Kopieren",
+                "copy_open_browser_text": "Kopieren & Browser öffnen",
                 "close_text": "Schließen",
             },
             "perk_suggestions": {
@@ -2869,6 +2870,10 @@ class MainWindow(QMainWindow):
                 bonus_parts.append(str(number))
         return f"/r {dice_part}{''.join(bonus_parts)}"
 
+    def open_roll20_browser_section(self):
+        log_debug("roll20", "ROLL OPEN_BROWSER section=browser")
+        self.show_main_section("browser")
+
     def split_specialization_text(self, text):
         raw = str(text or "")
         if not raw.strip():
@@ -3530,6 +3535,7 @@ class MainWindow(QMainWindow):
                 "compact_text": self.build_compact_preview_text,
                 "specialization_preview": self.build_specialization_preview_text,
                 "resolve_roll_asset_path": resolve_roll_asset_path,
+                "open_roll20_browser": self.open_roll20_browser_section,
                 "log_debug": log_debug,
                 "log_info": log_info,
             },
