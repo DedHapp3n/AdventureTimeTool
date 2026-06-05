@@ -300,7 +300,7 @@
         "error": null
       },
       "F10": {
-        "value": 34.85,
+        "value": 39.25,
         "formula": "=(1+G5+(AG4*G5)+(F16/10))",
         "references": [
           "G5",
@@ -488,7 +488,7 @@
         "error": null
       },
       "B16": {
-        "value": 15,
+        "value": "39",
         "formula": null,
         "references": [],
         "error": null
@@ -500,7 +500,7 @@
         "error": null
       },
       "F16": {
-        "value": "256",
+        "value": "300",
         "formula": null,
         "references": [],
         "error": null
@@ -1439,7 +1439,7 @@
         "error": null
       },
       "B12": {
-        "value": 15,
+        "value": 39,
         "formula": "=Charakterbogen!B16",
         "references": [
           "B16"
@@ -1453,7 +1453,7 @@
         "error": null
       },
       "F12": {
-        "value": 256,
+        "value": 300,
         "formula": "=Charakterbogen!F16",
         "references": [
           "F16"
@@ -3927,6 +3927,24 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "V27": {
+        "value": "I",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X27": {
+        "value": "R",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG27": {
+        "value": "Überzeugen,Noble",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Inventar": {
@@ -4087,7 +4105,7 @@
         "error": null
       },
       "T16": {
-        "value": "",
+        "value": "MAigc Amulete gekingen manor",
         "formula": null,
         "references": [],
         "error": null
@@ -6238,7 +6256,7 @@
             "text": "Etikette und Redegewandheit",
             "skill_key": "allgemein/etikette_und_redegewandheit",
             "skill_name": "Etikette und Redegewandheit",
-            "value": "5"
+            "value": "0"
           },
           {
             "text": "Klettern , Athletik , Ini-Wurf",

@@ -18,7 +18,30 @@
       "enabled": false,
       "console_messages": false,
       "navigation": false,
-      "suppress_engine_noise": true
+      "suppress_engine_noise": true,
+      "persistence_test_enabled": false,
+      "persistence_test_url_keyword": "persistence-test"
+    },
+    "profile": {
+      "enabled": true,
+      "name": "roll20",
+      "use_default_profile": true,
+      "persistent_cookies": true,
+      "force_persistent_cookies": true,
+      "cache_enabled": true,
+      "disk_cache": true,
+      "http_cache_maximum_size": 0,
+      "storage_subdir": "browser_profiles/roll20_default",
+      "encrypt_at_rest": false,
+      "cookie_backup": {
+        "enabled": true,
+        "file": "browser_profiles/roll20_cookie_backup.json",
+        "domains": [
+          "roll20.net",
+          ".roll20.net",
+          "app.roll20.net"
+        ]
+      }
     }
   }
 }
