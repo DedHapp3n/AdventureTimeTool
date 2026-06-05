@@ -532,9 +532,8 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             bold=True,
         )
     )
-    preview_edit_height = min(preview_height, max(36, preview_rect[3] - 24))
-    roll_command_edit.setMinimumHeight(preview_edit_height)
-    roll_command_edit.setFixedHeight(preview_edit_height)
+    roll_command_edit.setMinimumHeight(preview_height)
+    roll_command_edit.setFixedHeight(preview_height)
     preview_layout.addWidget(roll_command_edit)
 
     buttons_row = QHBoxLayout()

@@ -1,8 +1,8 @@
 {
   "dialog": {
     "title": "Roll20 Wurf-Assistent",
-    "w": 1024,
-    "h": 691,
+    "w": 922,
+    "h": 622,
     "fixed_size": true,
     "frameless_window": false,
     "use_main_canvas_ratio": true,
@@ -23,8 +23,8 @@
       "asset": "panels/main_Frame.png",
       "x": 0,
       "y": 0,
-      "w": 1024,
-      "h": 691
+      "w": 922,
+      "h": 622
     },
     "frame": {
       "enabled": false,
@@ -46,16 +46,16 @@
   },
   "layout": {
     "padding": 32,
-    "left": { "x": 54, "y": 160, "w": 500, "h": 360 },
-    "right": { "x": 590, "y": 160, "w": 360, "h": 360 },
-    "preview": { "x": 54, "y": 555, "w": 896, "h": 76 }
+    "left": { "x": 49, "y": 145, "w": 450, "h": 325 },
+    "right": { "x": 531, "y": 145, "w": 324, "h": 325 },
+    "preview": { "x": 49, "y": 464, "w": 806, "h": 96 }
   },
   "title": {
-    "x": 260,
-    "y": 30,
+    "x": 210,
+    "y": 12,
     "w": 500,
-    "h": 42,
-    "font_size": 24,
+    "h": 28,
+    "font_size": 18,
     "align": "center",
     "color": "#f2d28b"
   },
@@ -63,10 +63,10 @@
     "enabled": true,
     "asset": "icons/x.jpg",
     "anchor": "top_right",
-    "right": 12,
-    "top": 20,
-    "w": 32,
-    "h": 32
+    "right": 8,
+    "top": 12,
+    "w": 22,
+    "h": 22
   },
   "specialization_box": {
     "background": "#141618",
@@ -119,7 +119,7 @@
     "border_color": "#8a6a32",
     "text_color": "#f2d28b",
     "font_size": 22,
-    "height": 70
+    "height": 82
   },
   "boxes": {
     "info_background": "rgba(0, 0, 0, 70)",
@@ -151,8 +151,8 @@
     "preview_frame": {
       "enabled": true,
       "asset": "frames/1024x122_box.png",
-      "border_width": 8,
-      "padding": 8,
+      "border_width": 6,
+      "padding": 4,
       "slice": {
         "left": 24,
         "top": 24,
@@ -166,7 +166,7 @@
     "bonus": 10,
     "tooltip": "Manueller Schalter. Es wird kein Paradigma automatisch verbraucht.",
     "indicator": {
-      "active_asset": "icons/x.jpg",
+      "active_asset": "icons/checkmark_true.png",
       "inactive_asset": "icons/checkmark_false.png",
       "indicator_w": 18,
       "indicator_h": 18
@@ -198,16 +198,16 @@
     "visual_mode": "menu_asset",
     "asset": "buttons/menu_button_medium.png",
     "area": {
-      "x": 230,
-      "y": 90,
-      "w": 560,
-      "h": 46,
-      "gap": 16
+      "x": 220,
+      "y": 60,
+      "w": 500,
+      "h": 38,
+      "gap": 12
     },
-    "copy_w": 155,
-    "copy_open_browser_w": 230,
-    "close_w": 155,
-    "h": 40,
+    "copy_w": 140,
+    "copy_open_browser_w": 215,
+    "close_w": 135,
+    "h": 36,
     "background": "transparent",
     "text_color": "#f2d28b",
     "hover_text_color": "#ffffff",
