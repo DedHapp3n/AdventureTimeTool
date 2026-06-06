@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPixmap
+from PySide6.QtGui import QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QWidget
 
 from app_logger import log_debug
@@ -271,6 +271,147 @@ def calculate_se_total(rows):
     return int(total) if total.is_integer() else total
 
 
+def _get_se_cost_table(window, screen_cfg):
+    fallback = [(1, 4), (5, 20), (25, 100), (125, 375)]
+    cfg = screen_cfg.get("se_cost_info", {}) if isinstance(screen_cfg, dict) else {}
+    values = cfg.get("values", []) if isinstance(cfg, dict) else []
+    if not isinstance(values, list):
+        return fallback
+
+    costs = []
+    for item in values:
+        if not isinstance(item, dict):
+            continue
+        se_value = window._safe_int(item.get("se", 0), 0)
+        exp_value = window._safe_int(item.get("exp", 0), 0)
+        if se_value <= 0:
+            continue
+        costs.append((se_value, exp_value))
+    return costs or fallback
+
+
+def render_se_cost_info_box(window, parent, screen_cfg):
+    cfg = screen_cfg.get("se_cost_info", {}) if isinstance(screen_cfg, dict) else {}
+    if not isinstance(cfg, dict) or not bool(cfg.get("enabled", False)):
+        return None
+
+    costs = _get_se_cost_table(window, screen_cfg)
+    layout = cfg.get("layout", {}) if isinstance(cfg.get("layout", {}), dict) else {}
+    outer_frame = cfg.get("outer_frame", {}) if isinstance(cfg.get("outer_frame", {}), dict) else {}
+    card_frame = cfg.get("card_frame", {}) if isinstance(cfg.get("card_frame", {}), dict) else {}
+    colors = cfg.get("colors", {}) if isinstance(cfg.get("colors", {}), dict) else {}
+    x = window._safe_int(layout.get("x", 1030), 1030)
+    y = window._safe_int(layout.get("y", 0), 0)
+    w = max(1, window._safe_int(layout.get("w", 350), 350))
+    h = max(1, window._safe_int(layout.get("h", 76), 76))
+    card_w = max(1, window._safe_int(layout.get("card_w", 46), 46))
+    card_h = max(1, window._safe_int(layout.get("card_h", 64), 64))
+    card_gap = window._safe_int(layout.get("card_gap", 8), 8)
+    legend_w = max(1, window._safe_int(layout.get("legend_w", 96), 96))
+    title = str(cfg.get("title", "Kosten") or "Kosten")
+    se_label = str(cfg.get("se_label", "SE benötigt") or "SE benötigt")
+    exp_label = str(cfg.get("exp_label", "EXP benötigt") or "EXP benötigt")
+    se_color = str(colors.get("se", "#f2d28b"))
+    exp_color = str(colors.get("exp", "#73d68a"))
+    label_color = str(colors.get("label", "#f2d28b"))
+
+    box = QFrame(parent)
+    box.setGeometry(x, y, w, h)
+    box.setStyleSheet("background: transparent; border: none;")
+    box.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    box.show()
+
+    outer = create_frame_label(window, box, outer_frame, {"x": 0, "y": 0, "w": w, "h": h})
+    if outer is None:
+        box.setStyleSheet(
+            "background: rgba(5, 5, 5, 145);"
+            "border: 1px solid rgba(242, 210, 139, 110);"
+            "border-radius: 4px;"
+        )
+
+    title_label = QLabel(box)
+    title_label.setGeometry(8, 5, legend_w, 18)
+    title_label.setText(title)
+    title_label.setAlignment(Qt.AlignCenter)
+    title_label.setStyleSheet(
+        f"background: transparent; border: none; color: {label_color};"
+        "font-size: 12px; font-weight: 700;"
+    )
+    title_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    title_label.show()
+
+    se_text = QLabel(box)
+    se_text.setGeometry(8, 26, legend_w, 18)
+    se_text.setText(se_label)
+    se_text.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+    se_text.setStyleSheet(
+        f"background: transparent; border: none; color: {se_color};"
+        "font-size: 10px; font-weight: 700;"
+    )
+    se_text.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    se_text.show()
+
+    exp_text = QLabel(box)
+    exp_text.setGeometry(8, 47, legend_w, 18)
+    exp_text.setText(exp_label)
+    exp_text.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+    exp_text.setStyleSheet(
+        f"background: transparent; border: none; color: {exp_color};"
+        "font-size: 10px; font-weight: 700;"
+    )
+    exp_text.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    exp_text.show()
+
+    frame_src = _optional_theme_ui_pixmap(window, card_frame.get("asset", ""))
+    rotate_degrees = window._safe_int(card_frame.get("rotate_degrees", 90), 90)
+    card_x = legend_w + 16
+    card_y = max(1, int((h - card_h) / 2))
+    for index, (se_value, exp_value) in enumerate(costs[:4]):
+        x_pos = card_x + index * (card_w + card_gap)
+        if frame_src is not None and bool(card_frame.get("enabled", False)):
+            pixmap = _apply_source_crop(window, frame_src, card_frame)
+            if rotate_degrees:
+                pixmap = pixmap.transformed(QTransform().rotate(rotate_degrees), Qt.SmoothTransformation)
+            frame_label = QLabel(box)
+            frame_label.setGeometry(x_pos, card_y, card_w, card_h)
+            frame_label.setPixmap(pixmap.scaled(card_w, card_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+            frame_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            frame_label.show()
+        else:
+            fallback_card = QFrame(box)
+            fallback_card.setGeometry(x_pos, card_y, card_w, card_h)
+            fallback_card.setStyleSheet(
+                "background: rgba(5, 5, 5, 95);"
+                "border: 1px solid rgba(242, 210, 139, 100);"
+                "border-radius: 3px;"
+            )
+            fallback_card.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            fallback_card.show()
+
+        se_number = QLabel(box)
+        se_number.setGeometry(x_pos, card_y + 8, card_w, 22)
+        se_number.setText(str(se_value))
+        se_number.setAlignment(Qt.AlignCenter)
+        se_number.setStyleSheet(
+            f"background: transparent; border: none; color: {se_color};"
+            "font-size: 15px; font-weight: 800;"
+        )
+        se_number.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        se_number.show()
+
+        exp_number = QLabel(box)
+        exp_number.setGeometry(x_pos, card_y + 34, card_w, 22)
+        exp_number.setText(str(exp_value))
+        exp_number.setAlignment(Qt.AlignCenter)
+        exp_number.setStyleSheet(
+            f"background: transparent; border: none; color: {exp_color};"
+            "font-size: 15px; font-weight: 800;"
+        )
+        exp_number.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        exp_number.show()
+    return box
+
+
 def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg, raise_frame=False):
     field_cfg = row_fields_cfg.get(field_id, {}) if isinstance(row_fields_cfg, dict) else {}
     frame_cfg = field_cfg.get("frame", {}) if isinstance(field_cfg, dict) else {}
@@ -481,6 +622,8 @@ def render_skills_section(window):
         )
         button.clicked.connect(callback)
         button.show()
+
+    render_se_cost_info_box(window, screen, screen_cfg)
 
     active_category = None
     for category in categories_for_tabs:

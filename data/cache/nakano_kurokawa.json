@@ -488,7 +488,7 @@
         "error": null
       },
       "B16": {
-        "value": "39",
+        "value": "11",
         "formula": null,
         "references": [],
         "error": null
@@ -705,7 +705,7 @@
         "error": null
       },
       "K24": {
-        "value": "",
+        "value": "X",
         "formula": null,
         "references": [],
         "error": null
@@ -1439,7 +1439,7 @@
         "error": null
       },
       "B12": {
-        "value": 39,
+        "value": 11,
         "formula": "=Charakterbogen!B16",
         "references": [
           "B16"
@@ -3945,6 +3945,30 @@
         "formula": null,
         "references": [],
         "error": null
+      },
+      "V119": {
+        "value": "I",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG119": {
+        "value": "Unheilig",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V101": {
+        "value": "I",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG101": {
+        "value": "Zeichnen",
+        "formula": null,
+        "references": [],
+        "error": null
       }
     },
     "Inventar": {
@@ -6316,7 +6340,7 @@
             "text": "Schreiber, Maler und Kartograph",
             "skill_key": "handwerk/schreiber_maler_und_kartograph",
             "skill_name": "Schreiber, Maler und Kartograph",
-            "value": "1"
+            "value": "0"
           },
           {
             "text": "Ausweichen",
@@ -6328,7 +6352,7 @@
             "text": "Ritualistik",
             "skill_key": "handwerk/ritualistik",
             "skill_name": "Ritualistik",
-            "value": "2"
+            "value": "1"
           },
           {
             "text": "",

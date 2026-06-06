@@ -9,7 +9,7 @@
       "y": 10,
       "w": 1380,
       "h": 50,
-      "button_w": 220,
+      "button_w": 188,
       "button_h": 42,
       "gap": 18,
       "font_size": 20,
@@ -481,6 +481,61 @@
           "value_color": "#7fd0ff",
           "align": "center"
         }
+      }
+    },
+    "se_cost_info": {
+      "enabled": true,
+      "title": "Kosten",
+      "se_label": "SE benötigt",
+      "exp_label": "EXP benötigt",
+      "values": [
+        {
+          "se": 1,
+          "exp": 4
+        },
+        {
+          "se": 5,
+          "exp": 20
+        },
+        {
+          "se": 25,
+          "exp": 100
+        },
+        {
+          "se": 125,
+          "exp": 375
+        }
+      ],
+      "layout": {
+        "x": 1050,
+        "y": 0,
+        "w": 350,
+        "h": 76,
+        "card_w": 46,
+        "card_h": 64,
+        "card_gap": 8,
+        "legend_w": 96
+      },
+      "outer_frame": {
+        "enabled": true,
+        "asset": "frames/512x122_box.png",
+        "render_mode": "fit",
+        "keep_aspect": false,
+        "fit_mode": "stretch",
+        "smooth_scaling": true,
+        "opacity": 1.0
+      },
+      "card_frame": {
+        "enabled": true,
+        "asset": "frames/256x122_box.png",
+        "rotate_degrees": 90,
+        "smooth_scaling": true,
+        "opacity": 1.0
+      },
+      "colors": {
+        "se": "#f2d28b",
+        "exp": "#73d68a",
+        "label": "#f2d28b"
       }
     }
   }
