@@ -115,8 +115,10 @@
         "fallback_asset": "buttons/menu_button_small.png",
         "shadow": {
           "enabled": true,
+          "mode": "alpha_pixmap",
           "x": 2,
           "y": 3,
+          "blur_radius": 10,
           "color": "rgba(0, 0, 0, 120)"
         }
       }
@@ -139,8 +141,10 @@
       "inactive_asset": "buttons/menu_button_small.png",
       "button_shadow": {
         "enabled": true,
+        "mode": "alpha_pixmap",
         "x": 2,
         "y": 3,
+        "blur_radius": 10,
         "color": "rgba(0, 0, 0, 115)"
       }
     },

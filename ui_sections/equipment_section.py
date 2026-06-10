@@ -149,6 +149,78 @@ def _create_equipment_shadow(window, parent, rect_cfg, shadow_cfg):
     return shadow
 
 
+def _equipment_shadow_color(window, shadow_cfg):
+    fallback = QColor(0, 0, 0, 120)
+    if hasattr(window, "parse_layout_color"):
+        color, ok = window.parse_layout_color(shadow_cfg.get("color", ""), fallback)
+        if ok:
+            return color
+    color = QColor(str(shadow_cfg.get("color", "")))
+    return color if color.isValid() else fallback
+
+
+def _create_equipment_alpha_pixmap_shadow(window, parent, src, x, y, w, h, shadow_cfg):
+    if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
+        return None
+    mode = str(shadow_cfg.get("mode", "alpha_pixmap") or "alpha_pixmap").strip().lower()
+    if mode not in ("alpha_pixmap", "alpha"):
+        return None
+
+    offset_x = window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 2)), 2)
+    offset_y = window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 3)), 3)
+    blur_radius = max(0, window._safe_int(shadow_cfg.get("blur_radius", 10), 10))
+    spread = max(1, blur_radius // 3)
+    w = max(1, int(w))
+    h = max(1, int(h))
+    scaled = src.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+    mask = QPixmap(w, h)
+    mask.fill(Qt.transparent)
+    mask_painter = QPainter(mask)
+    mask_painter.drawPixmap(0, 0, scaled)
+    mask_painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    mask_painter.fillRect(mask.rect(), _equipment_shadow_color(window, shadow_cfg))
+    mask_painter.end()
+
+    pad_left = max(spread, spread - offset_x)
+    pad_top = max(spread, spread - offset_y)
+    pad_right = max(spread, spread + offset_x)
+    pad_bottom = max(spread, spread + offset_y)
+    shadow_w = w + pad_left + pad_right
+    shadow_h = h + pad_top + pad_bottom
+
+    rendered = QPixmap(shadow_w, shadow_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if blur_radius > 0:
+        for distance in range(spread, 0, -1):
+            painter.setOpacity(0.10 * (spread - distance + 1) / spread)
+            for dx, dy in (
+                (-distance, 0),
+                (distance, 0),
+                (0, -distance),
+                (0, distance),
+                (-distance, -distance),
+                (distance, -distance),
+                (-distance, distance),
+                (distance, distance),
+            ):
+                painter.drawPixmap(pad_left + offset_x + dx, pad_top + offset_y + dy, mask)
+    painter.setOpacity(0.55)
+    painter.drawPixmap(pad_left + offset_x, pad_top + offset_y, mask)
+    painter.end()
+
+    shadow = QLabel(parent)
+    shadow.setGeometry(x - pad_left, y - pad_top, shadow_w, shadow_h)
+    shadow.setAttribute(Qt.WA_TranslucentBackground, True)
+    shadow.setAutoFillBackground(False)
+    shadow.setStyleSheet("background: transparent; border: none;")
+    shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    shadow.setPixmap(rendered)
+    shadow.show()
+    return shadow
+
+
 def _create_equipment_frame_label(window, parent, frame_cfg, rect_cfg, raise_frame=False):
     if not isinstance(frame_cfg, dict) or not bool(frame_cfg.get("enabled", False)):
         return None
@@ -259,22 +331,13 @@ def render_equipment_category_tabs(window, parent, screen_cfg):
     for index, (category_id, title) in enumerate(categories):
         is_active = category_id == active_category
         button_x = index * (button_w + gap)
-        if bool(shadow_cfg.get("enabled", False)):
-            shadow = QLabel(tabs)
-            shadow.setGeometry(
-                button_x + window._safe_int(shadow_cfg.get("x", 2), 2),
-                window._safe_int(shadow_cfg.get("y", 3), 3),
-                button_w,
-                button_h,
-            )
-            shadow.setStyleSheet(
-                f"background: {str(shadow_cfg.get('color', 'rgba(0, 0, 0, 120)'))}; border: none;"
-            )
-            shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-            shadow.show()
-
         asset = active_asset if is_active else inactive_asset
         asset_path = _optional_equipment_ui_asset_path(window, asset)
+        asset_pixmap = _optional_equipment_ui_pixmap(window, asset)
+        if asset_pixmap is not None:
+            _create_equipment_alpha_pixmap_shadow(
+                window, tabs, asset_pixmap, button_x, 0, button_w, button_h, shadow_cfg
+            )
         button = QPushButton(tabs)
         button.setGeometry(button_x, 0, button_w, button_h)
         button.setText(title)

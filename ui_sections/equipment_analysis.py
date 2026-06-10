@@ -174,6 +174,16 @@ def _equipment_cache_text(sheet_cache, cell_ref):
     return str(value).strip()
 
 
+def _equipment_cache_formula(sheet_cache, cell_ref):
+    cell_data = sheet_cache.get(cell_ref)
+    if not isinstance(cell_data, dict):
+        return ""
+    formula = cell_data.get("formula")
+    if formula is None:
+        return ""
+    return str(formula).strip()
+
+
 def _equipment_cell_sort_key(window, cell_ref):
     match = re.match(r"^([A-Z]+)(\d+)$", str(cell_ref).strip().upper())
     if not match:
@@ -362,6 +372,44 @@ def _equipment_stop_reason(kind, row_data):
     return "", ""
 
 
+def _is_armor_formula_summary_row(sheet_cache, row_data):
+    if not isinstance(row_data, dict):
+        return False
+    if any(str(row_data.get(field_key, "") or "").strip() for field_key in ("slot", "name", "pl")):
+        return False
+
+    numeric_fields = [
+        "phys_head",
+        "phys_chest",
+        "phys_arms",
+        "phys_legs",
+        "fire",
+        "water",
+        "earth",
+        "wind",
+        "lightning",
+        "ice",
+        "acid",
+        "light",
+        "dark",
+    ]
+    has_formula_total = False
+    has_numeric_total = False
+    for field_key in numeric_fields:
+        value = str(row_data.get(field_key, "") or "").strip()
+        if not value:
+            continue
+        try:
+            float(value.replace(",", "."))
+        except Exception:
+            return False
+        has_numeric_total = True
+        cell_ref = str(row_data.get("cells", {}).get(field_key, "") or "").strip()
+        if cell_ref and _equipment_cache_formula(sheet_cache, cell_ref):
+            has_formula_total = True
+    return has_formula_total and has_numeric_total
+
+
 def _extract_equipment_rows(
     sheet_cache,
     mapping,
@@ -408,6 +456,13 @@ def _extract_equipment_rows(
                     f'EQUIPMENT SKIP {kind} row={row_index} reason={stop_reason} text="{stop_text}"',
                 )
             break
+        if kind == "armor" and _is_armor_formula_summary_row(sheet_cache, row_data):
+            if window is not None and window._equipment_print_mapping_enabled():
+                log_debug(
+                    "equipment",
+                    f'EQUIPMENT SKIP armor row={row_index} reason=formula_summary_row text="{_equipment_row_text(row_data)}"',
+                )
+            continue
 
         if kind == "armor":
             is_data = _is_valid_armor_data_core(

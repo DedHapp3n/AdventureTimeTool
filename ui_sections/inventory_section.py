@@ -250,6 +250,78 @@ def _inventory_asset_button_stylesheet(window, cfg, asset_key, color, hover_colo
     )
 
 
+def _inventory_shadow_color(window, shadow_cfg):
+    fallback = QColor(0, 0, 0, 115)
+    if hasattr(window, "parse_layout_color"):
+        color, ok = window.parse_layout_color(shadow_cfg.get("color", ""), fallback)
+        if ok:
+            return color
+    color = QColor(str(shadow_cfg.get("color", "")))
+    return color if color.isValid() else fallback
+
+
+def _create_inventory_alpha_pixmap_shadow(window, parent, src, x, y, w, h, shadow_cfg):
+    if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
+        return None
+    mode = str(shadow_cfg.get("mode", "alpha_pixmap") or "alpha_pixmap").strip().lower()
+    if mode not in ("alpha_pixmap", "alpha"):
+        return None
+
+    offset_x = window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 2)), 2)
+    offset_y = window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 3)), 3)
+    blur_radius = max(0, window._safe_int(shadow_cfg.get("blur_radius", 10), 10))
+    spread = max(1, blur_radius // 3)
+    w = max(1, int(w))
+    h = max(1, int(h))
+    scaled = src.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+    mask = QPixmap(w, h)
+    mask.fill(Qt.transparent)
+    mask_painter = QPainter(mask)
+    mask_painter.drawPixmap(0, 0, scaled)
+    mask_painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    mask_painter.fillRect(mask.rect(), _inventory_shadow_color(window, shadow_cfg))
+    mask_painter.end()
+
+    pad_left = max(spread, spread - offset_x)
+    pad_top = max(spread, spread - offset_y)
+    pad_right = max(spread, spread + offset_x)
+    pad_bottom = max(spread, spread + offset_y)
+    shadow_w = w + pad_left + pad_right
+    shadow_h = h + pad_top + pad_bottom
+
+    rendered = QPixmap(shadow_w, shadow_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if blur_radius > 0:
+        for distance in range(spread, 0, -1):
+            painter.setOpacity(0.10 * (spread - distance + 1) / spread)
+            for dx, dy in (
+                (-distance, 0),
+                (distance, 0),
+                (0, -distance),
+                (0, distance),
+                (-distance, -distance),
+                (distance, -distance),
+                (-distance, distance),
+                (distance, distance),
+            ):
+                painter.drawPixmap(pad_left + offset_x + dx, pad_top + offset_y + dy, mask)
+    painter.setOpacity(0.55)
+    painter.drawPixmap(pad_left + offset_x, pad_top + offset_y, mask)
+    painter.end()
+
+    shadow = QLabel(parent)
+    shadow.setGeometry(x - pad_left, y - pad_top, shadow_w, shadow_h)
+    shadow.setAttribute(Qt.WA_TranslucentBackground, True)
+    shadow.setAutoFillBackground(False)
+    shadow.setStyleSheet("background: transparent; border: none;")
+    shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    shadow.setPixmap(rendered)
+    shadow.show()
+    return shadow
+
+
 def render_inventory_screen(window):
     if window.content_layer is None:
         return
@@ -368,27 +440,23 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
         title = str(category.get("title", category_id))
         is_active = category_id == window.current_inventory_category
         button_x = index * (button_w + button_gap)
-        if bool(shadow_cfg.get("enabled", False)):
-            shadow_x = window._safe_int(shadow_cfg.get("x", 2), 2)
-            shadow_y = window._safe_int(shadow_cfg.get("y", 3), 3)
-            shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 115)"))
-            shadow = QLabel(tabs_container)
-            shadow.setGeometry(button_x + shadow_x, shadow_y, button_w, button_h)
-            shadow.setStyleSheet(f"background: {shadow_color}; border: none;")
-            shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-            shadow.show()
+        color = active_color if is_active else inactive_color
+        border = "#b88a35" if is_active else "rgba(180, 140, 70, 90)"
+        bg = "rgba(35, 24, 12, 185)" if is_active else "rgba(8, 8, 8, 125)"
+        asset_for_state = active_asset if is_active else inactive_asset
+        asset_path = window.resolve_ui_asset_path(asset_for_state) if asset_for_state else None
+        asset_pixmap = _optional_inventory_ui_pixmap(window, asset_for_state) if asset_for_state else None
+        has_asset = bool(use_asset_buttons and asset_path is not None and asset_path.exists() and asset_pixmap is not None)
+        if has_asset:
+            _create_inventory_alpha_pixmap_shadow(
+                window, tabs_container, asset_pixmap, button_x, 0, button_w, button_h, shadow_cfg
+            )
         button = QPushButton(tabs_container)
         button.setGeometry(button_x, 0, button_w, button_h)
         button.setText(title)
         button.setCursor(Qt.PointingHandCursor)
         button.setProperty("inventory_category_id", category_id)
         button.installEventFilter(window)
-        color = active_color if is_active else inactive_color
-        border = "#b88a35" if is_active else "rgba(180, 140, 70, 90)"
-        bg = "rgba(35, 24, 12, 185)" if is_active else "rgba(8, 8, 8, 125)"
-        asset_for_state = active_asset if is_active else inactive_asset
-        asset_path = window.resolve_ui_asset_path(asset_for_state) if asset_for_state else None
-        has_asset = bool(use_asset_buttons and asset_path is not None and asset_path.exists())
         if has_asset:
             button.setStyleSheet(
                 "QPushButton {"
@@ -810,16 +878,6 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
     minus_button.setGeometry(max(0, minus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
     plus_button.setGeometry(max(0, plus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
     button_shadow_cfg = delta_buttons_cfg.get("shadow", {}) if isinstance(delta_buttons_cfg.get("shadow", {}), dict) else {}
-    if bool(button_shadow_cfg.get("enabled", False)):
-        shadow_x = window._safe_int(button_shadow_cfg.get("x", 2), 2)
-        shadow_y = window._safe_int(button_shadow_cfg.get("y", 3), 3)
-        shadow_color = str(button_shadow_cfg.get("color", "rgba(0, 0, 0, 120)"))
-        for button in (minus_button, plus_button):
-            shadow = QLabel(panel)
-            shadow.setGeometry(button.x() + shadow_x, button.y() + shadow_y, button.width(), button.height())
-            shadow.setStyleSheet(f"background: {shadow_color}; border: none;")
-            shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-            shadow.show()
     for button, asset_key, icon_key in (
         (minus_button, "minus_asset", "minus_icon"),
         (plus_button, "plus_asset", "plus_icon"),
@@ -833,6 +891,18 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
             "#ffffff",
             button_font_size,
         )
+        asset_pixmap = _optional_inventory_ui_pixmap(window, delta_buttons_cfg.get(asset_key, ""))
+        if asset_pixmap is not None:
+            _create_inventory_alpha_pixmap_shadow(
+                window,
+                panel,
+                asset_pixmap,
+                button.x(),
+                button.y(),
+                button.width(),
+                button.height(),
+                button_shadow_cfg,
+            )
         if asset_style:
             button.setStyleSheet(asset_style)
         else:

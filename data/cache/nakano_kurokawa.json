@@ -777,7 +777,7 @@
         "error": null
       },
       "E26": {
-        "value": "",
+        "value": "X",
         "formula": null,
         "references": [],
         "error": null
@@ -1238,7 +1238,7 @@
         "error": null
       },
       "AA43": {
-        "value": "",
+        "value": "x",
         "formula": null,
         "references": [],
         "error": null
@@ -4009,13 +4009,13 @@
         "error": null
       },
       "B9": {
-        "value": "4",
+        "value": "0",
         "formula": null,
         "references": [],
         "error": null
       },
       "E9": {
-        "value": "3",
+        "value": "2",
         "formula": null,
         "references": [],
         "error": null
@@ -4075,19 +4075,19 @@
         "error": null
       },
       "B14": {
-        "value": "",
+        "value": "Kreisel Emely Caver (Memento)",
         "formula": null,
         "references": [],
         "error": null
       },
       "P14": {
-        "value": "",
+        "value": "99",
         "formula": null,
         "references": [],
         "error": null
       },
       "Q14": {
-        "value": "",
+        "value": "1",
         "formula": null,
         "references": [],
         "error": null
@@ -4279,19 +4279,19 @@
         "error": null
       },
       "T30": {
-        "value": "Minor Frost Spirit ",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AH30": {
-        "value": 2,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AI30": {
-        "value": 1,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4441,19 +4441,19 @@
         "error": null
       },
       "T21": {
-        "value": "Aquamarin (rare) PL:3",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AH21": {
-        "value": "3",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AI21": {
-        "value": "1",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4483,19 +4483,19 @@
         "error": null
       },
       "T27": {
-        "value": "Magewright-Stone",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AH27": {
-        "value": "3",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AI27": {
-        "value": "1",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -5094,13 +5094,13 @@
         "error": null
       },
       "C35": {
-        "value": " Silber Rapier",
+        "value": "Silber ICY FANCY Rapier",
         "formula": null,
         "references": [],
         "error": null
       },
       "K35": {
-        "value": 3,
+        "value": "4",
         "formula": null,
         "references": [],
         "error": null
@@ -5112,7 +5112,7 @@
         "error": null
       },
       "T35": {
-        "value": "1d8",
+        "value": "2d8",
         "formula": null,
         "references": [],
         "error": null
@@ -5521,6 +5521,42 @@
       },
       "C43": {
         "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G35": {
+        "value": "Melle Stich",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA35": {
+        "value": "1d6 FROST",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T40": {
+        "value": "1d6",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C40": {
+        "value": "Leihgabe Rapier",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K40": {
+        "value": "1",
         "formula": null,
         "references": [],
         "error": null
