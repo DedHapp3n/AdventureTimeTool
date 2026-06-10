@@ -20,6 +20,16 @@
       "print_rows": true,
       "show_label": false
     },
+    "row_delete": {
+      "enabled": true,
+      "show_on_selected_row": true,
+      "column_w": 34,
+      "icon_asset": "icons/x.jpg",
+      "fallback_text": "X",
+      "font_size": 14,
+      "color": "#f2d28b",
+      "confirm": false
+    },
     "category_tabs": {
       "enabled": true,
       "x": 20,

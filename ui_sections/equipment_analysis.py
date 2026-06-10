@@ -128,6 +128,15 @@ def save_custom_equipment_cell(window, table_type, row_index, field_key, value):
     return True
 
 
+def clear_custom_equipment_row(window, table_type, row_index):
+    rows = _normalize_custom_equipment_rows(window, table_type)
+    if row_index < 0 or row_index >= len(rows):
+        return False
+    rows[row_index] = _empty_custom_equipment_row(table_type)
+    window.loader.save_active_character_json()
+    return True
+
+
 def custom_equipment_row_is_empty(table_type, row_data):
     if not isinstance(row_data, dict):
         return True

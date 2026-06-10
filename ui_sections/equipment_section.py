@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QT
 from app_logger import log_debug, log_error, log_warning
 from ui_sections.equipment_analysis import (
     analyze_equipment_sheet,
+    clear_custom_equipment_row,
     ensure_custom_equipment_min_rows,
     grow_custom_equipment_rows_if_needed,
     save_custom_equipment_cell,
@@ -420,10 +421,11 @@ def render_equipment_section(window, parent, layout_config):
         weapon_rows = []
     if not any(bool(row.get("is_data_row")) for row in weapon_rows if isinstance(row, dict)):
         weapon_rows = ensure_custom_equipment_min_rows(window, "weapons", 12)
+    row_delete_cfg = _finalize_equipment_row_delete_config(window, screen_cfg)
 
     if window.current_equipment_category == "weapons":
         try:
-            render_equipment_weapons_table(window, screen, screen_cfg.get("weapons", {}), weapon_rows)
+            render_equipment_weapons_table(window, screen, screen_cfg.get("weapons", {}), weapon_rows, row_delete_cfg)
         except Exception as exc:
             log_error("equipment", f"weapon render failed: {exc}")
             window.create_panel_text(
@@ -437,7 +439,7 @@ def render_equipment_section(window, parent, layout_config):
             )
     else:
         try:
-            render_equipment_armor_table(window, screen, screen_cfg.get("armor", {}), armor_rows)
+            render_equipment_armor_table(window, screen, screen_cfg.get("armor", {}), armor_rows, row_delete_cfg)
         except Exception as exc:
             log_error("equipment", f"armor render failed: {exc}")
             window.create_panel_text(
@@ -531,6 +533,149 @@ def apply_equipment_item_editability(item, editable):
         item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
 
+def _equipment_row_delete_config(screen_cfg):
+    cfg = screen_cfg.get("row_delete", {}) if isinstance(screen_cfg, dict) else {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    fallback_text = str(cfg.get("fallback_text", "X") or "X")
+    return {
+        "enabled": bool(cfg.get("enabled", True)),
+        "show_on_selected_row": bool(cfg.get("show_on_selected_row", True)),
+        "column_w": None,
+        "icon_asset": str(cfg.get("icon_asset", cfg.get("trash_icon_asset", "icons/x.jpg")) or "icons/x.jpg"),
+        "fallback_text": fallback_text,
+        "font_size": None,
+        "color": str(cfg.get("color", "#f2d28b") or "#f2d28b"),
+        "confirm": bool(cfg.get("confirm", False)),
+        "_raw_column_w": cfg.get("column_w", 34),
+        "_raw_font_size": cfg.get("font_size", 14),
+    }
+
+
+def _finalize_equipment_row_delete_config(window, screen_cfg):
+    cfg = _equipment_row_delete_config(screen_cfg)
+    cfg["column_w"] = max(18, window._safe_int(cfg.get("_raw_column_w", 34), 34))
+    cfg["font_size"] = max(8, window._safe_int(cfg.get("_raw_font_size", 14), 14))
+    return cfg
+
+
+def _equipment_delete_icon_pixmap(window, delete_cfg):
+    icon_w = max(18, min(28, int(delete_cfg.get("column_w", 34)) - 8))
+    icon_h = icon_w
+    rendered = QPixmap(icon_w, icon_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+
+    icon = _optional_equipment_ui_pixmap(window, delete_cfg.get("icon_asset", "icons/x.jpg"))
+    if icon is not None:
+        icon_size = max(12, min(18, icon_w - 6))
+        x = int((icon_w - icon_size) / 2)
+        y = int((icon_h - icon_size) / 2)
+        painter.drawPixmap(x, y, icon_size, icon_size, icon)
+    else:
+        fallback_text = str(delete_cfg.get("fallback_text", "X") or "X")
+        painter.setPen(QColor(str(delete_cfg.get("color", "#f2d28b"))))
+        font = painter.font()
+        font.setPixelSize(max(8, int(delete_cfg.get("font_size", 14))))
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(rendered.rect(), Qt.AlignCenter, fallback_text)
+    painter.end()
+    return rendered
+
+
+def _equipment_delete_row_is_allowed(binding, row_index):
+    if not isinstance(binding, dict):
+        return False
+    if row_index == int(binding.get("summary_row_index", -1)):
+        return False
+    data_row_index = row_index - int(binding.get("data_row_offset", 0))
+    rows = binding.get("rows", [])
+    return isinstance(rows, list) and data_row_index >= 0 and data_row_index < len(rows)
+
+
+def update_equipment_delete_column(window, table):
+    binding = window._equipment_table_bindings.get(id(table), {})
+    delete_cfg = binding.get("row_delete", {}) if isinstance(binding, dict) else {}
+    if not isinstance(delete_cfg, dict) or not bool(delete_cfg.get("enabled", False)):
+        return
+    delete_col = int(binding.get("delete_column", -1))
+    if delete_col < 0:
+        return
+    selected_rows = {index.row() for index in table.selectionModel().selectedRows()} if table.selectionModel() else set()
+    show_selected_only = bool(delete_cfg.get("show_on_selected_row", True))
+    icon = binding.get("delete_icon")
+    if icon is None:
+        icon = _equipment_delete_icon_pixmap(window, delete_cfg)
+        binding["delete_icon"] = icon
+    for row_index in range(table.rowCount()):
+        item = table.item(row_index, delete_col)
+        if item is None:
+            item = QTableWidgetItem("")
+            table.setItem(row_index, delete_col, item)
+        item.setText("")
+        item.setToolTip("")
+        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        item.setTextAlignment(Qt.AlignCenter)
+        show_icon = _equipment_delete_row_is_allowed(binding, row_index) and (
+            not show_selected_only or row_index in selected_rows
+        )
+        item.setData(Qt.DecorationRole, icon if show_icon else None)
+        if show_icon:
+            item.setToolTip("Double-click to delete row")
+
+
+def clear_equipment_table_row(window, table, row_index):
+    binding = window._equipment_table_bindings.get(id(table), {})
+    if not _equipment_delete_row_is_allowed(binding, row_index):
+        return
+
+    data_row_index = row_index - int(binding.get("data_row_offset", 0))
+    rows = binding.get("rows", [])
+    row_data = rows[data_row_index] if isinstance(rows, list) and data_row_index < len(rows) else {}
+    if not isinstance(row_data, dict):
+        return
+    table_type = str(binding.get("table_type", ""))
+    column_order = binding.get("column_order", [])
+    data_fields = [str(field_key) for field_key, _ in column_order if str(field_key) != "__delete__"]
+    if str(row_data.get("storage", "") or "") == "custom":
+        custom_row_index = row_data.get("custom_row_index", data_row_index)
+        try:
+            custom_row_index = int(custom_row_index)
+        except Exception:
+            custom_row_index = data_row_index
+        clear_custom_equipment_row(window, table_type, custom_row_index)
+    else:
+        sheet_name = str(window.equipment_analysis.get("sheet", "") or "Ausrüstung")
+        cells = row_data.get("cells", {})
+        if not isinstance(cells, dict):
+            cells = {}
+        changed = False
+        for field_key in data_fields:
+            cell_ref = str(cells.get(field_key, "") or "").strip()
+            if not cell_ref:
+                continue
+            window.loader.set_cell_value(sheet_name, cell_ref, "")
+            changed = True
+        if changed:
+            window.loader.save_active_character_json()
+    for field_key in data_fields:
+        row_data[field_key] = ""
+    row_data["is_empty_row"] = True
+    row_data["is_data_row"] = False
+    if table_type == "armor":
+        refresh_armor_summary_table_row(window, table)
+    window.show_main_section("equipment")
+
+
+def on_equipment_table_cell_clicked(window, table, row_index, column_index):
+    binding = window._equipment_table_bindings.get(id(table), {})
+    delete_col = int(binding.get("delete_column", -1)) if isinstance(binding, dict) else -1
+    if column_index == delete_col:
+        clear_equipment_table_row(window, table, row_index)
+
+
 def refresh_armor_summary_table_row(window, table):
     binding = window._equipment_table_bindings.get(id(table), {})
     if not isinstance(binding, dict):
@@ -546,6 +691,8 @@ def refresh_armor_summary_table_row(window, table):
     table.blockSignals(True)
     try:
         for col_index, (field_key, _) in enumerate(binding.get("column_order", [])):
+            if str(field_key) == "__delete__":
+                continue
             item = table.item(summary_row_index, col_index)
             if item is None:
                 continue
@@ -582,6 +729,8 @@ def on_equipment_table_item_changed(window, table, row_index, column_index):
     if column_index < 0 or column_index >= len(column_order):
         return
     field_key = str(column_order[column_index][0])
+    if field_key == "__delete__":
+        return
     item = table.item(row_index, column_index)
     if item is None:
         return
@@ -637,7 +786,7 @@ def on_equipment_table_item_changed(window, table, row_index, column_index):
         refresh_armor_summary_table_row(window, table)
 
 
-def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
+def render_equipment_armor_table(window, parent, armor_cfg, armor_rows, row_delete_cfg=None):
     if not isinstance(armor_cfg, dict) or not armor_cfg.get("enabled", True):
         return
 
@@ -740,6 +889,9 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
         ("durability_max", "Max"),
         ("attributes", "Attribute / Sonderfertigkeiten"),
     ]
+    delete_enabled = isinstance(row_delete_cfg, dict) and bool(row_delete_cfg.get("enabled", False))
+    if delete_enabled:
+        column_order = [("__delete__", "")] + column_order
     table = QTableWidget(panel)
     table_top = 42 if show_panel_title else 10
     table.setGeometry(10, table_top, table_w - 20, table_h - table_top - 10)
@@ -774,11 +926,15 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
     header_labels = []
     for col_index, (field_key, fallback_title) in enumerate(column_order):
         field_to_col_index[field_key] = col_index
-        col_cfg = columns_cfg.get(field_key, {})
-        if not isinstance(col_cfg, dict):
-            col_cfg = {}
-        header_title = str(col_cfg.get("title", fallback_title))
-        col_width = window._safe_int(col_cfg.get("w", 70), 70)
+        if field_key == "__delete__":
+            header_title = ""
+            col_width = int(row_delete_cfg.get("column_w", 34)) if isinstance(row_delete_cfg, dict) else 34
+        else:
+            col_cfg = columns_cfg.get(field_key, {})
+            if not isinstance(col_cfg, dict):
+                col_cfg = {}
+            header_title = str(col_cfg.get("title", fallback_title))
+            col_width = window._safe_int(col_cfg.get("w", 70), 70)
         header_labels.append(header_title)
         table.setColumnWidth(col_index, col_width)
     table.setHorizontalHeaderLabels(header_labels)
@@ -862,6 +1018,10 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
         summary_durability_background_raw, "rgba(170,170,185,120)"
     )
     for field_key, _ in column_order:
+        if field_key == "__delete__":
+            column_background_brushes[field_key] = QBrush()
+            header_background_brushes[field_key] = QBrush()
+            continue
         col_bg_raw = column_backgrounds.get(field_key, "")
         if not col_bg_raw:
             group_cfg = group_styles.get(field_key, {})
@@ -931,6 +1091,12 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
             )
         row_has_data = any(str(row_data.get(key, "") or "").strip() for key, _ in column_order)
         for col_index, (field_key, _) in enumerate(column_order):
+            if field_key == "__delete__":
+                item = QTableWidgetItem("")
+                item.setTextAlignment(Qt.AlignCenter)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                table.setItem(row_index, col_index, item)
+                continue
             raw_value = str(row_data.get(field_key, "") or "").strip()
             display_value = raw_value if raw_value else ""
             item = QTableWidgetItem(display_value)
@@ -1017,7 +1183,16 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
         "summary_label": summary_label,
         "save_on_cell_change": save_on_cell_change,
         "debug": edit_debug,
+        "delete_column": 0 if delete_enabled else -1,
+        "row_delete": row_delete_cfg if isinstance(row_delete_cfg, dict) else {},
     }
+    update_equipment_delete_column(window, table)
+    table.itemSelectionChanged.connect(
+        lambda widget=table: update_equipment_delete_column(window, widget)
+    )
+    table.cellDoubleClicked.connect(
+        lambda row, column, widget=table: on_equipment_table_cell_clicked(window, widget, row, column)
+    )
     table.itemChanged.connect(
         lambda item, widget=table: on_equipment_table_item_changed(
             window, widget, item.row(), item.column()
@@ -1026,7 +1201,7 @@ def render_equipment_armor_table(window, parent, armor_cfg, armor_rows):
     table.show()
 
 
-def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
+def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows, row_delete_cfg=None):
     if not isinstance(weapons_cfg, dict) or not weapons_cfg.get("enabled", True):
         return
 
@@ -1106,6 +1281,9 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
         ("durability_max", "Max"),
         ("attributes", "Attribute / Sonderfertigkeiten"),
     ]
+    delete_enabled = isinstance(row_delete_cfg, dict) and bool(row_delete_cfg.get("enabled", False))
+    if delete_enabled:
+        column_order = [("__delete__", "")] + column_order
     table = QTableWidget(panel)
     table_top = 42 if show_panel_title else 10
     table.setGeometry(10, table_top, table_w - 20, table_h - table_top - 10)
@@ -1135,11 +1313,15 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
     header_labels = []
     for col_index, (field_key, fallback_title) in enumerate(column_order):
         field_to_col_index[field_key] = col_index
-        col_cfg = columns_cfg.get(field_key, {})
-        if not isinstance(col_cfg, dict):
-            col_cfg = {}
-        header_title = str(col_cfg.get("title", fallback_title))
-        col_width = window._safe_int(col_cfg.get("w", 70), 70)
+        if field_key == "__delete__":
+            header_title = ""
+            col_width = int(row_delete_cfg.get("column_w", 34)) if isinstance(row_delete_cfg, dict) else 34
+        else:
+            col_cfg = columns_cfg.get(field_key, {})
+            if not isinstance(col_cfg, dict):
+                col_cfg = {}
+            header_title = str(col_cfg.get("title", fallback_title))
+            col_width = window._safe_int(col_cfg.get("w", 70), 70)
         header_labels.append(header_title)
         table.setColumnWidth(col_index, col_width)
     table.setHorizontalHeaderLabels(header_labels)
@@ -1190,6 +1372,10 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
     column_background_brushes = {}
     header_background_brushes = {}
     for field_key, _ in column_order:
+        if field_key == "__delete__":
+            column_background_brushes[field_key] = QBrush()
+            header_background_brushes[field_key] = QBrush()
+            continue
         col_bg_raw = str(column_backgrounds.get(field_key, "") or "")
         col_color, _ = window.parse_layout_color(col_bg_raw, "rgba(0,0,0,0)")
         column_background_brushes[field_key] = QBrush(col_color)
@@ -1214,6 +1400,12 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
     for row_index in range(table_row_count):
         row_data = weapon_rows[row_index] if isinstance(weapon_rows[row_index], dict) else {}
         for col_index, (field_key, _) in enumerate(column_order):
+            if field_key == "__delete__":
+                item = QTableWidgetItem("")
+                item.setTextAlignment(Qt.AlignCenter)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                table.setItem(row_index, col_index, item)
+                continue
             raw_value = str(row_data.get(field_key, "") or "").strip()
             item = QTableWidgetItem(raw_value)
             item.setData(Qt.UserRole, raw_value)
@@ -1265,7 +1457,16 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows):
         "data_row_offset": 0,
         "save_on_cell_change": save_on_cell_change,
         "debug": edit_debug,
+        "delete_column": 0 if delete_enabled else -1,
+        "row_delete": row_delete_cfg if isinstance(row_delete_cfg, dict) else {},
     }
+    update_equipment_delete_column(window, table)
+    table.itemSelectionChanged.connect(
+        lambda widget=table: update_equipment_delete_column(window, widget)
+    )
+    table.cellDoubleClicked.connect(
+        lambda row, column, widget=table: on_equipment_table_cell_clicked(window, widget, row, column)
+    )
     table.itemChanged.connect(
         lambda item, widget=table: on_equipment_table_item_changed(
             window, widget, item.row(), item.column()
