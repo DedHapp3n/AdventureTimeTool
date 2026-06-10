@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPixmap, QTransform
+from PySide6.QtGui import QColor, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QWidget
 
 from app_logger import log_debug
@@ -412,6 +412,75 @@ def render_se_cost_info_box(window, parent, screen_cfg):
     return box
 
 
+def _skills_shadow_color(window, shadow_cfg):
+    fallback = QColor(0, 0, 0, 115)
+    if hasattr(window, "parse_layout_color"):
+        color, ok = window.parse_layout_color(shadow_cfg.get("color", ""), fallback)
+        if ok:
+            return color
+    color = QColor(str(shadow_cfg.get("color", "")))
+    return color if color.isValid() else fallback
+
+
+def _create_alpha_button_shadow(window, parent, src, w, h, shadow_cfg):
+    if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
+        return None
+
+    mode = str(shadow_cfg.get("mode", "alpha_pixmap") or "alpha_pixmap").strip().lower()
+    if mode not in ("alpha_pixmap", "alpha"):
+        return None
+    offset_x = window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 2)), 2)
+    offset_y = window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 3)), 3)
+    blur_radius = max(0, window._safe_int(shadow_cfg.get("blur_radius", 10), 10))
+    spread = max(1, blur_radius // 3)
+    scaled = src.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+    mask = QPixmap(w, h)
+    mask.fill(Qt.transparent)
+    mask_painter = QPainter(mask)
+    mask_painter.drawPixmap(0, 0, scaled)
+    mask_painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    mask_painter.fillRect(mask.rect(), _skills_shadow_color(window, shadow_cfg))
+    mask_painter.end()
+
+    pad_left = max(spread, spread - offset_x)
+    pad_top = max(spread, spread - offset_y)
+    pad_right = max(spread, spread + offset_x)
+    pad_bottom = max(spread, spread + offset_y)
+    shadow_w = w + pad_left + pad_right
+    shadow_h = h + pad_top + pad_bottom
+    rendered = QPixmap(shadow_w, shadow_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if blur_radius > 0:
+        for distance in range(spread, 0, -1):
+            painter.setOpacity(0.10 * (spread - distance + 1) / spread)
+            for dx, dy in (
+                (-distance, 0),
+                (distance, 0),
+                (0, -distance),
+                (0, distance),
+                (-distance, -distance),
+                (distance, -distance),
+                (-distance, distance),
+                (distance, distance),
+            ):
+                painter.drawPixmap(pad_left + offset_x + dx, pad_top + offset_y + dy, mask)
+    painter.setOpacity(0.55)
+    painter.drawPixmap(pad_left + offset_x, pad_top + offset_y, mask)
+    painter.end()
+
+    shadow = QLabel(parent)
+    shadow.setGeometry(-pad_left, -pad_top, shadow_w, shadow_h)
+    shadow.setAttribute(Qt.WA_TranslucentBackground, True)
+    shadow.setAutoFillBackground(False)
+    shadow.setStyleSheet("background: transparent; border: none;")
+    shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    shadow.setPixmap(rendered)
+    shadow.show()
+    return shadow
+
+
 def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg, raise_frame=False):
     field_cfg = row_fields_cfg.get(field_id, {}) if isinstance(row_fields_cfg, dict) else {}
     frame_cfg = field_cfg.get("frame", {}) if isinstance(field_cfg, dict) else {}
@@ -466,14 +535,7 @@ def _create_asset_category_button(window, parent, cfg, title, is_active, callbac
 
     shadow_cfg = button_cfg.get("shadow", {}) if isinstance(button_cfg.get("shadow", {}), dict) else {}
     if bool(shadow_cfg.get("enabled", False)):
-        shadow_x = window._safe_int(shadow_cfg.get("x", 2), 2)
-        shadow_y = window._safe_int(shadow_cfg.get("y", 3), 3)
-        shadow_color = str(shadow_cfg.get("color", "rgba(0, 0, 0, 115)"))
-        shadow = QLabel(container)
-        shadow.setGeometry(shadow_x, shadow_y, w, h)
-        shadow.setStyleSheet(f"background: {shadow_color}; border: none;")
-        shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        shadow.show()
+        _create_alpha_button_shadow(window, container, pixmap, w, h, shadow_cfg)
 
     bg_label = QLabel(container)
     bg_label.setGeometry(0, 0, w, h)

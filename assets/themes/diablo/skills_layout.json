@@ -28,7 +28,9 @@
           "enabled": true,
           "x": 2,
           "y": 3,
-          "color": "rgba(0, 0, 0, 115)"
+          "color": "rgba(0, 0, 0, 115)",
+          "mode": "alpha_pixmap",
+          "blur_radius": 10
         }
       }
     },
