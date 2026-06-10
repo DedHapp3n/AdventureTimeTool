@@ -4009,13 +4009,13 @@
         "error": null
       },
       "B9": {
-        "value": "11",
+        "value": "4",
         "formula": null,
         "references": [],
         "error": null
       },
       "E9": {
-        "value": "6",
+        "value": "3",
         "formula": null,
         "references": [],
         "error": null
@@ -4219,19 +4219,19 @@
         "error": null
       },
       "T22": {
-        "value": "Grants Carry",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AH22": {
-        "value": 3,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
       },
       "AI22": {
-        "value": 1,
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -4435,7 +4435,7 @@
         "error": null
       },
       "T19": {
-        "value": "Grant's Miracle Elixir's Coupon - buy one get one free  (up to Rare Quality)",
+        "value": "",
         "formula": null,
         "references": [],
         "error": null
@@ -6154,7 +6154,8 @@
       "tab_labels": {
         "inventory_02": "Inventar 02",
         "inventory_03": "Inventar 3",
-        "inventory_04": "Bücher"
+        "inventory_04": "Bücher",
+        "inventory_05": "GRANT"
       },
       "custom_rows": {
         "inventory_04": [
@@ -6258,6 +6259,18 @@
             "pl": "",
             "count": ""
           }
+        ],
+        "inventory_05": [
+          {
+            "name": "Grant's Miracle Elixir's Coupon - buy one get one free  (up to Rare Quality)",
+            "pl": "",
+            "count": ""
+          },
+          {
+            "name": "Grants Carry",
+            "pl": "3",
+            "count": "1"
+          }
         ]
       }
     },
@@ -6334,7 +6347,7 @@
             "text": "Handel und Wertgegenstände",
             "skill_key": "wissen/handel_und_wertgegenstaende",
             "skill_name": "Handel und Wertgegenstände",
-            "value": "2"
+            "value": "3"
           },
           {
             "text": "Schreiber, Maler und Kartograph",

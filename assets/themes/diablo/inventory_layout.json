@@ -72,8 +72,7 @@
       "columns": [
         { "id": "gulden", "label": "Gulden" },
         { "id": "schilling", "label": "Schilling" },
-        { "id": "heller", "label": "Heller" },
-        { "id": "pfifferling", "label": "Pfifferling" }
+        { "id": "heller", "label": "Heller" }
       ],
       "delta_row": {
         "label": "   Änderung",

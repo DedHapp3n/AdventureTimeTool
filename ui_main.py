@@ -1073,7 +1073,6 @@ class MainWindow(QMainWindow):
                         {"id": "gulden", "label": "Gulden"},
                         {"id": "schilling", "label": "Schilling"},
                         {"id": "heller", "label": "Heller"},
-                        {"id": "pfifferling", "label": "Pfifferling"},
                     ],
                 },
                 "tables": {
@@ -3646,14 +3645,11 @@ class MainWindow(QMainWindow):
             "heller": self.format_character_display_value(
                 self.get_cache_cell_value("Inventar", "H9", None), "auto"
             ),
-            "pfifferling": self.format_character_display_value(
-                self.get_cache_cell_value("Inventar", "K9", None), "auto"
-            ),
         }
         log_debug(
             "inventory",
             f"INVENTORY money Gulden={money['gulden']} Schilling={money['schilling']} "
-            f"Heller={money['heller']} Pfifferling={money['pfifferling']}",
+            f"Heller={money['heller']}",
         )
 
         row_values = {}
@@ -4244,10 +4240,10 @@ class MainWindow(QMainWindow):
         return inventory_section.on_inventory_money_edit_finished(self, field)
     def _inventory_parse_non_negative_int(self, value):
         return inventory_section._inventory_parse_non_negative_int(self, value)
-    def money_to_pfifferling(self, gulden, schilling, heller, pfifferling):
-        return inventory_section.money_to_pfifferling(self, gulden, schilling, heller, pfifferling)
-    def pfifferling_to_money(self, total_pfifferling):
-        return inventory_section.pfifferling_to_money(self, total_pfifferling)
+    def money_to_heller(self, gulden, schilling, heller):
+        return inventory_section.money_to_heller(self, gulden, schilling, heller)
+    def heller_to_money(self, total_heller):
+        return inventory_section.heller_to_money(self, total_heller)
     def _inventory_get_wallet_money_values(self):
         return inventory_section._inventory_get_wallet_money_values(self)
     def on_inventory_money_delta_apply(self, op):

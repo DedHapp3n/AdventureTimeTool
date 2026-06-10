@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPixmap
-from PySide6.QtWidgets import QFrame, QLabel, QLineEdit
+from PySide6.QtGui import QColor, QPainter, QPixmap
+from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit
 
 
 def _optional_theme_ui_pixmap(window, asset_rel_path):
@@ -21,6 +21,163 @@ def _optional_theme_ui_pixmap(window, asset_rel_path):
     except Exception:
         return None
     return None
+
+
+def _character_panel_shadow_config(character_screen, panel_cfg):
+    base_cfg = character_screen.get("panel_shadow", {}) if isinstance(character_screen, dict) else {}
+    panel_shadow = panel_cfg.get("shadow", {}) if isinstance(panel_cfg, dict) else {}
+    if not isinstance(base_cfg, dict):
+        base_cfg = {}
+    if not isinstance(panel_shadow, dict):
+        panel_shadow = {}
+    return {**base_cfg, **panel_shadow}
+
+
+def _character_subpanel_shadow_config(character_screen, panel_cfg):
+    base_cfg = character_screen.get("subpanel_shadow", {}) if isinstance(character_screen, dict) else {}
+    panel_shadow = panel_cfg.get("shadow", {}) if isinstance(panel_cfg, dict) else {}
+    if not isinstance(base_cfg, dict):
+        base_cfg = {}
+    if not isinstance(panel_shadow, dict):
+        panel_shadow = {}
+    return {**base_cfg, **panel_shadow}
+
+
+def _character_shadow_color(window, shadow_cfg):
+    color_text = str(shadow_cfg.get("color", "rgba(0, 0, 0, 160)"))
+    fallback = QColor(0, 0, 0, 160)
+    if hasattr(window, "parse_layout_color"):
+        color, ok = window.parse_layout_color(color_text, fallback)
+        return color if ok else fallback
+    return fallback
+
+
+def _create_character_panel_shadow(window, parent, rect_cfg, shadow_cfg):
+    if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
+        return None
+    x = window._safe_int(rect_cfg.get("x", 0), 0)
+    y = window._safe_int(rect_cfg.get("y", 0), 0)
+    w = max(1, window._safe_int(rect_cfg.get("w", 1), 1))
+    h = max(1, window._safe_int(rect_cfg.get("h", 1), 1))
+    offset_x = window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 3)), 3)
+    offset_y = window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 4)), 4)
+    blur_radius = window._safe_int(shadow_cfg.get("blur_radius", 18), 18)
+    border_radius = window._safe_int(shadow_cfg.get("border_radius", 6), 6)
+    source_alpha = max(1, min(80, window._safe_int(shadow_cfg.get("source_alpha", 45), 45)))
+
+    shadow = QLabel(parent)
+    shadow.setGeometry(x, y, w, h)
+    shadow.setAttribute(Qt.WA_TranslucentBackground, True)
+    shadow.setStyleSheet(f"background: rgba(0, 0, 0, {source_alpha}); border-radius: {border_radius}px;")
+    shadow.setAutoFillBackground(False)
+    shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    effect = QGraphicsDropShadowEffect(shadow)
+    effect.setBlurRadius(max(0, blur_radius))
+    effect.setOffset(offset_x, offset_y)
+    effect.setColor(_character_shadow_color(window, shadow_cfg))
+    shadow.setGraphicsEffect(effect)
+    shadow.show()
+    shadow.lower()
+    return shadow
+
+
+def _apply_character_subpanel_shadow_effect(window, panel, shadow_cfg):
+    if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
+        return
+    effect = QGraphicsDropShadowEffect(panel)
+    effect.setBlurRadius(max(0, window._safe_int(shadow_cfg.get("blur_radius", 18), 18)))
+    effect.setOffset(
+        window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 4)), 4),
+        window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 5)), 5),
+    )
+    effect.setColor(_character_shadow_color(window, shadow_cfg))
+    panel.setGraphicsEffect(effect)
+
+
+def _create_alpha_pixmap_shadow(window, parent, panel_cfg, shadow_cfg):
+    if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
+        return None
+    src = _optional_theme_ui_pixmap(window, panel_cfg.get("asset", ""))
+    if src is None:
+        return None
+
+    x = window._safe_int(panel_cfg.get("x", 0), 0)
+    y = window._safe_int(panel_cfg.get("y", 0), 0)
+    w = max(1, window._safe_int(panel_cfg.get("w", 1), 1))
+    h = max(1, window._safe_int(panel_cfg.get("h", 1), 1))
+    offset_x = window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 3)), 3)
+    offset_y = window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 4)), 4)
+    blur_radius = max(0, window._safe_int(shadow_cfg.get("blur_radius", 18), 18))
+    spread = max(1, blur_radius // 3)
+    scaled = src.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+    mask = QPixmap(w, h)
+    mask.fill(Qt.transparent)
+    mask_painter = QPainter(mask)
+    mask_painter.drawPixmap(0, 0, scaled)
+    mask_painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    mask_painter.fillRect(mask.rect(), _character_shadow_color(window, shadow_cfg))
+    mask_painter.end()
+
+    pad_left = max(spread, spread - offset_x)
+    pad_top = max(spread, spread - offset_y)
+    pad_right = max(spread, spread + offset_x)
+    pad_bottom = max(spread, spread + offset_y)
+    shadow_w = w + pad_left + pad_right
+    shadow_h = h + pad_top + pad_bottom
+    rendered = QPixmap(shadow_w, shadow_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    if blur_radius > 0:
+        for distance in range(spread, 0, -1):
+            opacity = 0.10 * (spread - distance + 1) / spread
+            painter.setOpacity(opacity)
+            for dx, dy in ((-distance, 0), (distance, 0), (0, -distance), (0, distance), (-distance, -distance), (distance, -distance), (-distance, distance), (distance, distance)):
+                painter.drawPixmap(pad_left + offset_x + dx, pad_top + offset_y + dy, mask)
+    painter.setOpacity(0.55)
+    painter.drawPixmap(pad_left + offset_x, pad_top + offset_y, mask)
+    painter.end()
+
+    shadow = QLabel(parent)
+    shadow.setGeometry(x - pad_left, y - pad_top, shadow_w, shadow_h)
+    shadow.setAttribute(Qt.WA_TranslucentBackground, True)
+    shadow.setAutoFillBackground(False)
+    shadow.setStyleSheet("background: transparent; border: none;")
+    shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    shadow.setPixmap(rendered)
+    shadow.show()
+    shadow.lower()
+    return shadow
+
+
+def _create_character_image_panel(window, parent, panel_cfg):
+    x = window._safe_int(panel_cfg.get("x", 0), 0)
+    y = window._safe_int(panel_cfg.get("y", 0), 0)
+    w = max(1, window._safe_int(panel_cfg.get("w", 300), 300))
+    h = max(1, window._safe_int(panel_cfg.get("h", 300), 300))
+    panel = QFrame(parent)
+    panel.setGeometry(x, y, w, h)
+    panel.setAttribute(Qt.WA_TranslucentBackground, True)
+    panel.setAutoFillBackground(False)
+    panel.setStyleSheet("background: transparent; border: none;")
+
+    src = _optional_theme_ui_pixmap(window, panel_cfg.get("asset", ""))
+    if src is not None:
+        bg = QLabel(panel)
+        bg.setGeometry(0, 0, w, h)
+        bg.setAttribute(Qt.WA_TranslucentBackground, True)
+        bg.setAutoFillBackground(False)
+        bg.setStyleSheet("background: transparent; border: none;")
+        bg.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        bg.setPixmap(src.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+        bg.lower()
+        bg.show()
+    else:
+        panel.setStyleSheet(
+            "background: rgba(12, 12, 12, 170); border: 1px solid rgba(200, 200, 200, 70); border-radius: 6px;"
+        )
+    panel.show()
+    return panel
 
 
 def _apply_character_panel_frame_if_enabled(window, panel, panel_cfg):
@@ -272,6 +429,11 @@ def render_character_initiative_panel(window, character_screen, character_panel,
             "border-radius: 6px;"
             "}"
         )
+    _apply_character_subpanel_shadow_effect(
+        window,
+        panel,
+        _character_subpanel_shadow_config(character_screen, panel_cfg),
+    )
     panel.show()
 
     title = str(panel_cfg.get("title", "Initiative"))
@@ -465,6 +627,11 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
             "border-radius: 6px;"
             "}"
         )
+    _apply_character_subpanel_shadow_effect(
+        window,
+        panel,
+        _character_subpanel_shadow_config(character_screen, panel_cfg),
+    )
     panel.show()
 
     title = str(panel_cfg.get("title", "Paradigmen"))
@@ -754,8 +921,11 @@ def render_character_section(window):
         window._character_rendering = False
         return
 
+    character_colors = character_screen.get("character_colors", {})
+    if not isinstance(character_colors, dict):
+        character_colors = {}
     default_text_style = window.theme_style.get("default_text", {})
-    default_color = str(default_text_style.get("color", "#e8e0c8"))
+    default_color = str(character_colors.get("default_text", default_text_style.get("color", "#e8e0c8")))
     data_map = character_screen.get("data_map", {})
     text_layout = character_screen.get("text_layout", {})
     panels_cfg = character_screen.get("panels", {})
@@ -773,9 +943,27 @@ def render_character_section(window):
         window._character_rendering = False
         return
 
-    character_panel = window._create_content_panel(window.content_layer, character_panel_cfg)
-    attribute_panel = window._create_content_panel(window.content_layer, attribute_panel_cfg)
-    perk_panel = window._create_content_panel(window.content_layer, perk_panel_cfg)
+    _create_alpha_pixmap_shadow(
+        window,
+        window.content_layer,
+        character_panel_cfg,
+        _character_panel_shadow_config(character_screen, character_panel_cfg),
+    )
+    character_panel = _create_character_image_panel(window, window.content_layer, character_panel_cfg)
+    _create_alpha_pixmap_shadow(
+        window,
+        window.content_layer,
+        attribute_panel_cfg,
+        _character_panel_shadow_config(character_screen, attribute_panel_cfg),
+    )
+    attribute_panel = _create_character_image_panel(window, window.content_layer, attribute_panel_cfg)
+    _create_alpha_pixmap_shadow(
+        window,
+        window.content_layer,
+        perk_panel_cfg,
+        _character_panel_shadow_config(character_screen, perk_panel_cfg),
+    )
+    perk_panel = _create_character_image_panel(window, window.content_layer, perk_panel_cfg)
 
     default_sheet = "Charakterbogen"
     basic_map = data_map.get("basic", {})
@@ -1487,6 +1675,11 @@ def render_character_section(window):
                 f"border-radius: {border_radius}px;"
                 "}"
             )
+        _apply_character_subpanel_shadow_effect(
+            window,
+            panel,
+            _character_subpanel_shadow_config(character_screen, wellbeing_cfg),
+        )
         panel.show()
 
         title_cfg = wellbeing_cfg.get("title", {})

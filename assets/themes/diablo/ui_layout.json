@@ -124,6 +124,12 @@
       "h": 60
     }
   ],
+  "content_area": {
+    "x": 32,
+    "y": 128,
+    "w": 1460,
+    "h": 870
+  },
   "skills_screen": {
     "layout_file": "skills_layout.json"
   },
@@ -135,12 +141,6 @@
   },
   "browser_screen": {
     "layout_file": "browser_layout.json"
-  },
-  "content_area": {
-    "x": 32,
-    "y": 128,
-    "w": 1460,
-    "h": 870
   },
   "settings_page": {
     "title": {
@@ -278,6 +278,34 @@
     }
   },
   "character_screen": {
+    "enabled": true,
+    "character_colors": {
+      "title": "#f2d28b",
+      "default_text": "#d8d0b0",
+      "value_blue": "#ffffff",
+      "hp": "#f71937",
+      "mp": "#0f95f5",
+      "xp": "#99f50f",
+      "lifeforce": "#ffaf3e",
+      "sanity": "#8bd0f2",
+      "faith": "#ffffff",
+      "perk_bp": "#7fd0ff",
+      "disadvantage_bp": "#ff8f8f"
+    },
+    "panel_shadow": {
+      "enabled": true,
+      "color": "rgba(0, 0, 0, 160)",
+      "blur_radius": 18,
+      "offset_x": 3,
+      "offset_y": 4
+    },
+    "subpanel_shadow": {
+      "enabled": true,
+      "color": "rgba(0, 0, 0, 170)",
+      "blur_radius": 18,
+      "offset_x": 4,
+      "offset_y": 5
+    },
     "panels": {
       "character_info_panel": {
         "asset": "panels/character_info_panel.png",
@@ -397,6 +425,267 @@
           "color": "#1f6f37"
         }
       ],
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_character_panel_frame.png",
+        "slice": {
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
+        },
+        "content_margin": {
+          "left": 10,
+          "top": 10,
+          "right": 10,
+          "bottom": 10
+        },
+        "frame_inset": {
+          "left": 0,
+          "top": 0,
+          "right": 0,
+          "bottom": 0
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0
+      }
+    },
+    "paradigm_panel": {
+      "enabled": true,
+      "x": 24,
+      "y": 625,
+      "w": 520,
+      "h": 180,
+      "title": "Paradigmen",
+      "title_font_size": 22,
+      "font_size": 13,
+      "label_color": "#e8e0c8",
+      "text_color": "#ffffff",
+      "value_color": "#7fd0ff",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "edit": {
+        "enabled": true,
+        "debug": true
+      },
+      "layout": {
+        "padding": 10,
+        "title_h": 28,
+        "name_h": 34,
+        "label_w": 80,
+        "marker_w": 24,
+        "marker_h": 24,
+        "marker_gap": 5,
+        "row_h": 30,
+        "column_gap": 24
+      },
+      "rows": [
+        {
+          "id": "grad",
+          "label": "Grad",
+          "enabled": true
+        },
+        {
+          "id": "brand",
+          "label": "Brand",
+          "enabled": true
+        },
+        {
+          "id": "daily",
+          "label": "Daily",
+          "enabled": true
+        }
+      ],
+      "marker": {
+        "active_asset": "icons/x.jpg",
+        "inactive_asset": "icons/checkmark_false.png",
+        "use_icon": true,
+        "fallback_text": "X",
+        "icon_padding": 0,
+        "box_w": 25,
+        "box_h": 25,
+        "asset_w": 25,
+        "asset_h": 25,
+        "true_asset_scale": 0.75,
+        "false_asset_scale": 1.0,
+        "true_asset_offset_x": 0,
+        "true_asset_offset_y": 0,
+        "false_asset_offset_x": 0,
+        "false_asset_offset_y": 0,
+        "draw_inactive_under_active": true,
+        "row_gap": 30,
+        "box_gap": 3,
+        "grid_y": 80,
+        "grid_offset_y": -8,
+        "row_label_offset_y": -8,
+        "column_offset_x": 0,
+        "grid_center_under_header": true
+      },
+      "frame": {
+        "enabled": true,
+        "asset": "panels/shared_character_panel_frame.png",
+        "slice": {
+          "left": 24,
+          "top": 24,
+          "right": 24,
+          "bottom": 24
+        },
+        "content_margin": {
+          "left": 5,
+          "top": 5,
+          "right": 5,
+          "bottom": 5
+        },
+        "frame_inset": {
+          "left": 0,
+          "top": 0,
+          "right": 0,
+          "bottom": 0
+        },
+        "draw_center": true,
+        "fallback_border": true,
+        "remove_old_border_when_active": true,
+        "transparent_panel_background_when_active": true,
+        "smooth_scaling": true,
+        "render_scale": 1.0,
+        "opacity": 1.0
+      },
+      "column_headers": {
+        "enabled": true,
+        "button": {
+          "enabled": true,
+          "asset": "buttons/menu_button_small.png",
+          "font_size": 12,
+          "color": "#ffffff",
+          "fallback_border": true
+        },
+        "items": {
+          "column_1": {
+            "enabled": true,
+            "text": "It is what it is",
+            "x": 90,
+            "y": 44,
+            "w": 124,
+            "h": 34,
+            "font_size": 13,
+            "color": "#ffffff"
+          },
+          "column_2": {
+            "enabled": true,
+            "text": "Arkanes",
+            "x": 238,
+            "y": 44,
+            "w": 124,
+            "h": 34,
+            "font_size": 13,
+            "color": "#ffffff"
+          },
+          "column_3": {
+            "enabled": true,
+            "text": "All or Nothing",
+            "x": 386,
+            "y": 44,
+            "w": 124,
+            "h": 34,
+            "font_size": 13,
+            "color": "#ffffff"
+          }
+        },
+        "use_data_text": true
+      }
+    },
+    "initiative_panel": {
+      "enabled": true,
+      "x": 373,
+      "y": 430,
+      "w": 150,
+      "h": 140,
+      "title": "",
+      "font_size": 15,
+      "title_font_size": 1,
+      "color": "#e8e0c8",
+      "value_color": "#7fd0ff",
+      "border_color": "rgba(242, 210, 139, 90)",
+      "background": "rgba(5, 5, 5, 95)",
+      "button_text": "Ini-Wurf",
+      "button_asset": "buttons/menu_button_small.png",
+      "button_font_size": 16,
+      "button_x": 5,
+      "button_y": 2,
+      "button_w": 141,
+      "button_h": 28,
+      "data": {
+        "sheet": "Charakterbogen",
+        "label_text": "",
+        "bonus_label_text": "Bonus",
+        "value_cell": "",
+        "bonus_cell": "",
+        "scan_enabled": true,
+        "bonus_editable": true
+      },
+      "title_layout": {
+        "enabled": false,
+        "x": 10,
+        "y": 8,
+        "w": 130,
+        "h": 26,
+        "font_size": 1,
+        "bold": true,
+        "align": "left"
+      },
+      "rows": {
+        "value": {
+          "enabled": true,
+          "label": "Wert:",
+          "label_x": 12,
+          "label_y": 36,
+          "label_w": 85,
+          "label_h": 22,
+          "value_x": 100,
+          "value_y": 36,
+          "value_w": 38,
+          "value_h": 22
+        },
+        "bonus": {
+          "enabled": true,
+          "label": "Bonus:",
+          "label_x": 12,
+          "label_y": 59,
+          "label_w": 85,
+          "label_h": 22,
+          "value_x": 100,
+          "value_y": 59,
+          "value_w": 38,
+          "value_h": 22
+        },
+        "roll_value": {
+          "enabled": true,
+          "label": "Rollwert:",
+          "label_x": 12,
+          "label_y": 82,
+          "label_w": 85,
+          "label_h": 22,
+          "value_x": 100,
+          "value_y": 82,
+          "value_w": 38,
+          "value_h": 22
+        }
+      },
+      "button": {
+        "enabled": true,
+        "text": "Ini-Wurf",
+        "asset": "buttons/menu_button_small.png",
+        "font_size": 16,
+        "x": 5,
+        "y": 2,
+        "w": 141,
+        "h": 28
+      },
       "frame": {
         "enabled": true,
         "asset": "panels/shared_character_panel_frame.png",
@@ -1054,267 +1343,6 @@
       "edit_on": "double_click",
       "text_editor": "dialog",
       "empty_value": ""
-    },
-    "paradigm_panel": {
-      "enabled": true,
-      "x": 24,
-      "y": 625,
-      "w": 520,
-      "h": 180,
-      "title": "Paradigmen",
-      "title_font_size": 22,
-      "font_size": 13,
-      "label_color": "#e8e0c8",
-      "text_color": "#ffffff",
-      "value_color": "#7fd0ff",
-      "border_color": "rgba(242, 210, 139, 90)",
-      "background": "rgba(5, 5, 5, 95)",
-      "edit": {
-        "enabled": true,
-        "debug": true
-      },
-      "layout": {
-        "padding": 10,
-        "title_h": 28,
-        "name_h": 34,
-        "label_w": 80,
-        "marker_w": 24,
-        "marker_h": 24,
-        "marker_gap": 5,
-        "row_h": 30,
-        "column_gap": 24
-      },
-      "rows": [
-        {
-          "id": "grad",
-          "label": "Grad",
-          "enabled": true
-        },
-        {
-          "id": "brand",
-          "label": "Brand",
-          "enabled": true
-        },
-        {
-          "id": "daily",
-          "label": "Daily",
-          "enabled": true
-        }
-      ],
-      "marker": {
-        "active_asset": "icons/x.jpg",
-        "inactive_asset": "icons/checkmark_false.png",
-        "use_icon": true,
-        "fallback_text": "X",
-        "icon_padding": 0,
-        "box_w": 25,
-        "box_h": 25,
-        "asset_w": 25,
-        "asset_h": 25,
-        "true_asset_scale": 0.75,
-        "false_asset_scale": 1.0,
-        "true_asset_offset_x": 0,
-        "true_asset_offset_y": 0,
-        "false_asset_offset_x": 0,
-        "false_asset_offset_y": 0,
-        "draw_inactive_under_active": true,
-        "row_gap": 30,
-        "box_gap": 3,
-        "grid_y": 80,
-        "grid_offset_y": -8,
-        "row_label_offset_y": -8,
-        "column_offset_x": 0,
-        "grid_center_under_header": true
-      },
-      "frame": {
-        "enabled": true,
-        "asset": "panels/shared_character_panel_frame.png",
-        "slice": {
-          "left": 24,
-          "top": 24,
-          "right": 24,
-          "bottom": 24
-        },
-        "content_margin": {
-          "left": 5,
-          "top": 5,
-          "right": 5,
-          "bottom": 5
-        },
-        "frame_inset": {
-          "left": 0,
-          "top": 0,
-          "right": 0,
-          "bottom": 0
-        },
-        "draw_center": true,
-        "fallback_border": true,
-        "remove_old_border_when_active": true,
-        "transparent_panel_background_when_active": true,
-        "smooth_scaling": true,
-        "render_scale": 1.0,
-        "opacity": 1.0
-      },
-      "column_headers": {
-        "enabled": true,
-        "button": {
-          "enabled": true,
-          "asset": "buttons/menu_button_small.png",
-          "font_size": 12,
-          "color": "#ffffff",
-          "fallback_border": true
-        },
-        "items": {
-          "column_1": {
-            "enabled": true,
-            "text": "It is what it is",
-            "x": 90,
-            "y": 44,
-            "w": 124,
-            "h": 34,
-            "font_size": 13,
-            "color": "#ffffff"
-          },
-          "column_2": {
-            "enabled": true,
-            "text": "Arkanes",
-            "x": 238,
-            "y": 44,
-            "w": 124,
-            "h": 34,
-            "font_size": 13,
-            "color": "#ffffff"
-          },
-          "column_3": {
-            "enabled": true,
-            "text": "All or Nothing",
-            "x": 386,
-            "y": 44,
-            "w": 124,
-            "h": 34,
-            "font_size": 13,
-            "color": "#ffffff"
-          }
-        },
-        "use_data_text": true
-      }
-    },
-    "initiative_panel": {
-      "enabled": true,
-      "x": 373,
-      "y": 430,
-      "w": 150,
-      "h": 140,
-      "title": "",
-      "font_size": 15,
-      "title_font_size": 1,
-      "color": "#e8e0c8",
-      "value_color": "#7fd0ff",
-      "border_color": "rgba(242, 210, 139, 90)",
-      "background": "rgba(5, 5, 5, 95)",
-      "button_text": "Ini-Wurf",
-      "button_asset": "buttons/menu_button_small.png",
-      "button_font_size": 16,
-      "button_x": 5,
-      "button_y": 2,
-      "button_w": 141,
-      "button_h": 28,
-      "data": {
-        "sheet": "Charakterbogen",
-        "label_text": "",
-        "bonus_label_text": "Bonus",
-        "value_cell": "",
-        "bonus_cell": "",
-        "scan_enabled": true,
-        "bonus_editable": true
-      },
-      "title_layout": {
-        "enabled": false,
-        "x": 10,
-        "y": 8,
-        "w": 130,
-        "h": 26,
-        "font_size": 1,
-        "bold": true,
-        "align": "left"
-      },
-      "rows": {
-        "value": {
-          "enabled": true,
-          "label": "Wert:",
-          "label_x": 12,
-          "label_y": 36,
-          "label_w": 85,
-          "label_h": 22,
-          "value_x": 100,
-          "value_y": 36,
-          "value_w": 38,
-          "value_h": 22
-        },
-        "bonus": {
-          "enabled": true,
-          "label": "Bonus:",
-          "label_x": 12,
-          "label_y": 59,
-          "label_w": 85,
-          "label_h": 22,
-          "value_x": 100,
-          "value_y": 59,
-          "value_w": 38,
-          "value_h": 22
-        },
-        "roll_value": {
-          "enabled": true,
-          "label": "Rollwert:",
-          "label_x": 12,
-          "label_y": 82,
-          "label_w": 85,
-          "label_h": 22,
-          "value_x": 100,
-          "value_y": 82,
-          "value_w": 38,
-          "value_h": 22
-        }
-      },
-      "button": {
-        "enabled": true,
-        "text": "Ini-Wurf",
-        "asset": "buttons/menu_button_small.png",
-        "font_size": 16,
-        "x": 5,
-        "y": 2,
-        "w": 141,
-        "h": 28
-      },
-      "frame": {
-        "enabled": true,
-        "asset": "panels/shared_character_panel_frame.png",
-        "slice": {
-          "left": 24,
-          "top": 24,
-          "right": 24,
-          "bottom": 24
-        },
-        "content_margin": {
-          "left": 10,
-          "top": 10,
-          "right": 10,
-          "bottom": 10
-        },
-        "frame_inset": {
-          "left": 0,
-          "top": 0,
-          "right": 0,
-          "bottom": 0
-        },
-        "draw_center": true,
-        "fallback_border": true,
-        "remove_old_border_when_active": true,
-        "transparent_panel_background_when_active": true,
-        "smooth_scaling": true,
-        "render_scale": 1.0,
-        "opacity": 1.0
-      }
     }
   }
 }

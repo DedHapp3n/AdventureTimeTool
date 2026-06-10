@@ -678,7 +678,6 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
         "gulden": "B9",
         "schilling": "E9",
         "heller": "H9",
-        "pfifferling": "K9",
     }
     column_w = max(1, (panel.width() - 24) // max(1, len(columns)))
     for index, column in enumerate(columns):
@@ -894,34 +893,30 @@ def _inventory_parse_non_negative_int(window, value):
     return max(0, number)
 
 
-def money_to_pfifferling(window, gulden, schilling, heller, pfifferling):
+def money_to_heller(window, gulden, schilling, heller):
     return (
-        int(gulden) * 1000
-        + int(schilling) * 100
-        + int(heller) * 10
-        + int(pfifferling)
+        int(gulden) * 100
+        + int(schilling) * 10
+        + int(heller)
     )
 
 
-def pfifferling_to_money(window, total_pfifferling):
-    total = max(0, int(total_pfifferling))
-    gulden = total // 1000
-    rest = total % 1000
-    schilling = rest // 100
-    rest = rest % 100
-    heller = rest // 10
-    pfifferling = rest % 10
+def heller_to_money(window, total_heller):
+    total = max(0, int(total_heller))
+    gulden = total // 100
+    rest = total % 100
+    schilling = rest // 10
+    heller = rest % 10
     return {
         "gulden": gulden,
         "schilling": schilling,
         "heller": heller,
-        "pfifferling": pfifferling,
     }
 
 
 def _inventory_get_wallet_money_values(window):
     values = {}
-    for key in ("gulden", "schilling", "heller", "pfifferling"):
+    for key in ("gulden", "schilling", "heller"):
         field = window._inventory_money_fields.get(key)
         if field is not None:
             values[key] = window._inventory_parse_non_negative_int(field.text())
@@ -929,7 +924,7 @@ def _inventory_get_wallet_money_values(window):
             values[key] = window._inventory_parse_non_negative_int(
                 window.get_cache_cell_value(
                     "Inventar",
-                    {"gulden": "B9", "schilling": "E9", "heller": "H9", "pfifferling": "K9"}[key],
+                    {"gulden": "B9", "schilling": "E9", "heller": "H9"}[key],
                     0,
                 )
             )
@@ -944,24 +939,19 @@ def on_inventory_money_delta_apply(window, op):
         return
     wallet = window._inventory_get_wallet_money_values()
     delta = {}
-    for key in ("gulden", "schilling", "heller", "pfifferling"):
+    for key in ("gulden", "schilling", "heller"):
         field = window._inventory_money_delta_fields.get(key)
         delta[key] = window._inventory_parse_non_negative_int(field.text() if field is not None else 0)
-    current_total = window.money_to_pfifferling(
-        wallet["gulden"], wallet["schilling"], wallet["heller"], wallet["pfifferling"]
-    )
-    delta_total = window.money_to_pfifferling(
-        delta["gulden"], delta["schilling"], delta["heller"], delta["pfifferling"]
-    )
+    current_total = window.money_to_heller(wallet["gulden"], wallet["schilling"], wallet["heller"])
+    delta_total = window.money_to_heller(delta["gulden"], delta["schilling"], delta["heller"])
     result_total = current_total + delta_total if op == "+" else current_total - delta_total
     if result_total < 0:
         result_total = 0
-    result_money = window.pfifferling_to_money(result_total)
+    result_money = window.heller_to_money(result_total)
     save_map = {
         "gulden": "B9",
         "schilling": "E9",
         "heller": "H9",
-        "pfifferling": "K9",
     }
     try:
         for key, cell_ref in save_map.items():
@@ -975,9 +965,9 @@ def on_inventory_money_delta_apply(window, op):
         window.loader.save_active_character_json()
         log_debug(
             "inventory",
-            f"INVENTORY MONEY DELTA op={op} input={delta['gulden']}/{delta['schilling']}/{delta['heller']}/{delta['pfifferling']} "
+            f"INVENTORY MONEY DELTA op={op} input={delta['gulden']}/{delta['schilling']}/{delta['heller']} "
             f"result={result_money.get('gulden', 0)}/{result_money.get('schilling', 0)}/"
-            f"{result_money.get('heller', 0)}/{result_money.get('pfifferling', 0)}",
+            f"{result_money.get('heller', 0)}",
         )
         log_debug("inventory", "INVENTORY SAVE active character saved")
         for field in window._inventory_money_delta_fields.values():
