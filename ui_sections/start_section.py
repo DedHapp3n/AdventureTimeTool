@@ -1,9 +1,14 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel
 
+from ui_sections.character_creator_section import render_character_creator_section
+
 
 def render_start_section(window):
     if window.content_layer is None:
+        return
+    if getattr(window, "_start_screen_mode", "menu") == "creator":
+        render_character_creator_section(window)
         return
 
     content_w = window.content_layer.width()
@@ -43,18 +48,6 @@ def render_start_section(window):
         window.on_settings_load_character_clicked,
     )
 
-    placeholder = QLabel(window.content_layer)
-    placeholder.setGeometry(max(0, (content_w - title_w) // 2), load_y + button_h + gap + button_h + 12, title_w, 26)
-    placeholder.setText("")
-    placeholder.setAlignment(Qt.AlignCenter)
-    placeholder.setStyleSheet(
-        "background: transparent; color: #cdbb8a; font-size: 16px; font-weight: 600;"
-    )
-    placeholder.show()
-
-    def show_create_placeholder():
-        placeholder.setText("Charakter erstellen kommt später.")
-
     window.create_asset_text_button(
         window.content_layer,
         {
@@ -68,5 +61,18 @@ def render_start_section(window):
             "color": "#f2d28b",
         },
         "Charakter erstellen",
-        show_create_placeholder,
+        lambda: _show_character_creator(window),
     )
+
+
+def _show_character_creator(window):
+    window._start_screen_mode = "creator"
+    if not isinstance(getattr(window, "_character_creator_state", None), dict):
+        window._character_creator_state = {
+            "step": "species",
+            "species_id": None,
+            "species_name": "",
+            "species_image_path": "",
+        }
+    window.clear_content_layer()
+    render_start_section(window)

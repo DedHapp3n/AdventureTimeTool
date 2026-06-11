@@ -129,18 +129,28 @@ class DataLoader:
             return None
         return self.workbook[sheet_name]
 
+    def get_character_dir(self) -> str:
+        path = data_path("characters")
+        os.makedirs(str(path), exist_ok=True)
+        return str(path)
+
+    def get_legacy_cache_dir(self) -> str:
+        path = data_path("cache")
+        os.makedirs(str(path), exist_ok=True)
+        return str(path)
+
     def save_cache_to_json(self, path=None):
         if path is None:
             character_name = self._get_character_name_from_cache()
             slug = self.make_character_slug(character_name)
-            path = str(data_path(f"cache/{slug}.json"))
+            path = os.path.join(self.get_character_dir(), f"{slug}.json")
         return self.save_active_character_json(path)
 
     def save_active_character_json(self, path=None):
         if path is None:
             character_name = self._get_character_name_from_cache()
             slug = self.make_character_slug(character_name)
-            path = self.active_cache_path or str(data_path(f"cache/{slug}.json"))
+            path = self.active_cache_path or os.path.join(self.get_character_dir(), f"{slug}.json")
         else:
             character_name = self._get_character_name_from_cache()
 
@@ -208,7 +218,7 @@ class DataLoader:
                 loaded = json.load(f)
             self._load_cache_payload(loaded)
             self.active_cache_path = path
-            detected_name = self._get_character_name_from_cache()
+            detected_name = self._get_character_name_from_payload(loaded)
             self.current_character_name = (
                 detected_name
                 if detected_name != "unknown_character"
@@ -244,31 +254,42 @@ class DataLoader:
         return slug if slug else "unknown_character"
 
     def list_character_caches(self) -> list[dict[str, str]]:
-        cache_dir = str(data_path("cache"))
-        if not os.path.isdir(cache_dir):
-            return []
-
         results: list[dict[str, str]] = []
-        for file_name in sorted(os.listdir(cache_dir)):
-            if not file_name.lower().endswith(".json"):
+        seen_files = set()
+        for storage, directory in (
+            ("characters", self.get_character_dir()),
+            ("legacy_cache", self.get_legacy_cache_dir()),
+        ):
+            if not os.path.isdir(directory):
                 continue
-            cache_path = os.path.join(cache_dir, file_name)
-            character_name = os.path.splitext(file_name)[0]
-            try:
-                with open(cache_path, "r", encoding="utf-8") as f:
-                    payload = json.load(f)
-                detected_name = self._get_character_name_from_payload(payload)
-                if detected_name != "unknown_character":
-                    character_name = detected_name
-            except Exception:
-                pass
-            results.append(
-                {
-                    "name": character_name,
-                    "path": cache_path,
-                    "file": file_name,
-                }
-            )
+            for file_name in sorted(os.listdir(directory)):
+                if not file_name.lower().endswith(".json"):
+                    continue
+                lowered_file = file_name.lower()
+                if lowered_file in seen_files:
+                    continue
+                seen_files.add(lowered_file)
+                cache_path = os.path.join(directory, file_name)
+                character_name = os.path.splitext(file_name)[0]
+                character_format = "unknown"
+                try:
+                    with open(cache_path, "r", encoding="utf-8") as f:
+                        payload = json.load(f)
+                    character_format = self.detect_character_json_format(payload)
+                    detected_name = self._get_character_name_from_payload(payload)
+                    if detected_name != "unknown_character":
+                        character_name = detected_name
+                except Exception:
+                    pass
+                results.append(
+                    {
+                        "name": character_name,
+                        "path": cache_path,
+                        "file": file_name,
+                        "storage": storage,
+                        "format": character_format,
+                    }
+                )
         return results
 
     def load_character_cache(self, cache_path: str) -> bool:
@@ -279,6 +300,14 @@ class DataLoader:
                 loaded = json.load(f)
             if not isinstance(loaded, dict):
                 return False
+            character_format = self.detect_character_json_format(loaded)
+            if character_format == "creator_state":
+                self.cell_cache, self.app_meta = self.build_cache_from_creator_state(loaded)
+                self.source_file_path = cache_path
+                derived_path = self._next_creator_sheet_cache_path(cache_path)
+                self.save_active_character_json(derived_path)
+                log_debug("cache", f"creator character converted to sheet cache: {derived_path}")
+                return True
             self._load_cache_payload(loaded)
             self.active_cache_path = cache_path
             self.current_character_name = self._get_character_name_from_cache()
@@ -289,6 +318,129 @@ class DataLoader:
             return True
         except Exception:
             return False
+
+    def build_cache_from_creator_state(self, creator_state: dict) -> tuple[dict, dict]:
+        creator_state = creator_state if isinstance(creator_state, dict) else {}
+        species = creator_state.get("species", {}) if isinstance(creator_state.get("species"), dict) else {}
+        concept = creator_state.get("concept", {}) if isinstance(creator_state.get("concept"), dict) else {}
+        attributes = creator_state.get("attributes", {}) if isinstance(creator_state.get("attributes"), dict) else {}
+        body = attributes.get("body", {}) if isinstance(attributes.get("body"), dict) else {}
+        mind = attributes.get("mind", {}) if isinstance(attributes.get("mind"), dict) else {}
+        skills = creator_state.get("skills", []) if isinstance(creator_state.get("skills"), list) else []
+        perks = creator_state.get("perks", []) if isinstance(creator_state.get("perks"), list) else []
+        equipment = creator_state.get("equipment", {}) if isinstance(creator_state.get("equipment"), dict) else {}
+        money = equipment.get("money", {}) if isinstance(equipment.get("money"), dict) else {}
+        items = equipment.get("items", []) if isinstance(equipment.get("items"), list) else []
+        weapons = equipment.get("weapons", []) if isinstance(equipment.get("weapons"), list) else []
+        armor = equipment.get("armor", []) if isinstance(equipment.get("armor"), list) else []
+
+        cell_cache = {
+            "Charakterbogen": {},
+            "Fertigkeiten": {},
+            "Inventar": {},
+            "Ausrüstung": {},
+            "Magie": {},
+            "Notizen": {},
+        }
+
+        def set_cell(sheet_name, cell_ref, value):
+            cell_cache.setdefault(sheet_name, {})[cell_ref] = self._creator_cell(value)
+
+        character_name = self._clean_creator_text(concept.get("character_name"))
+        set_cell("Charakterbogen", "G1", character_name)
+        set_cell("Charakterbogen", "C1", character_name)
+        set_cell("Charakterbogen", "G3", self._clean_creator_text(species.get("name")))
+        set_cell("Charakterbogen", "G5", self._clean_creator_text(concept.get("short_concept")))
+        set_cell("Charakterbogen", "G7", self._clean_creator_text(concept.get("origin")))
+        set_cell("Charakterbogen", "G9", self._clean_creator_text(concept.get("role")))
+        set_cell("Charakterbogen", "AG7", self._creator_int(body.get("kraft")))
+        set_cell("Charakterbogen", "AG9", self._creator_int(body.get("geschick")))
+        set_cell("Charakterbogen", "AG11", self._creator_int(body.get("zaehigkeit")))
+        set_cell("Charakterbogen", "AG13", self._creator_int(body.get("reflex")))
+        set_cell("Charakterbogen", "AR7", self._creator_int(mind.get("intelligenz")))
+        set_cell("Charakterbogen", "AR9", self._creator_int(mind.get("willenskraft")))
+        set_cell("Charakterbogen", "AR11", self._creator_int(mind.get("charisma")))
+        set_cell("Charakterbogen", "AR13", self._creator_int(mind.get("sinne")))
+
+        set_cell("Fertigkeiten", "A1", "Fertigkeiten")
+        set_cell("Fertigkeiten", "A2", "Name")
+        set_cell("Fertigkeiten", "B2", "Attribut")
+        set_cell("Fertigkeiten", "C2", "Spezialisierung")
+        set_cell("Fertigkeiten", "D2", "BP")
+        for index, skill in enumerate(skills, start=3):
+            if not isinstance(skill, dict):
+                continue
+            set_cell("Fertigkeiten", f"A{index}", self._clean_creator_text(skill.get("name") or skill.get("id")))
+            set_cell("Fertigkeiten", f"B{index}", self._clean_creator_text(skill.get("attribute")))
+            set_cell("Fertigkeiten", f"C{index}", self._clean_creator_text(skill.get("specialization")))
+            set_cell("Fertigkeiten", f"D{index}", self._creator_int(skill.get("bp")))
+
+        set_cell("Charakterbogen", "A30", "Perks")
+        for index, perk in enumerate(perks, start=31):
+            if not isinstance(perk, dict):
+                continue
+            set_cell("Charakterbogen", f"A{index}", self._clean_creator_text(perk.get("name")))
+            set_cell("Charakterbogen", f"B{index}", self._creator_int(perk.get("bp")))
+            set_cell("Charakterbogen", f"C{index}", self._clean_creator_text(perk.get("effect")))
+
+        set_cell("Inventar", "B9", self._creator_int(money.get("gulden")))
+        set_cell("Inventar", "E9", self._creator_int(money.get("schilling")))
+        set_cell("Inventar", "H9", self._creator_int(money.get("heller")))
+        set_cell("Inventar", "A12", "Inventar")
+        set_cell("Inventar", "B12", "PL")
+        set_cell("Inventar", "C12", "Anzahl")
+        for index, item in enumerate(items, start=13):
+            if not isinstance(item, dict):
+                continue
+            set_cell("Inventar", f"A{index}", self._clean_creator_text(item.get("name")))
+            set_cell("Inventar", f"B{index}", self._clean_creator_text(item.get("pl")))
+            set_cell("Inventar", f"C{index}", self._clean_creator_text(item.get("count")))
+
+        set_cell("Ausrüstung", "A1", "Waffen")
+        set_cell("Ausrüstung", "A2", "Name")
+        set_cell("Ausrüstung", "B2", "Schaden / Effekt")
+        set_cell("Ausrüstung", "C2", "Attribut / Fertigkeit")
+        set_cell("Ausrüstung", "D2", "Notiz")
+        for index, weapon in enumerate(weapons, start=3):
+            if not isinstance(weapon, dict):
+                continue
+            set_cell("Ausrüstung", f"A{index}", self._clean_creator_text(weapon.get("name")))
+            set_cell("Ausrüstung", f"B{index}", self._clean_creator_text(weapon.get("damage")))
+            set_cell("Ausrüstung", f"C{index}", self._clean_creator_text(weapon.get("attribute")))
+            set_cell("Ausrüstung", f"D{index}", self._clean_creator_text(weapon.get("note")))
+        set_cell("Ausrüstung", "A20", "Rüstung")
+        set_cell("Ausrüstung", "A21", "Name")
+        set_cell("Ausrüstung", "B21", "Schutz / Werte")
+        set_cell("Ausrüstung", "C21", "Notiz")
+        for index, armor_row in enumerate(armor, start=22):
+            if not isinstance(armor_row, dict):
+                continue
+            set_cell("Ausrüstung", f"A{index}", self._clean_creator_text(armor_row.get("name")))
+            set_cell("Ausrüstung", f"B{index}", self._clean_creator_text(armor_row.get("protection")))
+            set_cell("Ausrüstung", f"C{index}", self._clean_creator_text(armor_row.get("note")))
+
+        set_cell("Notizen", "A1", "Notizen")
+        set_cell("Notizen", "A2", self._clean_creator_text(concept.get("description")))
+        set_cell("Notizen", "A4", self._clean_creator_text(concept.get("motivation")))
+        set_cell("Notizen", "A6", self._clean_creator_text(equipment.get("notes")))
+
+        app_meta = {
+            "creator_state": creator_state,
+            "source_format": "creator_state",
+            "created_by": "character_creator",
+            "concept": concept,
+            "species": species,
+            "bp": creator_state.get("bp", {}) if isinstance(creator_state.get("bp"), dict) else {},
+            "creator_skills": skills,
+            "creator_perks": perks,
+            "creator_equipment": equipment,
+            "creator_notes": {
+                "description": self._clean_creator_text(concept.get("description")),
+                "motivation": self._clean_creator_text(concept.get("motivation")),
+                "equipment": self._clean_creator_text(equipment.get("notes")),
+            },
+        }
+        return cell_cache, app_meta
 
     def mark_dirty(self, reason=""):
         self.is_dirty = True
@@ -528,6 +680,37 @@ class DataLoader:
             return value
         return str(value)
 
+    def _creator_cell(self, value):
+        return {
+            "value": value,
+            "formula": None,
+            "references": [],
+            "error": None,
+        }
+
+    def _clean_creator_text(self, value):
+        return str(value or "").strip()
+
+    def _creator_int(self, value):
+        try:
+            return int(value or 0)
+        except Exception:
+            return 0
+
+    def _next_creator_sheet_cache_path(self, creator_path):
+        directory = os.path.dirname(str(creator_path)) or self.get_character_dir()
+        base_name = os.path.splitext(os.path.basename(str(creator_path)))[0] or "unnamed_character"
+        sheet_base = f"{base_name}_sheet"
+        candidate = os.path.join(directory, f"{sheet_base}.json")
+        if not os.path.exists(candidate):
+            return candidate
+        index = 2
+        while True:
+            candidate = os.path.join(directory, f"{sheet_base}_{index}.json")
+            if not os.path.exists(candidate):
+                return candidate
+            index += 1
+
     def _snapshot_hash(self, payload=None):
         if payload is None:
             payload = {"cell_cache": self.cell_cache, "app_meta": self.app_meta}
@@ -553,6 +736,11 @@ class DataLoader:
     def _get_character_name_from_payload(self, payload) -> str:
         if not isinstance(payload, dict):
             return "unknown_character"
+        concept = payload.get("concept")
+        if isinstance(concept, dict):
+            character_name = concept.get("character_name")
+            if self._looks_like_character_name(character_name):
+                return character_name.strip()
         if isinstance(payload.get("cell_cache"), dict):
             payload = payload.get("cell_cache", {})
 
@@ -605,10 +793,36 @@ class DataLoader:
             return False
         return text.lower() not in {"name", "unknown_character", "attribute"}
 
+    def detect_character_json_format(self, payload) -> str:
+        if not isinstance(payload, dict):
+            return "unknown"
+        if isinstance(payload.get("cell_cache"), dict):
+            return "sheet_cache"
+        if (
+            "version" in payload
+            and isinstance(payload.get("species"), dict)
+            and isinstance(payload.get("concept"), dict)
+            and isinstance(payload.get("attributes"), dict)
+            and isinstance(payload.get("equipment"), dict)
+        ):
+            return "creator_state"
+        if payload and all(isinstance(value, dict) for value in payload.values()):
+            for sheet_cache in payload.values():
+                if any(isinstance(cell_data, dict) and "value" in cell_data for cell_data in sheet_cache.values()):
+                    return "legacy_cell_cache"
+        return "unknown"
+
     def _load_cache_payload(self, payload):
         if not isinstance(payload, dict):
             self.cell_cache = {}
             self.app_meta = {}
+            return
+        if self.detect_character_json_format(payload) == "creator_state":
+            self.cell_cache = {}
+            self.app_meta = {
+                "creator_state": payload,
+                "source_format": "creator_state",
+            }
             return
         if isinstance(payload.get("cell_cache"), dict):
             self.cell_cache = payload.get("cell_cache", {})
@@ -710,6 +924,7 @@ class DataLoader:
         now = datetime.now().isoformat()
         payload = {
             "active_cache": active_cache_path,
+            "active_character": active_cache_path,
             "character_name": character_name,
             "source_file": self.source_file_path,
             "last_loaded": now,
