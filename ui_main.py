@@ -37,6 +37,7 @@ from ui_sections import settings_section
 from ui_sections import skills_section
 from ui_sections import character_section
 from ui_sections import browser_section
+from ui_sections import start_section
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -135,7 +136,7 @@ class MainWindow(QMainWindow):
         self.current_active_grid_cell = None
         self.current_reference_color_map = {}
         self.current_indirect_references = []
-        self.current_main_section = "character"
+        self.current_main_section = "character" if self.has_real_character_loaded() else "start"
         self.current_skill_category = "allgemein"
         self._skills_se_loading = False
         self.current_inventory_category = "inventory_01"
@@ -753,7 +754,22 @@ class MainWindow(QMainWindow):
         self.current_main_section = section_id
         self.update_main_nav_button_styles()
         self.clear_content_layer()
-        if section_id == "settings":
+        data_sections = {
+            "character",
+            "skills",
+            "fertigkeiten",
+            "inventory",
+            "equipment",
+            "ausruestung",
+            "ausrüstung",
+            "magic",
+            "notes",
+        }
+        if section_id in data_sections and not self.has_real_character_loaded():
+            start_section.render_start_section(self)
+        elif section_id == "start":
+            start_section.render_start_section(self)
+        elif section_id == "settings":
             self.render_settings_page()
         elif section_id == "character":
             self.render_character_screen()
@@ -771,6 +787,12 @@ class MainWindow(QMainWindow):
             self.render_browser_screen()
         self.window_close_button.raise_()
         self.settings_button.raise_()
+
+    def has_real_character_loaded(self):
+        return (
+            bool(getattr(self.loader, "cell_cache", None))
+            and str(getattr(self.loader, "current_character_name", "") or "") != "unknown_character"
+        )
 
     def create_asset_text_button(self, parent, cfg, default_text, callback):
         x = int(cfg.get("x", 0))
