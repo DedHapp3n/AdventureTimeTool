@@ -1,0 +1,2437 @@
+{
+  "version": 1,
+  "description": "Editierbarer zentraler Perk- und Nachteil-Katalog für Adventure Time Tool.",
+  "categories": [
+    {
+      "id": "general",
+      "name": "Allgemein"
+    },
+    {
+      "id": "species",
+      "name": "Spezies"
+    },
+    {
+      "id": "combat",
+      "name": "Kampf"
+    },
+    {
+      "id": "magic",
+      "name": "Magie"
+    },
+    {
+      "id": "social",
+      "name": "Sozial"
+    },
+    {
+      "id": "craft",
+      "name": "Handwerk"
+    },
+    {
+      "id": "disadvantage",
+      "name": "Nachteile"
+    }
+  ],
+  "perks": [
+    {
+      "id": "drittes_auge",
+      "name": "3tes Auge",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Kann Konzentration auf einen Zauber oder Effekt über ein geistiges Auge halten; maximale gleichzeitig aufrechterhaltene Effekte +1.",
+      "description": "",
+      "species": [
+        "Kitsune"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "konzentration"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "adlige_abstammung",
+      "name": "Adlige Abstammung",
+      "type": "perk",
+      "category": "social",
+      "bp": 4,
+      "effect": "Adelsdokumente, soziales Auftreten im Vorteil wenn Stand relevant ist, Start-Handgeld und edle Gewandung.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial",
+        "status"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 28",
+      "enabled": true
+    },
+    {
+      "id": "aetherdieb",
+      "name": "Ätherdieb",
+      "type": "perk",
+      "category": "magic",
+      "bp": 4,
+      "effect": "Kann Lebewesen bei Berührung oder über Fokus Äther entziehen; bei Widerstand vergleichender Willenskraftwurf.",
+      "description": "",
+      "species": [
+        "Goblin"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "äther"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "amphibie",
+      "name": "Amphibie",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Kann an Land und unter Wasser atmen; Schwimmen-Würfe erhalten einen zusätzlichen Vorteil.",
+      "description": "",
+      "species": [
+        "Nhym",
+        "Naggahi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "antimagische_tendenz",
+      "name": "Antimagische Tendenz",
+      "type": "perk",
+      "category": "magic",
+      "bp": 4,
+      "effect": "Auf den Charakter gewirkte Magie wirkt 1 Erfolg geringer; Körperkontakt kann gebundene Magie unterdrücken.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "resistenz"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 28",
+      "enabled": true
+    },
+    {
+      "id": "ausdauernd",
+      "name": "Ausdauernd",
+      "type": "perk",
+      "category": "general",
+      "bp": 2,
+      "effect": "Kann länger anstrengende Tätigkeiten durchhalten und widrige Bedingungen besser ohne Wohlbefinden-Verlust überstehen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "ausdauer"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 28",
+      "enabled": true
+    },
+    {
+      "id": "balance",
+      "name": "Balance",
+      "type": "perk",
+      "category": "general",
+      "bp": 2,
+      "effect": "Vorteile auf Klettern, Athletik und Bewegungsaktionen; zusätzlicher Vorteil gegen Umwerfen/Fallen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 28",
+      "enabled": true
+    },
+    {
+      "id": "besonderes_gespuer",
+      "name": "Besonderes Gespür",
+      "type": "perk",
+      "category": "general",
+      "bp": 4,
+      "effect": "Gespür für eine gewählte Option wie Magie, Fallen, Gefahr, Miasma, Gift, Beute oder schlechtes Wetter.",
+      "description": "",
+      "species": [
+        "Armelidae"
+      ],
+      "requirements": [],
+      "tags": [
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 28",
+      "enabled": true
+    },
+    {
+      "id": "cuelist",
+      "name": "Cuelist",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Alte Mechanismen reagieren auf den Charakter; Erwerb nach Spielleiterabsprache.",
+      "description": "Quelle markiert diesen Eintrag als speziellen/unklaren Spezies-Perk.",
+      "species": [
+        "Lepurii"
+      ],
+      "requirements": [
+        "Spielleiterabsprache"
+      ],
+      "tags": [
+        "spezies",
+        "speziell"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "drachenseele",
+      "name": "Drachenseele",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Beim erfolgreichen Wirken von Magie erhält der Charakter einen weiteren Erfolg und benötigt keinen externen Fokus.",
+      "description": "",
+      "species": [
+        "Wyverian",
+        "Wylv"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "magie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "elementare_infusion",
+      "name": "Elementare Infusion",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Resistenz gegen ein gewähltes Element; waffenlose Angriffe verursachen zusätzlichen Elementarschaden.",
+      "description": "",
+      "species": [
+        "Irdene",
+        "Wyverian",
+        "Wylv",
+        "Gremlin"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "element"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 28",
+      "enabled": true
+    },
+    {
+      "id": "elementarer_einklang",
+      "name": "Elementarer Einklang",
+      "type": "perk",
+      "category": "magic",
+      "bp": 3,
+      "effect": "Magie des gewählten Elements erhält bei erfolgreichem Wurf einen zusätzlichen Erfolg.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "element"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 28",
+      "enabled": true
+    },
+    {
+      "id": "eiserner_magen",
+      "name": "Eiserner Magen",
+      "type": "perk",
+      "category": "general",
+      "bp": 3,
+      "effect": "Nahrungsmittel mit PL 0 oder niedriger gelten als 1 PL besser; eingenommene Gifte wirken 1 PL geringer.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "nahrung",
+        "resistenz"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 29",
+      "enabled": true
+    },
+    {
+      "id": "eiserner_wille",
+      "name": "Eiserner Wille",
+      "type": "perk",
+      "category": "general",
+      "bp": 4,
+      "effect": "Willensstärke-Verteidigung im Vorteil; Willensbeeinflussung und vergleichbare Effekte wirken 1 Erfolg geringer.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "willenskraft",
+        "verteidigung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 29",
+      "enabled": true
+    },
+    {
+      "id": "evokator",
+      "name": "Evokator",
+      "type": "perk",
+      "category": "magic",
+      "bp": 0,
+      "effect": "",
+      "description": "Magie-Typus; in der PDF-Perkliste genannt, aber ohne klare Regel im extrahierten Abschnitt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "typ"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 33",
+      "enabled": true
+    },
+    {
+      "id": "fluffy",
+      "name": "Flauschig",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Dichtes Fell/Haar reduziert Fallschaden um die Hälfte und gibt Wetterresistenz 1.",
+      "description": "",
+      "species": [
+        "Xacivi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "resistenz"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "flug",
+      "name": "Flug",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Stufe I Gleiten ohne Fallschaden; spätere Stufen erlauben Fliegen mit sinkenden Beschränkungen.",
+      "description": "",
+      "species": [
+        "Volx"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "flink",
+      "name": "Flink",
+      "type": "perk",
+      "category": "species",
+      "bp": 2,
+      "effect": "Initiative +4; Athletik-Würfe zur Mobilitaetsbestimmung im Vorteil.",
+      "description": "",
+      "species": [
+        "Lepurii"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "bewegung",
+        "initiative"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 29",
+      "enabled": true
+    },
+    {
+      "id": "gefahreninstinkt",
+      "name": "Gefahreninstinkt",
+      "type": "perk",
+      "category": "general",
+      "bp": 0,
+      "effect": "",
+      "description": "In der PDF-Perkliste genannt; detaillierter Regeltext war in der extrahierten Quelle nicht klar.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 34",
+      "enabled": true
+    },
+    {
+      "id": "galdre",
+      "name": "Galdre",
+      "type": "perk",
+      "category": "magic",
+      "bp": 0,
+      "effect": "",
+      "description": "Magie-Typus; in der PDF-Perkliste genannt, aber ohne klare Regel im extrahierten Abschnitt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "typ"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 34",
+      "enabled": true
+    },
+    {
+      "id": "gekkofuesse",
+      "name": "Gekkofüße",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Kann sich an trockenen Wänden und Decken fortbewegen; Angriffe von/gegen Deckenposition sind erschwert.",
+      "description": "Erscheint in der Speziesübersicht auch als Spinnengleiche Bewegung.",
+      "species": [
+        "Gremlin",
+        "Weaver"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 29",
+      "enabled": true
+    },
+    {
+      "id": "gemuetlich",
+      "name": "Gemütlich",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Kann tagsüber Schlafen nutzen, um Wohlbefinden und Heilung zu erhalten.",
+      "description": "",
+      "species": [
+        "Korika"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "rest"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 28",
+      "enabled": true
+    },
+    {
+      "id": "giftig",
+      "name": "Giftig",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Kann körpereigenes Gift durch Spucken, Berührung oder Extraktion einsetzen.",
+      "description": "",
+      "species": [
+        "Weaver"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "gift"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "glueck",
+      "name": "Glück",
+      "type": "perk",
+      "category": "general",
+      "bp": 5,
+      "effect": "Einmal pro Tag eigenen Wurf um +10 erhöhen; nächste natürliche 1 muss genommen werden.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "glück"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 29",
+      "enabled": true
+    },
+    {
+      "id": "gourmet",
+      "name": "Gourmet",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Kann durch Essen Wohlbefinden über Maximum speichern; Essen über PL 3 gilt automatisch als 1 PL höher.",
+      "description": "",
+      "species": [
+        "Armelidae"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 29",
+      "enabled": true
+    },
+    {
+      "id": "gut_aussehend",
+      "name": "Gut aussehend",
+      "type": "perk",
+      "category": "social",
+      "bp": 3,
+      "effect": "Vorteil auf soziale Talente wie Etikette, Performance oder Handel, solange der Charakter gesehen wird.",
+      "description": "Quelle nennt mögliche Umbenennung zu Charismatisch.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 29",
+      "enabled": true
+    },
+    {
+      "id": "hivemind",
+      "name": "Schwarmbewusstsein",
+      "type": "perk",
+      "category": "species",
+      "bp": 5,
+      "effect": "Telepathische Wahrnehmung und Kommunikation mit nahen Speziesmitgliedern, die ebenfalls Schwarmbewusstsein besitzen.",
+      "description": "Quelle diskutiert mögliche Ersetzung/Kombination mit Gedankenbund.",
+      "species": [
+        "Kri'tikki"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "telepathie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 29",
+      "enabled": true
+    },
+    {
+      "id": "innerer_ofen",
+      "name": "Innerer Ofen",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Kann Materialien verbrennen/einlagern und Ladungen für Handwerk oder Geräte nutzen.",
+      "description": "",
+      "species": [
+        "Taimana"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "handwerk"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "instinktiver_bastler",
+      "name": "Instinktiver Bastler",
+      "type": "perk",
+      "category": "craft",
+      "bp": 4,
+      "effect": "Beim Erstellen eines Gegenstandes besteht eine Chance auf einen zusätzlichen Effekt.",
+      "description": "Erscheint für Gremlin auch als Funke der Ingenuität/Funke der Intuition.",
+      "species": [
+        "Gremlin"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "handwerk"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 8, 29",
+      "enabled": true
+    },
+    {
+      "id": "kalyz",
+      "name": "Kalyz",
+      "type": "perk",
+      "category": "magic",
+      "bp": 0,
+      "effect": "",
+      "description": "Magie-Typus; in der PDF-Perkliste genannt, aber ohne klare Regel im extrahierten Abschnitt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "typ"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 34",
+      "enabled": true
+    },
+    {
+      "id": "kristallfresser",
+      "name": "Kristallfresser",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Konsum elementarer Kristalle gibt temporaer den Effekt von Elementare Infusion.",
+      "description": "",
+      "species": [
+        "Irdene"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "element",
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "kriegerblut",
+      "name": "Kriegerblut",
+      "type": "perk",
+      "category": "combat",
+      "bp": 3,
+      "effect": "Wertet den Schadenswürfel physischer Waffen automatisch einmal auf.",
+      "description": "",
+      "species": [
+        "Ork"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "kampf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "lasttier",
+      "name": "Lasttier",
+      "type": "perk",
+      "category": "general",
+      "bp": 2,
+      "effect": "Traglast für schwere Gegenstände wird anhand von (Größenklasse + Kraft) x 2 berechnet.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "traglast"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 29",
+      "enabled": true
+    },
+    {
+      "id": "lebendes_konstrukt",
+      "name": "Lebendes Konstrukt",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "",
+      "description": "In der Quelle als WIP/im Aufbau markiert.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "wip"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 29, 34",
+      "enabled": true
+    },
+    {
+      "id": "linguist",
+      "name": "Sprachkundig",
+      "type": "perk",
+      "category": "general",
+      "bp": 2,
+      "effect": "Lernt eine exotische oder zwei Standardsprachen; kann mehrfach erworben werden.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sprache",
+        "mehrfach"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 29",
+      "enabled": true
+    },
+    {
+      "id": "magiefresser",
+      "name": "Magiefresser",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Kann magische Gegenstände statt Nahrung konsumieren und daraus Wohlbefinden gewinnen.",
+      "description": "",
+      "species": [
+        "Goblin"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "magie",
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 30",
+      "enabled": true
+    },
+    {
+      "id": "magie_anwender",
+      "name": "Magieanwender",
+      "type": "perk",
+      "category": "magic",
+      "bp": 4,
+      "effect": "Schaltet Talent Magie Anwendung, eine Spezialisierung und eine Zauberschule frei.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 5, 30",
+      "enabled": true
+    },
+    {
+      "id": "magischer_verstaerker",
+      "name": "Magischer Verstärker",
+      "type": "perk",
+      "category": "magic",
+      "bp": 0,
+      "effect": "",
+      "description": "In der PDF-Perkliste genannt, aber ohne klare Regel im extrahierten Abschnitt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 34",
+      "enabled": true
+    },
+    {
+      "id": "metamorphose",
+      "name": "Metamorphose",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "",
+      "description": "In der Quelle als WIP/im Aufbau markiert.",
+      "species": [
+        "Kri'tikki"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "wip"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 28",
+      "enabled": true
+    },
+    {
+      "id": "miasmaresistent",
+      "name": "Miasmaresistent",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Rettungswuerfe gegen Miasma im Vorteil; resistent gegen Gift/Miasma-Schaden und länger unter Miasmaeinfluss belastbar.",
+      "description": "",
+      "species": [
+        "Armelidae"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "resistenz"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "modularer_koerper",
+      "name": "Modularer Körper",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Körper bietet Platz für Modifikationen; konkrete Modifikationen brauchen Handwerkswurf und SL-Absegnung.",
+      "description": "Quelle markiert diesen Eintrag als kreativ, SL-abhängig und teilweise WIP.",
+      "species": [
+        "Taimana"
+      ],
+      "requirements": [
+        "Spielleiterabsprache"
+      ],
+      "tags": [
+        "spezies",
+        "handwerk"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 30",
+      "enabled": true
+    },
+    {
+      "id": "naturverbundenheit",
+      "name": "Naturverbundenheit",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "",
+      "description": "In der Quelle als WIP/im Aufbau markiert.",
+      "species": [
+        "Yûn'ga"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "natur",
+        "wip"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 19, 28",
+      "enabled": true
+    },
+    {
+      "id": "natuerliche_ruestung",
+      "name": "Natürliche Rüstung",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Erhält zusätzliche physische Rüstung in Höhe des Körper-Wertes.",
+      "description": "",
+      "species": [
+        "Taimana"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "rüstung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 31",
+      "enabled": true
+    },
+    {
+      "id": "mentale_ruestung",
+      "name": "Mentale Rüstung",
+      "type": "perk",
+      "category": "magic",
+      "bp": 4,
+      "effect": "Erhält zusätzliche magische Rüstung in Höhe des Geist-Wertes.",
+      "description": "Erscheint in der Quelle nahe Natürliche Rüstung.",
+      "species": [
+        "Kri'tikki"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "rüstung",
+        "magie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 19, 31",
+      "enabled": true
+    },
+    {
+      "id": "organisations_boss",
+      "name": "Organisations-Boss",
+      "type": "perk",
+      "category": "social",
+      "bp": 10,
+      "effect": "Erlaubt Aufbau einer Organisation mit Personal, Besitztümer, Ausrüstung oder Vehikeln nach Punktesystem.",
+      "description": "Nach Spielleiterabsprache; Quelle markiert Teile als WIP.",
+      "species": [],
+      "requirements": [
+        "Spielleiterabsprache"
+      ],
+      "tags": [
+        "organisation",
+        "wip"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 30",
+      "enabled": true
+    },
+    {
+      "id": "orn",
+      "name": "Orn",
+      "type": "perk",
+      "category": "magic",
+      "bp": 0,
+      "effect": "",
+      "description": "Magie-Typus; in der PDF-Perkliste genannt, aber ohne klare Regel im extrahierten Abschnitt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "typ"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 34",
+      "enabled": true
+    },
+    {
+      "id": "photosynthese",
+      "name": "Photosynthese",
+      "type": "perk",
+      "category": "species",
+      "bp": 5,
+      "effect": "Kann statt Mahlzeit Wasser und Sonnenbad nutzen, sofern Wetter es erlaubt.",
+      "description": "Quelle merkt an, dass dieser Eintrag später geändert oder entfernt werden könnte.",
+      "species": [
+        "Yûn'ga"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "nahrung",
+        "natur"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 11, 31",
+      "enabled": true
+    },
+    {
+      "id": "regenerativ",
+      "name": "Regenerativ",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Bei jeder Rast wird ein zusätzlicher d4 Lebenspunkte wiederhergestellt; Lebenskraft-Regeneration im Vorteil.",
+      "description": "",
+      "species": [
+        "Nhym"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "heilung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 31",
+      "enabled": true
+    },
+    {
+      "id": "robust",
+      "name": "Robust",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Schaden bis zum Körperwert wird automatisch zu 1 Schaden; höhere Stufen skalieren mit Körper.",
+      "description": "",
+      "species": [
+        "Ork",
+        "Korika"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "verteidigung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "rudeltaktik",
+      "name": "Rudeltaktik",
+      "type": "perk",
+      "category": "species",
+      "bp": 5,
+      "effect": "",
+      "description": "Als Spezies-Perk der Shab'ark gelistet; extrahierter Regeltext ist unvollständig.",
+      "species": [
+        "Shab'ark"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "kampf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 31",
+      "enabled": true
+    },
+    {
+      "id": "sammler",
+      "name": "Sammler",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Beim Sammeln des gewählten Rohstoffs zusätzlichen d100-50 würfeln und weitere Rohstoffe erhalten.",
+      "description": "",
+      "species": [
+        "Korika"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sammeln"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 31",
+      "enabled": true
+    },
+    {
+      "id": "saisonaler_einklang",
+      "name": "Saisonaler Einklang",
+      "type": "perk",
+      "category": "species",
+      "bp": 5,
+      "effect": "Waehlt Jahreszeit mit saisonalem Bonus; Bonus wird in der gewählten Jahreszeit verdoppelt.",
+      "description": "",
+      "species": [
+        "Sylph"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "natur"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "samtpfoten",
+      "name": "Samtpfoten",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Akrobatik-Würfe für Springen/Landen und Schleichen-Würfe im Vorteil; Schleichen in normalem Tempo möglich.",
+      "description": "",
+      "species": [
+        "Malaschi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "heimlichkeit",
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "schmender",
+      "name": "Schmender",
+      "type": "perk",
+      "category": "magic",
+      "bp": 0,
+      "effect": "",
+      "description": "Magie-Typus; in der PDF-Perkliste genannt, aber ohne klare Regel im extrahierten Abschnitt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "typ"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 35",
+      "enabled": true
+    },
+    {
+      "id": "schlangenmensch",
+      "name": "Schlangenmensch",
+      "type": "perk",
+      "category": "general",
+      "bp": 0,
+      "effect": "Würfe zum Befreien aus Griffen/Fesseln und Athletik/Klettern zum Zwängen durch enge Stellen im Vorteil.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 31",
+      "enabled": true
+    },
+    {
+      "id": "schnelle_entwicklung",
+      "name": "Schnelle Entwicklung",
+      "type": "perk",
+      "category": "species",
+      "bp": 5,
+      "effect": "Beim erfolgreichen Lernen mit Hilfsmittel wird erhaltene spezielle Erfahrung um 1 SE erhoeht.",
+      "description": "",
+      "species": [
+        "Menschen"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "lernen"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 26",
+      "enabled": true
+    },
+    {
+      "id": "stur",
+      "name": "Stur",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Willensstärke-Verteidigung gegen Etikette und Handel im Vorteil.",
+      "description": "",
+      "species": [
+        "Irdene",
+        "Xacivi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "willenskraft"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 31",
+      "enabled": true
+    },
+    {
+      "id": "sucker_punch",
+      "name": "Hinterhältiger Schlag",
+      "type": "perk",
+      "category": "combat",
+      "bp": 4,
+      "effect": "Der erste Angriff ist im Vorteil und kommt mit automatischem Dominance-Effekt.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 31",
+      "enabled": true
+    },
+    {
+      "id": "sucker_punch_conqueror",
+      "name": "Hinterhältiger Schlag - Zusatz Eroberer",
+      "type": "perk",
+      "category": "combat",
+      "bp": 2,
+      "effect": "Zusatz zu Hinterhältiger Schlag; der Angriff erhält Dreadful.",
+      "description": "",
+      "species": [],
+      "requirements": [
+        "Sucker Punch"
+      ],
+      "tags": [
+        "kampf",
+        "upgrade"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 35",
+      "enabled": true
+    },
+    {
+      "id": "verstaerkter_sinn",
+      "name": "Verstärkter Sinn",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Mustern-Würfe auf den entsprechenden Sinn werden im Vorteil geworfen.",
+      "description": "",
+      "species": [
+        "Shab'ark"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 31",
+      "enabled": true
+    },
+    {
+      "id": "verrueckter_wissenschaftler",
+      "name": "Verrückter Wissenschaftler",
+      "type": "perk",
+      "category": "craft",
+      "bp": 4,
+      "effect": "Alchemie-Crafting kann zusätzliche Effekte oder zufaellige Gegenstände erzeugen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "handwerk",
+        "alchemie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 35",
+      "enabled": true
+    },
+    {
+      "id": "willensbrecher",
+      "name": "Willensbrecher",
+      "type": "perk",
+      "category": "general",
+      "bp": 4,
+      "effect": "Würfe zum Durchbrechen von Willenskraft im Vorteil; Willensbeeinflussung wirkt 1 Erfolg groesser.",
+      "description": "",
+      "species": [
+        "Yûn'ga"
+      ],
+      "requirements": [],
+      "tags": [
+        "willenskraft"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 21, 31",
+      "enabled": true
+    },
+    {
+      "id": "wohlklang",
+      "name": "Wohlklang",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Bardenlieder wirken eine Erfolgsstufe höher; Singen-Würfe im Vorteil.",
+      "description": "Erscheint in der Speziesübersicht auch als Wohlgesang.",
+      "species": [
+        "Volx"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "musik"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "witterungssicht",
+      "name": "Witterungssicht",
+      "type": "perk",
+      "category": "species",
+      "bp": 4,
+      "effect": "Riechen-Würfe im Vorteil; kann Wahrnehmung über Geruch statt Sicht nutzen, Illusionen/Unsichtbarkeit sind ineffektiv.",
+      "description": "",
+      "species": [
+        "Shab'ark"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 27",
+      "enabled": true
+    },
+    {
+      "id": "wissenstalent",
+      "name": "Wissenstalent",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Spezies-gebundenes Wissenstalent auf Stufe 2.",
+      "description": "",
+      "species": [
+        "Sylph"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "fertigkeit"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "kampftalent",
+      "name": "Kampftalent",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Spezies-gebundenes Kampftalent auf Stufe 2.",
+      "description": "",
+      "species": [
+        "Ork"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "fertigkeit",
+        "kampf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "handwerks_talent",
+      "name": "Handwerks Talent",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Spezies-gebundenes Handwerkstalent auf Stufe 2.",
+      "description": "",
+      "species": [
+        "Xacivi",
+        "Naggahi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "fertigkeit",
+        "handwerk"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "feines_gehoer",
+      "name": "Feines Gehör",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Spezies-gebundener Sinnesvorteil für Gehoer.",
+      "description": "",
+      "species": [
+        "Lepurii",
+        "Kitsune"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "illusion_magie",
+      "name": "Illusion Magie",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Natuerliche Illusionsmagie.",
+      "description": "Appears as Illusion (natürlich) in species overview and as Illusion Magie in character data.",
+      "species": [
+        "Kitsune"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "magie",
+        "illusion"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19; data/characters/nakano_kurokawa.json",
+      "enabled": true
+    },
+    {
+      "id": "pflanzensprache",
+      "name": "Pflanzensprache",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Kann mit Pflanzen sprechen.",
+      "description": "Appears as Pflanzen- oder Tiersprache/Pflanzensprache in species overview.",
+      "species": [
+        "Sylph",
+        "Yûn'ga"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sprache",
+        "natur"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "tiersprache",
+      "name": "Tiersprache",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "Kann mit Tieren sprechen.",
+      "description": "Appears as Pflanzen- oder Tiersprache in species overview.",
+      "species": [
+        "Sylph"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sprache",
+        "natur"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "starker_magen",
+      "name": "Starker Magen",
+      "type": "perk",
+      "category": "species",
+      "bp": 0,
+      "effect": "",
+      "description": "Als Spezies-Perk der Naggahi gelistet; detaillierter extrahierter Regeltext ist nicht klar.",
+      "species": [
+        "Naggahi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
+      "enabled": true
+    },
+    {
+      "id": "nachtsicht",
+      "name": "Nachtsicht",
+      "type": "perk",
+      "category": "species",
+      "bp": 3,
+      "effect": "Reduziert pro Stufe einen Nachteil der Sicht-Kategorie Dunkelheit.",
+      "description": "Appears as Malaschi racial perk and as Dämmerungssicht/Nachtsicht/Dunkelsicht in general perks.",
+      "species": [
+        "Malaschi"
+      ],
+      "requirements": [],
+      "tags": [
+        "spezies",
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 32",
+      "enabled": true
+    },
+    {
+      "id": "adlerauge",
+      "name": "Adlerauge",
+      "type": "perk",
+      "category": "combat",
+      "bp": 0,
+      "effect": "Keine Nachteile durch Entfernung bei Fernkampf-Angriffen; 1 zusätzlicher Vorteil auf Zielen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf",
+        "fernkampf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 32",
+      "enabled": true
+    },
+    {
+      "id": "zauberhaar",
+      "name": "Zauberhaar",
+      "type": "perk",
+      "category": "magic",
+      "bp": 1,
+      "effect": "Erweitert Äther-Speicher pro Stufe und kann als Material für Foki genutzt werden.",
+      "description": "Quelle enthält Haarlängen-Varianten mit unterschiedlichen BP.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie",
+        "äther"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 31",
+      "enabled": true
+    },
+    {
+      "id": "zaeher_hund",
+      "name": "Zäher Hund",
+      "type": "perk",
+      "category": "combat",
+      "bp": 5,
+      "effect": "Erlaubt kurze Handlungsfähigkeit trotz körperlicher Wunden; Quelle nennt zusätzlich Ideen zu Lebenskraft und Regeneration.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf",
+        "überleben"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 31",
+      "enabled": true
+    },
+    {
+      "id": "ungefiltertes_wissen",
+      "name": "Ungefiltertes Wissen",
+      "type": "perk",
+      "category": "general",
+      "bp": 5,
+      "effect": "Eigenartige Träume und Visionen; Erwerb im Abenteuer oder nach Spielleiterabsprache.",
+      "description": "Auch Ungefiltertes Wissen (der Gang) genannt.",
+      "species": [],
+      "requirements": [
+        "Spielleiterabsprache"
+      ],
+      "tags": [
+        "speziell"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 8, 32",
+      "enabled": true
+    },
+    {
+      "id": "mindlink",
+      "name": "Gedankenbund",
+      "type": "perk",
+      "category": "magic",
+      "bp": 8,
+      "effect": "Mehrere Charaktere bauen einen telepathischen Link mit stufenabhängiger Reichweite und geteilten Effekten auf.",
+      "description": "Nach Spielleiterabsprache; BP pro Person.",
+      "species": [],
+      "requirements": [
+        "Spielleiterabsprache",
+        "Weitere Gedankenbund-Teilnehmer"
+      ],
+      "tags": [
+        "telepathie",
+        "gruppe"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 30",
+      "enabled": true
+    },
+    {
+      "id": "bluter",
+      "name": "Bluter",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Doppelte Anfälligkeit für Blutungsstacks.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "blutung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "unglueck",
+      "name": "Unglück",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 5,
+      "effect": "DM darf einmal pro Tag einen deiner Würfel neu würfeln oder ein kleines Missgeschick ausloesen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "glück"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38; data/characters/nakano_kurokawa.json",
+      "enabled": true
+    },
+    {
+      "id": "rival_nemesis",
+      "name": "Rivale/Nemesis",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Rivale, Nemesis oder Organisation macht dem Charakter das Leben schwer oder trachtet ihm nach dem Leben.",
+      "description": "Quelle nennt modulare BP 2/4/8.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "geschichte"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "allergie_element_anfaelligkeit",
+      "name": "Allergie/Element Anfälligkeit",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Schaden bei Berührung oder doppelter Schaden durch Angriffe des gewählten Elements.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "element",
+        "schwäche"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "sucht",
+      "name": "Sucht",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Muss Suchtmittel täglich konsumieren, sonst Verlust von Wohlbefinden; erster Konsum gibt kein Wohlbefinden.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "zustand"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "fehlende_gliedmassen",
+      "name": "Fehlende Gliedmaßen",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 0,
+      "effect": "",
+      "description": "Spezieller/modularer Nachteil; Quelle nennt keine klare feste Regel.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "speziell"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "schulden",
+      "name": "Schulden",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 0,
+      "effect": "Ignorierte Schulden koennen nach Spielleiterentscheid zu Gesucht oder gleichwertigem Nachteil werden.",
+      "description": "Modular disadvantage.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "geschichte",
+        "modular"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "lahm",
+      "name": "Lahm",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Initiative und Athletik im Nachteil; Initiative -4.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "bewegung",
+        "initiative"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "haesslich_unansehnlich",
+      "name": "Hässlich/Unansehnlich",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Nachteil auf freundliche soziale Interaktionen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "insomnia",
+      "name": "Schlaflosigkeit",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Einschlafen erfordert Zähigkeitswurf; Zielwert sinkt je erfolgloser Zeiteinheit.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "schlaf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "sleepyhead",
+      "name": "Langschläfer",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Braucht eine Zeiteinheit mehr Schlaf.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "schlaf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "pazifist_fighters_guilt",
+      "name": "Pazifist/Fighters Guilt",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Direkte Schadensaktionen koennen Wohlbefinden kosten, wenn Willensstärke gegen Aktionswurf misslingt.",
+      "description": "Quelle enthält höhere Stufen.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf",
+        "moral"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "glasknochen",
+      "name": "Glasknochen",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Stumpfe/zerschmetternde Angriffe und Fallschaden-Würfel werden vor Schadenswurf hochgestuft.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "schaden"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 38",
+      "enabled": true
+    },
+    {
+      "id": "social_anxiety_suspicious",
+      "name": "Soziale Angst/Misstrauisch",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Nachteil in spezifischen sozialen Situationen oder gegen bestimmten Sozialstatus.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 38-39",
+      "enabled": true
+    },
+    {
+      "id": "flight_or_freeze",
+      "name": "Flucht oder Erstarren",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Chance auf Flucht- oder Erstarren-Reaktion in entsprechenden Situationen; Stufen erhöhen die Chance.",
+      "description": "Auch Scheu genannt.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "angst"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "bittere_medizin",
+      "name": "Bittere Medizin",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Medizin, Heilzauber und eigene Heilmittel ziehen automatisch 1 Wohlbefinden ab.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "heilung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "schlechter_sinn",
+      "name": "Schlechter Sinn",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Wie guter/verstärkter Sinn, aber negativ.",
+      "description": "Quelle enthält nur gekürzten Regeltext.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "oblivious",
+      "name": "Ahnungslos",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Andere erhalten einen zusätzlichen Erfolg in sozialen Aktionen gegen dich.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "nachtblind",
+      "name": "Nachtblind",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Zusätzliche Nachteile für Sehen-Aktionen bei Dunkelheit.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sinn"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "steif_tollpatsch",
+      "name": "Steif/Tollpatsch",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Alle Körper-Aktionen erhalten einen Nachteil.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "körper"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "wanted",
+      "name": "Gesucht!",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Eine Gruppe sucht nach dir; Reichweite und Konsequenzen sind stufenabhängig.",
+      "description": "Quelle nennt flexible BP 2/4/8.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "geschichte"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "schlechte_regeneration",
+      "name": "Schlechte Regeneration",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Würfel-Downgrade für nächtliche Regeneration.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "heilung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "niedrige_lebenskraft",
+      "name": "Niedrige Lebenskraft",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Lebenskraft -1; mehrfach kaufbar.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "lebenskraft",
+        "mehrfach"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "bunter_hund",
+      "name": "Bunter Hund",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Leicht wiederzuerkennen; andere erhalten zusätzliche Erfolgsstufe auf Mustern/Menschenkenntnis, zwei Begegnung-Tabellenwürfe.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial",
+        "wiedererkennung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "aetherleck",
+      "name": "Aetherleck",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "25% Chance, beim Zauberwirken 1 zusätzlichen Äther zu verlieren.",
+      "description": "",
+      "species": [],
+      "requirements": [
+        "Magieanwendung aktiv"
+      ],
+      "tags": [
+        "magie",
+        "äther"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "narkolepsie_taimana_trojaner",
+      "name": "Narkolepsie/Taimana Trojaner",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 0,
+      "effect": "Baukasten-Nachteil mit Einschlafen/Ausfall bei Auslöser.",
+      "description": "Quelle markiert dies als frühen modularen Nachteil, der noch nicht vollständig zum Stufensystem passt.",
+      "species": [
+        "Taimana"
+      ],
+      "requirements": [],
+      "tags": [
+        "schlaf",
+        "modular"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 39",
+      "enabled": true
+    },
+    {
+      "id": "willensschwach",
+      "name": "Willensschwach",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Minus 1 Erfolg auf Willensstärke-Verteidigung.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "willenskraft"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "dilettant",
+      "name": "Dilettant",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Ein Nachteil auf eine aktivierte Fertigkeit; gewürfelte NAT 1 müssen genommen werden.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "fertigkeit"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "begrenzte_kompetenz",
+      "name": "Begrenzte Kompetenz",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Begrenzt pro Fertigkeits-Kategorie nutzbare/aktivierbare Fähigkeiten; Rest gilt als nicht aktiviert.",
+      "description": "Quelle nennt gestufte Grenzen 3/2/1.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "fertigkeit"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "vielfrass",
+      "name": "Vielfraß",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Doppelter Nahrungsverbrauch notwendig, um Wohlbefinden zu erhalten.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "niedrige_konzentration",
+      "name": "Niedrige Konzentration",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "2 Nachteile auf das Aufrechterhalten von Zaubern, wenn Konzentration gestört wird.",
+      "description": "",
+      "species": [],
+      "requirements": [
+        "Magieanwendung aktiv"
+      ],
+      "tags": [
+        "magie",
+        "konzentration"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "nahrungseinschraenkung",
+      "name": "Nahrungseinschränkung/Wählerischer Esser",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Beschraenkung auf spezifische Nahrungsmittel; mehr BP bei seltener Nahrung oder Konsequenzen.",
+      "description": "Quelle nennt BP-Spanne 2 bis 4.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40; data/characters/nakano_kurokawa.json",
+      "enabled": true
+    },
+    {
+      "id": "snob",
+      "name": "Snob",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Nahrung muss Geistest-PL haben; geringere PL entzieht Wohlbefinden entsprechend Differenz.",
+      "description": "Quelle nennt PL 2/4/6.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "nahrung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "rage",
+      "name": "Raserei",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Bei mehr als 5 HP Verlust und misslungener Willensstärke-Probe greift der Charakter für d4 Runden nächstgelegenes Ziel an.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf",
+        "zustand"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40; data/characters/nakano_kurokawa.json",
+      "enabled": true
+    },
+    {
+      "id": "linked_fate",
+      "name": "Verbundenes Schicksal",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Du stirbst, wenn die verbundene Sache oder Person stirbt/zerstört wird.",
+      "description": "Darf bei Geistlink nicht mit dem Geistlink-Buddy verbunden sein.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "geschichte",
+        "lebenskraft"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "workaholic",
+      "name": "Arbeitssüchtig",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Nach Arbeitsbeginn ist Willenskraftprobe nötig, um in der nächsten ZE etwas anderes zu tun.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "handwerk"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "depression",
+      "name": "Depression",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 5,
+      "effect": "Pro Stufe ein Wohlbefinden-Stufe weniger als Maximum.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "wellbeing"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "adhd",
+      "name": "ADHS",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Bei mehreren gleichen Zeiteinheiten hintereinander ist Willensstärke-Wurf nötig, sonst Abzug von Erfolgen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "fokus",
+        "handwerk"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "learning_by_doing",
+      "name": "Lernen durch Tun",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 1,
+      "effect": "Beim Lernen durch Hilfsmittel zählt erst eine höhere Schwelle als Erfolg.",
+      "description": "Quelle nennt Schwellen 15/20/25.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "lernen"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 40",
+      "enabled": true
+    },
+    {
+      "id": "brandlock",
+      "name": "Brand-Sperre",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Charakter kann nicht brennen; nicht erfüllte Paradigmen ziehen am Tagesende Wohlbefinden ab.",
+      "description": "Auch N(a)o-Game-N(a)o-Life genannt; BP pro Paradigma-Stufe.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "brand",
+        "paradigma"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "unaufmerksam",
+      "name": "Unaufmerksam",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Schlechte Intentionen zu erkennen kostet einen Erfolg mehr.",
+      "description": "In der Quelle als Gegenstück zu Gefahreninstinkt beschrieben.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sinn",
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "flashbacks",
+      "name": "Flashbacks",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 5,
+      "effect": "Auslöser lösen Willenskraftprobe aus; bei Misserfolg zeitweise 2 Nachteile auf alle Würfe.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "zustand"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "schlechter_orientierungssinn",
+      "name": "Schlechter Orientierungssinn",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Würfe für Wegfindung bekommen 2 Nachteile und Ergebnis ist 1 Erfolg geringer.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "orientierung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "did",
+      "name": "Dissoziative Identitätsstörung",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 0,
+      "effect": "Mehrere Charaktere/Alternativpersönlichkeiten mit reduzierten Baupunkten/EXP; täglicher Wechselwurf.",
+      "description": "Quelle sagt, dass Spielleiterabsprache nötig ist.",
+      "species": [],
+      "requirements": [
+        "Spielleiterabsprache"
+      ],
+      "tags": [
+        "speziell"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "stubenhocker_ortsgebunden_social_vampire",
+      "name": "Stubenhocker/Ortsgebunden/Sozialer Vampir",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Außerhalb vertrauter Umgebung Nachteile auf Würfe und keine Regeneration; Akklimatisierung braucht Zeit.",
+      "description": "Quelle enthält höhere Stufen.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "ort"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "nudelarme",
+      "name": "Nudelarme",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Physische Schadenswürfel werden automatisch abgewertet.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf",
+        "schaden"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "ohrenbetaeubende_stimme",
+      "name": "Ohrenbetäubende Stimme",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Beim Singen kannst du Leute nur Wohlbefinden verlieren lassen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "musik",
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "stein",
+      "name": "Stein",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Kann nicht schwimmen oder fliegen; Transport durch andere ist stark erschwert.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "bewegung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "aussenseiter_monster_abstammung",
+      "name": "Außenseiter/Monster Abstammung",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Chance, dass Personen dich meiden; höhere Stufen können aggressive Übergriffe auslösen.",
+      "description": "Quelle nennt gestufte Chancen 25/50/75%.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 41",
+      "enabled": true
+    },
+    {
+      "id": "coldblooded_wetteranfaellig",
+      "name": "Kaltblütig/Wetteranfällig",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Wettereffekte treffen dich um eine Stufe heftiger.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "wetter"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "acidic",
+      "name": "Säurehaltig",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 2,
+      "effect": "Ausrüstung nimmt bei aktiver oder passiver Benutzung schneller Haltbarkeitsschaden.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "ausrüstung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "zaubermagnet",
+      "name": "Zaubermagnet",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Negative Zauber gegen Gruppenmitglieder treffen dich in Reichweite anteilig oder zusätzlich.",
+      "description": "Quelle enthält höhere Stufen.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "magie"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "stinky_smelly",
+      "name": "Stinkend/Übelriechend",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Nachteile auf Verstecken/Heimlichkeit und soziale Talente.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "sozial",
+        "heimlichkeit"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "all_in",
+      "name": "Alles oder nichts",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Kampfhaltung muss zu Kampfbeginn festgelegt oder ausgewürfelt werden und kann nicht frei gewechselt werden.",
+      "description": "Quelle enthält Stufen 1-3.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf",
+        "haltung"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "aethergebunden",
+      "name": "Äthergebunden",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Beim Zaubern ist Willenskraftprobe gegen eigene Zaubererfolge nötig, sonst stufenabhängige Ausfälle.",
+      "description": "",
+      "species": [],
+      "requirements": [
+        "Magieanwendung aktiv"
+      ],
+      "tags": [
+        "magie",
+        "äther"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "combat_paralysis",
+      "name": "Kampflähmung",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 4,
+      "effect": "Bei misslungener Willensstärkeprobe entfällt erste Kampfrunde; bei Gelingen trotzdem Nachteil auf Aktionen.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "kampf"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "moralkodex",
+      "name": "Moralkodex",
+      "type": "disadvantage",
+      "category": "disadvantage",
+      "bp": 3,
+      "effect": "Charakter hat Leitbilder oder Schwüre; Verstöße kosten Wohlbefinden.",
+      "description": "",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "rollenspiel"
+      ],
+      "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seite 42",
+      "enabled": true
+    },
+    {
+      "id": "tierform",
+      "name": "Tierform",
+      "type": "perk",
+      "category": "general",
+      "bp": 0,
+      "effect": "",
+      "description": "Erscheint in bestehenden Charakterdaten; in den extrahierten PDF-Abschnitten zu Perks/Nachteilen wurde keine klare Regel gefunden.",
+      "species": [],
+      "requirements": [],
+      "tags": [
+        "charakterdaten"
+      ],
+      "source": "data/characters/nakano_kurokawa.json",
+      "enabled": true
+    }
+  ]
+}
