@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QScrollArea, QTextEdit, QWidget
 
 from app_paths import data_path, resource_path
@@ -10,14 +10,12 @@ from app_paths import data_path, resource_path
 
 STEPS = [
     ("species", "Spezies"),
-    ("concept", "Konzept"),
+    ("concept", "Biografie"),
     ("attributes", "Attribute"),
     ("skills_perks", "Fertigkeiten & Perks"),
     ("equipment", "Ausrüstung"),
     ("summary", "Zusammenfassung"),
 ]
-
-SENSITIVE_IMAGE_SPECIES_IDS = {"armelidae", "kri_tikki", "weaver"}
 
 SPECIES = [
     {
@@ -194,6 +192,25 @@ for species in SPECIES:
     species["image_path"] = f"assets/ui_elements/character_creator/species/{species['id']}.png"
 
 
+# zoom < 1.0 shows more of the portrait
+# positive offset_x moves image right / negative moves left
+# positive offset_y moves image down / negative moves up
+SPECIES_PORTRAIT_TUNING = {
+    "taimana": {"zoom": 0.90, "offset_x": -4.8, "offset_y": 2.0},
+    "menschen": {"zoom": 0.90, "offset_x": 0, "offset_y": 0},
+    "irdene": {"zoom": 1.0, "offset_x": -10, "offset_y": 0},
+    "sylph": {"zoom": 0.88, "offset_x": 0, "offset_y": 3},
+    "shab_ark": {"zoom": 0.90, "offset_x": 0, "offset_y": 5},
+    "malaschi": {"zoom": 0.90, "offset_x": 0, "offset_y": 5},
+    "wyverian_wylv": {"zoom": 1, "offset_x": -5, "offset_y": 0},
+    "armelidae": {"zoom": 0.85, "offset_x": 0, "offset_y": 0},
+    "volx": {"zoom": 1, "offset_x": -4, "offset_y": 0},
+    "goblin": {"zoom": 1, "offset_x": 0, "offset_y": -5},
+    "gremlin": {"zoom": 1, "offset_x": 0, "offset_y": -5},
+    "armelidae": {"zoom": 1, "offset_x": 0, "offset_y": 15},
+}
+
+
 def render_character_creator_section(window):
     if window.content_layer is None:
         return
@@ -218,14 +235,20 @@ def render_character_creator_section(window):
 
     panel_y = title_h + step_h + gap + 8
     panel_h = max(260, content_h - panel_y - footer_h - gap)
-    panel = _create_framed_panel(
-        window,
-        window.content_layer,
-        margin,
-        panel_y,
-        content_w - (margin * 2),
-        panel_h,
-    )
+    if state.get("step") == "species":
+        panel = QWidget(window.content_layer)
+        panel.setGeometry(margin, panel_y, content_w - (margin * 2), panel_h)
+        panel.setStyleSheet("background: transparent; border: none;")
+        panel.show()
+    else:
+        panel = _create_framed_panel(
+            window,
+            window.content_layer,
+            margin,
+            panel_y,
+            content_w - (margin * 2),
+            panel_h,
+        )
 
     if state.get("step") == "species":
         _render_species_step(window, panel, state)
@@ -364,9 +387,14 @@ def _render_concept_step(window, panel, state):
     body_h = panel.height() - (pad * 2)
     concept = state.get("concept", {})
 
-    form_panel = _create_framed_panel(window, panel, pad, pad, body_w, body_h)
-    scroll = QScrollArea(form_panel)
-    scroll.setGeometry(14, 14, body_w - 28, body_h - 28)
+    ref_w = max(210, min(300, int(body_w * 0.27)))
+    gap = 18
+    left_w = max(320, body_w - ref_w - gap)
+    if left_w + gap + ref_w > body_w:
+        ref_w = max(180, body_w - left_w - gap)
+
+    scroll = QScrollArea(panel)
+    scroll.setGeometry(pad, pad, left_w, body_h)
     scroll.setWidgetResizable(True)
     scroll.setStyleSheet(
         "QScrollArea { background: transparent; border: none; }"
@@ -376,57 +404,119 @@ def _render_concept_step(window, panel, state):
 
     host = QWidget(scroll)
     host.setStyleSheet("background: transparent;")
-    inner_w = max(520, body_w - 58)
+    inner_w = max(320, left_w - 26)
     cursor_y = 10
 
     title = QLabel(host)
     title.setGeometry(8, cursor_y, inner_w - 16, 34)
-    title.setText("Konzept")
+    title.setText("Biografie")
     title.setStyleSheet("background: transparent; color: #f2d28b; font-size: 26px; font-weight: 800;")
     title.show()
     cursor_y += 42
 
     intro = QLabel(host)
-    intro.setGeometry(8, cursor_y, inner_w - 16, 44)
+    intro.setGeometry(8, cursor_y, inner_w - 16, 50)
     intro.setText(
-        "Lege hier die Grundidee deines Charakters fest. Diese Angaben sind erzählerisch "
+        "Beschreibe hier Herkunft, Rolle, Motivation und Persönlichkeit deines Charakters. Diese Angaben sind erzählerisch "
         "und können später noch angepasst werden."
     )
     intro.setWordWrap(True)
     intro.setStyleSheet("background: transparent; color: #cdbb8a; font-size: 14px; font-weight: 600;")
     intro.show()
-    cursor_y += 58
+    cursor_y += 66
 
-    left_x = 8
-    right_x = 8 + ((inner_w - 24) // 2) + 16
-    field_w = (inner_w - 40) // 2
-    row_h = 72
-    fields = [
-        ("Charaktername", "character_name"),
-        ("Spielername", "player_name"),
-        ("Kurzkonzept", "short_concept"),
-        ("Herkunft / Kultur", "origin"),
-        ("Beruf / Rolle", "role"),
-    ]
-    for index, (label_text, key) in enumerate(fields):
-        col_x = left_x if index % 2 == 0 else right_x
-        row_y = cursor_y + ((index // 2) * row_h)
-        _create_concept_line_edit(host, col_x, row_y, field_w, label_text, concept, key)
-    cursor_y += ((len(fields) + 1) // 2) * row_h + 8
+    cursor_y = _create_bio_section_heading(host, 8, cursor_y, inner_w - 16, "Grunddaten")
+    field_gap = 14
+    row_h = 64
+    if inner_w >= 560:
+        compact_w = (inner_w - 16 - (field_gap * 2)) // 3
+        wide_w = (inner_w - 16 - field_gap) // 2
+        _create_concept_line_edit(host, 8, cursor_y, compact_w, "Charaktername", concept, "character_name")
+        _create_concept_line_edit(host, 8 + compact_w + field_gap, cursor_y, compact_w, "Spielername", concept, "player_name")
+        _create_concept_line_edit(host, 8 + ((compact_w + field_gap) * 2), cursor_y, compact_w, "Beruf / Rolle", concept, "role")
+        cursor_y += row_h
+        _create_concept_line_edit(host, 8, cursor_y, wide_w, "Kurzkonzept", concept, "short_concept")
+        _create_concept_line_edit(host, 8 + wide_w + field_gap, cursor_y, wide_w, "Herkunft / Kultur", concept, "origin")
+        cursor_y += row_h + 4
+    else:
+        field_w = (inner_w - 16 - field_gap) // 2
+        _create_concept_line_edit(host, 8, cursor_y, field_w, "Charaktername", concept, "character_name")
+        _create_concept_line_edit(host, 8 + field_w + field_gap, cursor_y, field_w, "Spielername", concept, "player_name")
+        cursor_y += row_h
+        _create_concept_line_edit(host, 8, cursor_y, field_w, "Beruf / Rolle", concept, "role")
+        _create_concept_line_edit(host, 8 + field_w + field_gap, cursor_y, field_w, "Herkunft / Kultur", concept, "origin")
+        cursor_y += row_h
+        _create_concept_line_edit(host, 8, cursor_y, inner_w - 16, "Kurzkonzept", concept, "short_concept")
+        cursor_y += row_h + 4
 
-    cursor_y = _create_concept_text_edit(host, 8, cursor_y, inner_w - 16, "Motivation", concept, "motivation", 96)
-    cursor_y = _create_concept_text_edit(host, 8, cursor_y + 14, inner_w - 16, "Kurzbeschreibung", concept, "description", 116)
+    cursor_y = _create_bio_section_heading(host, 8, cursor_y + 10, inner_w - 16, "Persönlichkeit & Motivation")
+    cursor_y = _create_concept_text_edit(host, 8, cursor_y, inner_w - 16, "Motivation", concept, "motivation", 104)
+    cursor_y = _create_concept_text_edit(host, 8, cursor_y + 14, inner_w - 16, "Kurzbeschreibung", concept, "description", 128)
 
-    host.setMinimumSize(inner_w, max(body_h - 28, cursor_y + 12))
+    host.setMinimumSize(inner_w, max(body_h, cursor_y + 12))
     scroll.setWidget(host)
     scroll.show()
+
+    _render_bio_species_reference(window, panel, pad + left_w + gap, pad, ref_w, body_h, state)
+
+
+def _create_bio_section_heading(parent, x, y, w, text):
+    title = QLabel(parent)
+    title.setGeometry(x, y, w, 26)
+    title.setText(text)
+    title.setStyleSheet("background: transparent; color: #f2d28b; font-size: 18px; font-weight: 800;")
+    title.show()
+
+    line = QLabel(parent)
+    line.setGeometry(x, y + 30, w, 2)
+    line.setStyleSheet("background: rgba(160, 110, 35, 150);")
+    line.show()
+    return y + 44
+
+
+def _render_bio_species_reference(window, parent, x, y, w, h, state):
+    species = _species_by_id(state.get("species_id"))
+
+    portrait_size = max(92, min(116, w - 70, int(h * 0.30)))
+    portrait_x = x + ((w - portrait_size) // 2)
+    portrait_y = y + 18
+    image = QLabel(parent)
+    image.setGeometry(portrait_x, portrait_y, portrait_size, portrait_size)
+    image.setAlignment(Qt.AlignCenter)
+    image.setStyleSheet(
+        "background: transparent; color: #d5b66f; border: none; "
+        "font-size: 16px; font-weight: 800;"
+    )
+    pixmap = _load_species_source_pixmap(window, species)
+    if not state.get("species_id"):
+        image.setPixmap(_species_missing_portrait_pixmap("Keine Spezies gewählt", portrait_size, portrait_size, False))
+    elif pixmap.isNull():
+        image.setPixmap(_species_missing_portrait_pixmap("Kein Bild vorhanden", portrait_size, portrait_size, False))
+    else:
+        image.setPixmap(_cached_species_portrait_pixmap(window, species, image.width(), image.height()))
+    image.show()
+
+    text_y = portrait_y + portrait_size + 14
+    name = QLabel(parent)
+    name.setGeometry(x + 8, text_y, w - 16, 30)
+    name.setText(species["name"] if state.get("species_id") else "-")
+    name.setAlignment(Qt.AlignCenter)
+    name.setStyleSheet("background: transparent; color: #f2d28b; font-size: 18px; font-weight: 900;")
+    name.show()
+
+    note = QLabel(parent)
+    note.setGeometry(x + 8, text_y + 34, w - 16, 24)
+    note.setText("Ausgewählte Spezies" if state.get("species_id") else "Keine Spezies gewählt")
+    note.setAlignment(Qt.AlignCenter)
+    note.setStyleSheet("background: transparent; color: #cdbb8a; font-size: 13px; font-weight: 700;")
+    note.show()
 
 
 def _concept_label(parent, x, y, w, text):
     label = QLabel(parent)
     label.setGeometry(x, y, w, 22)
     label.setText(text)
-    label.setStyleSheet("background: transparent; color: #f2d28b; font-size: 15px; font-weight: 800;")
+    label.setStyleSheet("background: transparent; color: #e2c678; font-size: 14px; font-weight: 800;")
     label.show()
     return label
 
@@ -455,10 +545,11 @@ def _create_concept_text_edit(parent, x, y, w, label_text, concept, key, h):
 
 def _concept_input_style():
     return (
-        "background: rgba(9, 7, 6, 185); color: #f2ead2; "
-        "border: 1px solid rgba(160, 110, 35, 170); "
+        "background: rgba(8, 6, 5, 210); color: #f2ead2; "
+        "border: 1px solid rgba(121, 82, 34, 190); "
+        "border-radius: 5px; "
         "selection-background-color: rgba(120, 76, 28, 200); "
-        "font-size: 15px; padding: 6px;"
+        "font-size: 15px; padding: 7px;"
     )
 
 
@@ -1364,7 +1455,7 @@ def _summary_concept_section(parent, x, y, w, character_state):
         x,
         y,
         w,
-        "Konzept",
+        "Biografie",
         [
             ("Charaktername", _dash(concept.get("character_name"))),
             ("Spielername", _dash(concept.get("player_name"))),
@@ -1534,35 +1625,73 @@ def _create_framed_panel(window, parent, x, y, w, h):
     return panel
 
 
-def _create_species_button(window, parent, x, y, w, h, species, selected):
+def _create_species_card(window, parent, x, y, w, h, species, selected):
     container = QWidget(parent)
     container.setGeometry(x, y, w, h)
-    container.setStyleSheet("background: transparent;")
+    container.setStyleSheet("background: transparent; border: none;")
 
-    bg = QLabel(container)
-    bg.setGeometry(0, 0, w, h)
-    bg.setStyleSheet(
-        "background: rgba(22, 17, 14, 165); "
-        f"border: 1px solid {'#c08a32' if selected else 'rgba(90, 63, 36, 120)'};"
+    plate_h = 32
+    portrait_size = max(46, min(116, w - 2, h - plate_h - 4))
+    portrait_x = (w - portrait_size) // 2
+    portrait_y = 2
+
+    image = QLabel(container)
+    image.setGeometry(portrait_x, portrait_y, portrait_size, portrait_size)
+    image.setAlignment(Qt.AlignCenter)
+    image.setStyleSheet(
+        "background: transparent; color: #d5b66f; border: none; "
+        "font-size: 15px; font-weight: 800;"
     )
-    bg_pixmap = window.load_ui_pixmap("frames/512x122_box.png")
-    if bg_pixmap is None or bg_pixmap.isNull():
-        bg_pixmap = window.load_ui_pixmap("buttons/menu_button_medium.png")
-    if bg_pixmap is not None and not bg_pixmap.isNull():
-        bg.setPixmap(bg_pixmap.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-        bg.setStyleSheet("background: transparent;")
-    bg.lower()
+    pixmap = _load_species_source_pixmap(window, species)
+    if pixmap.isNull():
+        image.setPixmap(_species_missing_portrait_pixmap(species["name"], portrait_size, portrait_size, selected))
+    else:
+        portrait = _cached_species_portrait_pixmap(window, species, image.width(), image.height())
+        image.setPixmap(portrait)
+    image.show()
 
-    text = QLabel(container)
-    text.setGeometry(12, 0, w - 24, h)
-    text.setText(species["name"])
-    text.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-    text.setStyleSheet(
+    if selected:
+        selected_ring = QLabel(container)
+        ring_pad = 4
+        selected_ring.setGeometry(
+            portrait_x + ring_pad,
+            portrait_y + ring_pad,
+            portrait_size - (ring_pad * 2),
+            portrait_size - (ring_pad * 2),
+        )
+        selected_ring.setStyleSheet(
+            f"background: transparent; border: 4px solid rgba(242, 210, 139, 220); "
+            f"border-radius: {(portrait_size - (ring_pad * 2)) // 2}px;"
+        )
+        selected_ring.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        selected_ring.show()
+
+    plate_w = min(w, max(68, int(portrait_size * 1.15)))
+    plate_x = (w - plate_w) // 2
+    plate_y = portrait_y + portrait_size + 2
+    plate = QLabel(container)
+    plate.setGeometry(plate_x, plate_y, plate_w, plate_h)
+    plate_pixmap = window.load_ui_pixmap("frames/512x122_box.png")
+    if plate_pixmap is None or plate_pixmap.isNull():
+        plate_pixmap = window.load_ui_pixmap("buttons/menu_button_medium.png")
+    if plate_pixmap is not None and not plate_pixmap.isNull():
+        plate.setPixmap(plate_pixmap.scaled(plate.width(), plate.height(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+        plate.setStyleSheet("background: transparent;")
+    else:
+        plate.setStyleSheet("background: rgba(20, 14, 10, 210); border-top: 1px solid rgba(160, 110, 35, 170);")
+    plate.show()
+
+    name = QLabel(container)
+    name.setGeometry(plate_x + 6, plate_y, plate_w - 12, plate_h)
+    name.setText(species["name"])
+    name.setAlignment(Qt.AlignCenter)
+    name.setStyleSheet(
         "background: transparent; "
-        f"color: {'#f2d28b' if selected else '#c8b178'}; "
-        f"font-size: {'15' if selected else '14'}px; font-weight: 800;"
+        f"color: {'#f2d28b' if selected else '#d8c38a'}; "
+        "font-size: 12px; font-weight: 900;"
     )
-    text.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    name.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+    name.show()
 
     hit = QPushButton(container)
     hit.setGeometry(0, 0, w, h)
@@ -1570,7 +1699,7 @@ def _create_species_button(window, parent, x, y, w, h, species, selected):
     hit.setCursor(Qt.PointingHandCursor)
     hit.setStyleSheet(
         "QPushButton { border: none; background: transparent; padding: 0px; }"
-        "QPushButton:hover { border: 1px solid rgba(242, 210, 139, 110); }"
+        "QPushButton:hover { border: none; background: transparent; }"
     )
     hit.clicked.connect(lambda checked=False, species_id=species["id"]: _select_species(window, species_id))
     hit.raise_()
@@ -1578,43 +1707,191 @@ def _create_species_button(window, parent, x, y, w, h, species, selected):
     return container
 
 
+def _species_card_portrait_pixmap(source, target_w, target_h, tuning=None):
+    tuning = tuning if isinstance(tuning, dict) else {}
+    zoom = _safe_float(tuning.get("zoom"), 1.0)
+    if zoom <= 0:
+        zoom = 1.0
+    offset_x = int(_safe_float(tuning.get("offset_x"), 0))
+    offset_y = int(_safe_float(tuning.get("offset_y"), 0))
+
+    crop_x = max(0, int(source.width() * 0.42))
+    crop_y = max(0, int(source.height() * 0.05))
+    crop_w = max(1, min(source.width() - crop_x, int(source.width() * 0.56)))
+    crop_h = max(1, min(source.height() - crop_y, int(source.height() * 0.75)))
+    cropped = source.copy(crop_x, crop_y, crop_w, crop_h)
+    scaled_w = max(1, int(target_w * zoom))
+    scaled_h = max(1, int(target_h * zoom))
+    scaled = cropped.scaled(scaled_w, scaled_h, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+
+    portrait = QPixmap(target_w, target_h)
+    portrait.fill(Qt.transparent)
+    painter = QPainter(portrait)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    draw_x = ((target_w - scaled.width()) // 2) + offset_x
+    draw_y = int((target_h - scaled.height()) * 0.42) + offset_y
+    painter.drawPixmap(draw_x, draw_y, scaled)
+    painter.end()
+    return portrait
+
+
+def _species_floating_portrait_pixmap(source, target_w, target_h, tuning=None):
+    target_w = max(1, int(target_w))
+    target_h = max(1, int(target_h))
+    portrait = _species_card_portrait_pixmap(source, target_w, target_h, tuning)
+
+    token = QPixmap(target_w, target_h)
+    token.fill(Qt.transparent)
+    painter = QPainter(token)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+
+    inset = 4
+    path = QPainterPath()
+    path.addEllipse(inset, inset, target_w - (inset * 2), target_h - (inset * 2))
+    painter.fillPath(path, QColor(255, 255, 255, 255))
+    painter.setClipPath(path)
+    painter.drawPixmap(0, 0, portrait)
+    painter.setClipping(False)
+    painter.setPen(QPen(QColor(120, 82, 38, 175), 2))
+    painter.drawEllipse(inset + 1, inset + 1, target_w - ((inset + 1) * 2), target_h - ((inset + 1) * 2))
+
+    painter.end()
+    return token
+
+
+def _load_species_source_pixmap(window, species):
+    cache = getattr(window, "_creator_species_pixmap_cache", None)
+    if not isinstance(cache, dict):
+        cache = {}
+        window._creator_species_pixmap_cache = cache
+    image_path = _resolve_species_image_path(species)
+    key = (species.get("id", species.get("name", "")), str(image_path))
+    if key not in cache:
+        cache[key] = QPixmap(str(image_path)) if image_path.exists() else QPixmap()
+    return cache[key]
+
+
+def _cached_species_portrait_pixmap(window, species, target_w, target_h):
+    cache = getattr(window, "_creator_species_portrait_cache", None)
+    if not isinstance(cache, dict):
+        cache = {}
+        window._creator_species_portrait_cache = cache
+    image_path = _resolve_species_image_path(species)
+    tuning = _species_portrait_tuning(species)
+    zoom = _safe_float(tuning.get("zoom"), 1.0)
+    offset_x = int(_safe_float(tuning.get("offset_x"), 0))
+    offset_y = int(_safe_float(tuning.get("offset_y"), 0))
+    key = (
+        species.get("id", species.get("name", "")),
+        str(image_path),
+        int(target_w),
+        int(target_h),
+        "portrait",
+        zoom,
+        offset_x,
+        offset_y,
+    )
+    if key not in cache:
+        source = _load_species_source_pixmap(window, species)
+        cache[key] = _species_floating_portrait_pixmap(source, target_w, target_h, tuning) if not source.isNull() else QPixmap()
+    return cache[key]
+
+
+def _cached_species_preview_pixmap(window, species, target_w, target_h):
+    cache = getattr(window, "_creator_species_full_preview_cache", None)
+    if not isinstance(cache, dict):
+        cache = {}
+        window._creator_species_full_preview_cache = cache
+    image_path = _resolve_species_image_path(species)
+    key = (species.get("id", species.get("name", "")), str(image_path), int(target_w), int(target_h), "full")
+    if key not in cache:
+        source = _load_species_source_pixmap(window, species)
+        cache[key] = source.scaled(target_w, target_h, Qt.KeepAspectRatio, Qt.SmoothTransformation) if not source.isNull() else QPixmap()
+    return cache[key]
+
+
+def _species_portrait_tuning(species):
+    species_id = str(species.get("id", "") or "").strip().lower()
+    if species_id in SPECIES_PORTRAIT_TUNING:
+        return SPECIES_PORTRAIT_TUNING[species_id]
+    normalized_name = _sanitize_filename(species.get("name", "")).lower()
+    return SPECIES_PORTRAIT_TUNING.get(normalized_name, {})
+
+
+def _safe_float(value, default):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _species_missing_portrait_pixmap(name, target_w, target_h, selected):
+    target_w = max(1, int(target_w))
+    target_h = max(1, int(target_h))
+    token = QPixmap(target_w, target_h)
+    token.fill(Qt.transparent)
+    painter = QPainter(token)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+
+    inset = 4
+    path = QPainterPath()
+    path.addEllipse(inset, inset, target_w - (inset * 2), target_h - (inset * 2))
+    painter.fillPath(path, QColor(8, 6, 5, 222))
+    painter.setPen(QPen(QColor(242, 210, 139, 220) if selected else QColor(120, 82, 38, 175), 3 if selected else 2))
+    painter.drawEllipse(inset + 1, inset + 1, target_w - ((inset + 1) * 2), target_h - ((inset + 1) * 2))
+    painter.setPen(QColor(213, 182, 111, 230))
+    painter.drawText(10, 10, target_w - 20, target_h - 20, Qt.AlignCenter | Qt.TextWordWrap, str(name or "-"))
+    painter.end()
+    return token
+
+
 def _render_species_step(window, panel, state):
     pad = 18
-    list_w = 260
-    details_x = pad + list_w + 18
+    grid_w = int((panel.width() - (pad * 2)) * 0.68)
+    details_x = pad + grid_w + 18
     details_w = panel.width() - details_x - pad
     body_h = panel.height() - (pad * 2)
 
-    list_panel = _create_framed_panel(window, panel, pad, pad, list_w, body_h)
-    scroll = QScrollArea(list_panel)
-    scroll.setGeometry(12, 12, list_w - 24, body_h - 24)
-    scroll.setWidgetResizable(True)
-    scroll.setStyleSheet(
+    grid_panel = _create_framed_panel(window, panel, pad, pad, grid_w, body_h)
+    grid_scroll = QScrollArea(grid_panel)
+    grid_scroll.setGeometry(10, 10, grid_w - 20, body_h - 20)
+    grid_scroll.setWidgetResizable(False)
+    grid_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    grid_scroll.setStyleSheet(
         "QScrollArea { background: transparent; border: none; }"
         "QScrollBar:vertical { background: #17110f; width: 12px; }"
         "QScrollBar::handle:vertical { background: #6c4a22; min-height: 24px; }"
     )
-    host = QWidget(scroll)
-    host.setStyleSheet("background: transparent;")
-    host_h = max(body_h - 24, len(SPECIES) * 42 + 12)
-    host.setMinimumSize(list_w - 42, host_h)
+    grid_host = QWidget(grid_scroll)
+    grid_host.setStyleSheet("background: transparent;")
 
-    button_y = 8
-    for species in SPECIES:
-        _create_species_button(
+    columns = 7
+    rows = 3
+    grid_pad = 6
+    card_gap = 3
+    inner_w = max(300, grid_w - 34)
+    card_w = max(42, (inner_w - (grid_pad * 2) - (card_gap * (columns - 1))) // columns)
+    card_h = max(124, min(172, (body_h - 20 - (grid_pad * 2) - (card_gap * (rows - 1))) // rows))
+    content_h = grid_pad + (rows * card_h) + ((rows - 1) * card_gap) + grid_pad
+    grid_host.setMinimumSize(inner_w, max(body_h - 20, content_h))
+    grid_host.resize(inner_w, max(body_h - 20, content_h))
+    for index, species_item in enumerate(SPECIES):
+        row = index // columns
+        col = index % columns
+        card_x = grid_pad + (col * (card_w + card_gap))
+        card_y = grid_pad + (row * (card_h + card_gap))
+        _create_species_card(
             window,
-            host,
-            8,
-            button_y,
-            list_w - 58,
-            34,
-            species,
-            species["id"] == state.get("species_id"),
+            grid_host,
+            card_x,
+            card_y,
+            card_w,
+            card_h,
+            species_item,
+            species_item["id"] == state.get("species_id"),
         )
-        button_y += 42
-
-    scroll.setWidget(host)
-    scroll.show()
+    grid_scroll.setWidget(grid_host)
+    grid_scroll.show()
 
     species = _species_by_id(state.get("species_id"))
     preview_h = max(220, min(330, int(body_h * 0.50)))
@@ -1626,28 +1903,12 @@ def _render_species_step(window, panel, state):
         "background: rgba(9, 7, 6, 145); color: #d5b66f; border: none; "
         "font-size: 28px; font-weight: 800;"
     )
-    image_path = _resolve_species_image_path(species)
-    pixmap = QPixmap(str(image_path)) if image_path.exists() else QPixmap()
-    image_hidden = _is_sensitive_species(species) and not _sensitive_image_visible(window, species)
+    pixmap = _load_species_source_pixmap(window, species)
     if pixmap.isNull():
         preview.setText(species["name"])
-    elif image_hidden:
-        preview.setText(f"{species['name']}\n\nBild ausgeblendet\nKlicken zum Anzeigen")
     else:
-        preview.setPixmap(pixmap.scaled(preview.width(), preview.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        preview.setPixmap(_cached_species_preview_pixmap(window, species, preview.width(), preview.height()))
     preview.show()
-    if _is_sensitive_species(species) and not pixmap.isNull():
-        preview_hit = QPushButton(preview_frame)
-        preview_hit.setGeometry(preview.geometry())
-        preview_hit.setText("")
-        preview_hit.setCursor(Qt.PointingHandCursor)
-        preview_hit.setStyleSheet(
-            "QPushButton { border: none; background: transparent; padding: 0px; }"
-            "QPushButton:hover { border: 1px solid rgba(242, 210, 139, 90); }"
-        )
-        preview_hit.clicked.connect(lambda checked=False, species_id=species["id"]: _toggle_sensitive_species_image(window, species_id))
-        preview_hit.raise_()
-        preview_hit.show()
 
     detail_y = pad + preview_h + 16
     detail_h = max(150, body_h - preview_h - 16)
@@ -1841,27 +2102,6 @@ def _select_species(window, species_id):
     state["species_id"] = species["id"]
     state["species_name"] = species["name"]
     state["species_image_path"] = species["image_path"]
-    _rerender(window)
-
-
-def _is_sensitive_species(species):
-    return str(species.get("id", "")).strip().lower() in SENSITIVE_IMAGE_SPECIES_IDS
-
-
-def _sensitive_image_visible(window, species):
-    visible = getattr(window, "_character_creator_sensitive_image_visible", None)
-    if not isinstance(visible, dict):
-        visible = {}
-        window._character_creator_sensitive_image_visible = visible
-    return bool(visible.get(species["id"], False))
-
-
-def _toggle_sensitive_species_image(window, species_id):
-    visible = getattr(window, "_character_creator_sensitive_image_visible", None)
-    if not isinstance(visible, dict):
-        visible = {}
-        window._character_creator_sensitive_image_visible = visible
-    visible[species_id] = not bool(visible.get(species_id, False))
     _rerender(window)
 
 
