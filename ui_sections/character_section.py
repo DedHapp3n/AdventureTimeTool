@@ -2,6 +2,25 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit
 
+from game_rules_loader import get_perks_by_type, load_perk_catalog
+
+
+def _get_perk_catalog(window):
+    catalog = getattr(window, "_perk_catalog", None)
+    if isinstance(catalog, dict):
+        return catalog
+    catalog = load_perk_catalog()
+    window._perk_catalog = catalog if isinstance(catalog, dict) else {}
+    return window._perk_catalog
+
+
+def _get_available_perks(window):
+    return get_perks_by_type(_get_perk_catalog(window), "perk")
+
+
+def _get_available_disadvantages(window):
+    return get_perks_by_type(_get_perk_catalog(window), "disadvantage")
+
 
 def _optional_theme_ui_pixmap(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip()
@@ -915,6 +934,9 @@ def render_character_section(window):
         return
     window._character_edit_cfg = window._character_edit_config()
     window._character_rendering = True
+    _get_perk_catalog(window)
+    window._available_perks = _get_available_perks(window)
+    window._available_disadvantages = _get_available_disadvantages(window)
     character_screen = window.main_ui_layout_config.get("character_screen")
     if not isinstance(character_screen, dict):
         window.render_character_front()
@@ -1999,6 +2021,9 @@ def render_character_section(window):
                     widget.setProperty("character_perk_row", row)
                     widget.setProperty("character_perk_field", field)
                     widget.setProperty("character_perk_cell_ref", cell_ref)
+                    widget.setProperty("character_perk_name_cell_ref", f"{name_col}{row}")
+                    widget.setProperty("character_perk_bp_cell_ref", f"{bp_col}{row}")
+                    widget.setProperty("character_perk_effect_cell_ref", f"{effect_col}{row}")
                     widget.setProperty("character_perk_sheet_name", sheet_name)
                     widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
                     widget.installEventFilter(window)
@@ -2159,6 +2184,9 @@ def render_character_section(window):
                     widget.setProperty("character_perk_row", row)
                     widget.setProperty("character_perk_field", field)
                     widget.setProperty("character_perk_cell_ref", cell_ref)
+                    widget.setProperty("character_perk_name_cell_ref", f"{name_col}{row}")
+                    widget.setProperty("character_perk_bp_cell_ref", f"{bp_col}{row}")
+                    widget.setProperty("character_perk_effect_cell_ref", f"{effect_col}{row}")
                     widget.setProperty("character_perk_sheet_name", sheet_name)
                     widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
                     widget.installEventFilter(window)

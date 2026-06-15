@@ -649,7 +649,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         dialog.accept()
 
     def copy_roll_command_and_open_browser():
-        command = roll_command_edit.text().strip()
+        command = _roll_command_with_label(roll_command_edit.text().strip(), display_name)
         QApplication.clipboard().setText(command)
         if callable(log_debug):
             log_debug("roll20", f"ROLL COPY OPEN_BROWSER {command}")
@@ -716,6 +716,14 @@ def _rect_from_cfg(rect_cfg, default_x, default_y, default_w, default_h, safe_in
         safe_int(rect_cfg.get("w", default_w), default_w),
         safe_int(rect_cfg.get("h", default_h), default_h),
     )
+
+
+def _roll_command_with_label(command, label):
+    clean_command = str(command or "").strip()
+    clean_label = " ".join(str(label or "").split())
+    if not clean_command or not clean_label:
+        return clean_command
+    return f"{clean_command} ({clean_label})"
 
 
 def _anchored_rect_from_cfg(rect_cfg, parent_w, default_top, default_w, default_h, safe_int):

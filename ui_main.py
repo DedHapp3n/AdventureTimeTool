@@ -27,6 +27,7 @@ from data_loader import DataLoader
 from formula_parser import FormulaParser
 from ui_tabs.sheet_tab import SheetTab
 from calculation_center import CalculationCenterDialog
+from ui_dialogs.perk_picker_dialog import open_perk_picker
 from ui_dialogs.resource_dialog import open_resource_dialog
 from ui_dialogs.roll20_dialog import open_roll20_dialog
 from ui_sections.equipment_section import render_equipment_section
@@ -5845,38 +5846,52 @@ class MainWindow(QMainWindow):
                 perk_table_type = str(obj.property("character_perk_table_type") or "")
                 if perk_table_type in ("perk", "disadvantage"):
                     row = int(obj.property("character_perk_row") or 0)
-                    field = str(obj.property("character_perk_field") or "")
-                    cell_ref = str(obj.property("character_perk_cell_ref") or "")
                     sheet_name = str(obj.property("character_perk_sheet_name") or "")
-                    old_value = str(obj.property("character_perk_value") or "")
-                    if not cell_ref or not sheet_name:
+                    name_cell = str(obj.property("character_perk_name_cell_ref") or "")
+                    bp_cell = str(obj.property("character_perk_bp_cell_ref") or "")
+                    effect_cell = str(obj.property("character_perk_effect_cell_ref") or "")
+                    if not sheet_name or not name_cell or not bp_cell or not effect_cell:
                         self._character_debug(
-                            f"[CHARACTER EDIT SKIP] field={perk_table_type}.{field} reason=no_cell_ref"
+                            f"[CHARACTER PERK PICKER SKIP] table={perk_table_type} row={row} reason=no_cell_ref"
                         )
                         return True
-                    multiline = field == "effect"
-                    title = (
-                        "Perk Effekt bearbeiten"
-                        if perk_table_type == "perk" and multiline
-                        else "Nachteil Effekt bearbeiten"
-                        if perk_table_type == "disadvantage" and multiline
-                        else "Perk bearbeiten"
-                        if perk_table_type == "perk"
-                        else "Nachteil bearbeiten"
-                    )
-                    new_value, ok = self._open_character_field_dialog(title, old_value, multiline=multiline)
-                    if not ok:
+
+                    picker_result = open_perk_picker(self, perk_table_type)
+                    if not isinstance(picker_result, dict):
                         return True
-                    tag = "CHARACTER PERK EDIT" if perk_table_type == "perk" else "CHARACTER DISADVANTAGE EDIT"
-                    self._character_debug(
-                        f'[{tag}] row={row} field={field} cell={cell_ref} old="{old_value}" new="{new_value}"'
-                    )
-                    self.loader.set_cell_value(sheet_name, cell_ref, str(new_value))
-                    self._recalculate_after_user_edit(
-                        reason=f"{sheet_name}!{cell_ref}",
-                        save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
-                        rerender=True,
-                    )
+
+                    action = str(picker_result.get("action") or "")
+                    entry = picker_result.get("entry")
+                    if action == "delete":
+                        self.loader.set_cell_value(sheet_name, name_cell, "")
+                        self.loader.set_cell_value(sheet_name, bp_cell, "")
+                        self.loader.set_cell_value(sheet_name, effect_cell, "")
+                        tag = "CHARACTER PERK DELETE" if perk_table_type == "perk" else "CHARACTER DISADVANTAGE DELETE"
+                        self._character_debug(f"[{tag}] row={row}")
+                        self._recalculate_after_user_edit(
+                            reason=f"{sheet_name}!{name_cell}:{effect_cell}",
+                            save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                            rerender=True,
+                        )
+                        return True
+
+                    if action == "select" and isinstance(entry, dict):
+                        if not isinstance(entry, dict):
+                            return True
+                        effect_text = str(entry.get("effect") or entry.get("description") or "")
+                        self.loader.set_cell_value(sheet_name, name_cell, str(entry.get("name", "")))
+                        self.loader.set_cell_value(sheet_name, bp_cell, str(entry.get("bp", 0)))
+                        self.loader.set_cell_value(sheet_name, effect_cell, effect_text)
+                        tag = "CHARACTER PERK PICK" if perk_table_type == "perk" else "CHARACTER DISADVANTAGE PICK"
+                        self._character_debug(
+                            f'[{tag}] row={row} name="{entry.get("name", "")}" id="{entry.get("id", "")}"'
+                        )
+                        self._recalculate_after_user_edit(
+                            reason=f"{sheet_name}!{name_cell}:{effect_cell}",
+                            save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                            rerender=True,
+                        )
+                        return True
                     return True
                 if bool(obj.property("character_paradigm_name_edit")):
                     cell_ref = str(obj.property("character_paradigm_cell_ref") or "")
