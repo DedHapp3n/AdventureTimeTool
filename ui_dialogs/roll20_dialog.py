@@ -331,11 +331,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         perk_title_label = QLabel(str(perk_suggestions_cfg.get("title", "Perk-/Nachteil-Vorschläge:")))
         perk_title_label.setStyleSheet(f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;")
         right_layout.addWidget(perk_title_label)
-        perk_suggestions_max_visible = safe_int(perk_suggestions_cfg.get("max_visible", 4), 4)
-        if perk_suggestions_max_visible <= 0:
-            perk_suggestions_max_visible = 4
-        visible_suggestions = perk_suggestions[:perk_suggestions_max_visible]
-        for suggestion in visible_suggestions:
+        for suggestion in perk_suggestions:
             label_text = str(suggestion.get("label", "Regelvorschlag"))
             source_type = "Perk" if str(suggestion.get("source_type", "")) == "perk" else "Nachteil"
             source_name = str(suggestion.get("source_name", "") or "")
@@ -357,11 +353,6 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             right_layout.addWidget(source_label)
             perk_suggestion_checkboxes.append(checkbox)
 
-        remaining = len(perk_suggestions) - len(visible_suggestions)
-        if remaining > 0:
-            more_label = QLabel(f"... +{remaining} weitere Vorschläge")
-            more_label.setStyleSheet(f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;")
-            right_layout.addWidget(more_label)
         perk_hint_label = QLabel(str(perk_suggestions_cfg.get("hint", "Angehakte Vorschläge wirken nur manuell auf diesen Wurf.")))
         perk_hint_label.setStyleSheet(f"color: {hint_text_color}; font-size: {hint_text_font_size}px;")
         right_layout.addWidget(perk_hint_label)
@@ -376,10 +367,11 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             source_label = str(suggestion.get("source_label", "") or "")
             source_text = f"Quelle: {source_label}" if source_label else "Quelle: Wohlbefinden"
             checkbox = QCheckBox(label_text, right_content)
-            checkbox.setChecked(False)
+            suggested_effect = suggestion.get("suggested_effect", {})
+            checkbox.setChecked(_effect_grants_dice(suggested_effect))
             checkbox.setStyleSheet(checkbox_style)
             checkbox.setProperty("wellbeing_label", source_label)
-            checkbox.setProperty("suggested_effect", suggestion.get("suggested_effect", {}))
+            checkbox.setProperty("suggested_effect", suggested_effect)
             checkbox.setToolTip(source_text)
             right_layout.addWidget(checkbox)
             source_row = QLabel(source_text)
@@ -1043,3 +1035,9 @@ def _effect_int(value):
         return int(value or 0)
     except Exception:
         return 0
+
+
+def _effect_grants_dice(effect):
+    if not isinstance(effect, dict):
+        return False
+    return _effect_int(effect.get("advantage", 0)) > 0 or _effect_int(effect.get("disadvantage", 0)) > 0

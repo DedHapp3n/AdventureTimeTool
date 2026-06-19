@@ -664,6 +664,27 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
         align="left",
     )
 
+    edit_allowed = window._paradigm_edit_allowed()
+    reset_cfg = panel_cfg.get("reset_button", {})
+    if not isinstance(reset_cfg, dict):
+        reset_cfg = {}
+    if edit_allowed and bool(reset_cfg.get("enabled", True)):
+        reset_button_cfg = {
+            "x": window._safe_int(reset_cfg.get("x", panel_w - 80), panel_w - 80),
+            "y": window._safe_int(reset_cfg.get("y", 8), 8),
+            "w": window._safe_int(reset_cfg.get("w", 70), 70),
+            "h": window._safe_int(reset_cfg.get("h", 26), 26),
+            "asset": str(reset_cfg.get("asset", "buttons/menu_button_small.png")),
+            "font_size": window._safe_int(reset_cfg.get("font_size", 12), 12),
+            "color": str(reset_cfg.get("color", panel_cfg.get("text_color", "#ffffff"))),
+        }
+        window.create_asset_text_button(
+            panel,
+            reset_button_cfg,
+            str(reset_cfg.get("text", "Reset")),
+            window.reset_character_paradigms_daily_brand,
+        )
+
     if not analysis.get("columns"):
         window.create_panel_text(
             panel,
@@ -675,7 +696,6 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
         )
         return
 
-    edit_allowed = window._paradigm_edit_allowed()
     rows_cfg = panel_cfg.get("rows", [])
     if not isinstance(rows_cfg, list) or not rows_cfg:
         rows_cfg = [{"id": "grad", "label": "Grad"}, {"id": "brand", "label": "Brand"}, {"id": "daily", "label": "Daily"}]
@@ -721,6 +741,8 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
     marker_row_label_offset_y = window._safe_int(marker_cfg.get("row_label_offset_y", 0), 0)
     marker_row_label_x = window._safe_int(marker_cfg.get("row_label_x", padding), padding)
     marker_row_label_w = window._safe_int(marker_cfg.get("row_label_w", max(10, label_w - 8)), max(10, label_w - 8))
+    daily_columns = max(1, window._safe_int(marker_cfg.get("daily_columns", 3), 3))
+    daily_inner_row_gap = window._safe_int(marker_cfg.get("daily_inner_row_gap", 3), 3)
     marker_center_under_header = bool(marker_cfg.get("grid_center_under_header", True))
 
     headers_cfg = panel_cfg.get("column_headers", {})
@@ -834,7 +856,8 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
             cells = col_info.get(f"{row_id}_cells", [])
             if not isinstance(cells, list):
                 cells = []
-            marker_group_w = max(1, len(cells) * marker_box_w + max(0, len(cells) - 1) * marker_box_gap)
+            visual_columns = min(len(cells), daily_columns) if row_id == "daily" else len(cells)
+            marker_group_w = max(1, visual_columns * marker_box_w + max(0, visual_columns - 1) * marker_box_gap)
             if marker_center_under_header:
                 header_center_x = header_rect["x"] + (header_rect["w"] // 2)
                 marker_base_x = header_center_x - (marker_group_w // 2) + marker_column_offset_x
@@ -844,8 +867,20 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
                 value = window.get_cache_display_value(str(analysis.get("sheet", "Charakterbogen")), cell_ref, "")
                 active = str(value or "").strip().lower() == "x"
                 marker = QLabel(panel)
-                mx = marker_base_x + marker_idx * (marker_box_w + marker_box_gap)
-                my = marker_grid_y + marker_grid_offset_y + row_idx * marker_row_gap + max(0, (row_h - marker_box_h) // 2)
+                if row_id == "daily":
+                    visual_col = marker_idx % daily_columns
+                    visual_row = marker_idx // daily_columns
+                else:
+                    visual_col = marker_idx
+                    visual_row = 0
+                mx = marker_base_x + visual_col * (marker_box_w + marker_box_gap)
+                my = (
+                    marker_grid_y
+                    + marker_grid_offset_y
+                    + row_idx * marker_row_gap
+                    + max(0, (row_h - marker_box_h) // 2)
+                    + visual_row * (marker_box_h + daily_inner_row_gap)
+                )
                 marker.setGeometry(mx, my, marker_box_w, marker_box_h)
                 marker.setAlignment(Qt.AlignCenter)
                 marker.setText("")

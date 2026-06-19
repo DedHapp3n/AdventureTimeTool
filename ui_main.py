@@ -3046,8 +3046,8 @@ class MainWindow(QMainWindow):
             seen_source = set()
             for suggestion in candidates:
                 source_key = (
-                    str(suggestion.get("source_type", "") or ""),
-                    str(suggestion.get("source_name", "") or ""),
+                    self._norm_match_text(suggestion.get("source_type", "")),
+                    self._norm_match_text(suggestion.get("source_name", "")),
                 )
                 if source_key in seen_source:
                     continue
@@ -3077,12 +3077,8 @@ class MainWindow(QMainWindow):
             effect = self._norm_match_text(suggestion.get("source_effect", ""))
             source_name = self._norm_match_text(suggestion.get("source_name", ""))
             reason = None
-            if source_name == "flink":
-                reason = "flink_handled_as_fixed_bonus"
-            elif "balance" in rule_id:
+            if "balance" in rule_id:
                 reason = "balance_not_for_initiative"
-            elif rule_id == "flink_initiative_bonus":
-                reason = "flink_rule_fixed_bonus"
             elif any(word in label for word in ("mobilität", "athletik", "bewegung", "parcour")):
                 reason = "athletic_mobility_only"
             else:
@@ -3096,6 +3092,27 @@ class MainWindow(QMainWindow):
                 log_debug("roll20", f"ROLL SUGGESTION FILTER context=initiative drop rule={rule_id or '-'} reason={reason}")
         log_debug("roll20", f"ROLL SUGGESTION FILTER context=initiative kept={len(kept)} dropped={dropped}")
         return kept
+
+    def deduplicate_roll_suggestions_by_source_name(self, suggestions):
+        if not isinstance(suggestions, list):
+            return []
+        deduped = []
+        seen = set()
+        for suggestion in suggestions:
+            if not isinstance(suggestion, dict):
+                continue
+            key = self._norm_match_text(suggestion.get("label", ""))
+            if not key:
+                key = (
+                    self._norm_match_text(suggestion.get("source_type", "")),
+                    self._norm_match_text(suggestion.get("source_name", "")),
+                    self._norm_match_text(suggestion.get("rule_id", "")),
+                )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(suggestion)
+        return deduped
 
     def get_fixed_roll_bonuses_for_context(self, skill_info, roll_context=None):
         result = {"extra_bonuses": [], "lines": []}
@@ -3455,11 +3472,7 @@ class MainWindow(QMainWindow):
             fixed_bonus_lines = []
         if not isinstance(fixed_extra_bonuses, list):
             fixed_extra_bonuses = []
-        if is_initiative_context:
-            perk_suggestions = [
-                s for s in perk_suggestions
-                if self._norm_match_text(s.get("rule_id", "")) != "flink_initiative_bonus"
-            ]
+        perk_suggestions = self.deduplicate_roll_suggestions_by_source_name(perk_suggestions)
         wellbeing_context = {
             "display_name": display_name,
             "display_specialization": specialization_text,
@@ -5184,7 +5197,11 @@ class MainWindow(QMainWindow):
         self._character_paradigm_debug(f"[CHARACTER PARADIGM] names row={name_row if name_row else '-'}")
 
         columns = []
-        marker_count = 3
+        marker_counts = {
+            "grad": 3,
+            "brand": 3,
+            "daily": 6,
+        }
         row_cells = {"grad": [], "brand": [], "daily": []}
         for idx, entry in enumerate(name_columns):
             _, _, base_col, name_text, _ = entry
@@ -5200,7 +5217,7 @@ class MainWindow(QMainWindow):
                 target_row = row_by_label.get(key, 0)
                 cells = []
                 if target_row > 0:
-                    for offset in range(marker_count):
+                    for offset in range(marker_counts.get(key, 3)):
                         cell_ref = f"{self._col_index_to_letters(base_col + offset)}{target_row}"
                         cells.append(cell_ref)
                         row_cells[key].append(cell_ref)
@@ -5218,6 +5235,31 @@ class MainWindow(QMainWindow):
             },
             "names_row": name_row,
         }
+
+    def reset_character_paradigms_daily_brand(self):
+        analysis = getattr(self, "character_paradigm_analysis", None)
+        if not isinstance(analysis, dict) or not analysis.get("rows"):
+            analysis = self._analyze_character_paradigm_area("Charakterbogen")
+
+        sheet_name = str(analysis.get("sheet", "Charakterbogen"))
+        rows = analysis.get("rows", {})
+        if not isinstance(rows, dict):
+            return
+
+        for row_id in ("brand", "daily"):
+            row_info = rows.get(row_id, {})
+            if not isinstance(row_info, dict):
+                continue
+            cells = row_info.get("cells", [])
+            if not isinstance(cells, list):
+                continue
+            for cell_ref in cells:
+                if cell_ref:
+                    self.loader.set_cell_value(sheet_name, cell_ref, "")
+
+        self.loader.save_active_character_json()
+        self.create_tabs_from_cache()
+        self.show_main_section("character")
 
     def _paradigm_edit_allowed(self):
         cfg = self.main_ui_layout_config.get("character_screen", {})
