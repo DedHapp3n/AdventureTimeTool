@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QEvent, QRect, QPoint
-from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush, QPainter, QPolygon, QLinearGradient
+from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush, QPainter, QPolygon, QLinearGradient, QGuiApplication
 import re
 import os
 import json
@@ -37,7 +37,6 @@ from ui_sections.notes_section import notes_debug_enabled, render_notes_section
 from ui_sections import settings_section
 from ui_sections import skills_section
 from ui_sections import character_section
-from ui_sections import browser_section
 from ui_sections import start_section
 
 
@@ -240,6 +239,25 @@ class MainWindow(QMainWindow):
 
         if self.loader.cell_cache:
             self.create_tabs_from_cache()
+
+    def ensure_visible_on_screen(self):
+        screen = QGuiApplication.screenAt(self.frameGeometry().center()) or QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        frame = self.frameGeometry()
+        if not available.intersects(frame):
+            frame.moveCenter(available.center())
+            self.move(frame.topLeft())
+        elif frame.top() < available.top() or frame.left() < available.left():
+            self.move(max(frame.left(), available.left()), max(frame.top(), available.top()))
+        self.raise_()
+        self.activateWindow()
+
+    def browser_section_module(self):
+        from ui_sections import browser_section
+
+        return browser_section
 
     def resolve_ui_asset_path(self, filename):
         if not filename:
@@ -651,7 +669,6 @@ class MainWindow(QMainWindow):
 
         self.update_main_nav_button_styles()
         self.show_main_section(self.current_main_section)
-        self.preload_browser_if_enabled()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -4175,10 +4192,12 @@ class MainWindow(QMainWindow):
         )
 
     def render_browser_screen(self):
+        browser_section = self.browser_section_module()
         return browser_section.render_browser_section(self)
 
     def preload_browser_if_enabled(self):
         try:
+            browser_section = self.browser_section_module()
             cfg = browser_section.load_browser_layout_config(self).get("browser_screen", {})
             if not isinstance(cfg, dict) or not bool(cfg.get("preload_on_start", False)):
                 return
