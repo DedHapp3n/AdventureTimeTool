@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap, QTransform
-from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QWidget
+from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit, QWidget
 
 from app_logger import log_debug
 
@@ -481,6 +481,102 @@ def _create_alpha_button_shadow(window, parent, src, w, h, shadow_cfg):
     return shadow
 
 
+def _normalize_skill_search_text(value):
+    text = str(value or "").strip().lower()
+    text = (
+        text.replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("ß", "ss")
+    )
+    return "".join(ch if ch.isalnum() else " " for ch in text).strip()
+
+
+def _find_skill_category_for_query(categories, query):
+    normalized_query = _normalize_skill_search_text(query)
+    if not normalized_query:
+        return ""
+    for category in categories:
+        if not isinstance(category, dict):
+            continue
+        category_id = str(category.get("id", "") or "").strip()
+        if not category_id or category_id.lower() == "se":
+            continue
+        skills = category.get("skills", [])
+        if not isinstance(skills, list):
+            continue
+        for skill in skills:
+            if not isinstance(skill, dict):
+                continue
+            haystack = " ".join(
+                _normalize_skill_search_text(skill.get(key, ""))
+                for key in ("name", "id", "specialization", "note")
+            )
+            if normalized_query in haystack:
+                return category_id
+    return ""
+
+
+def render_skill_search_box(window, parent, screen_cfg, categories):
+    cfg = screen_cfg.get("search_box", {}) if isinstance(screen_cfg, dict) else {}
+    if not isinstance(cfg, dict) or not bool(cfg.get("enabled", False)):
+        return None
+
+    x = window._safe_int(cfg.get("x", 1050), 1050)
+    y = window._safe_int(cfg.get("y", 80), 80)
+    w = max(1, window._safe_int(cfg.get("w", 350), 350))
+    h = max(1, window._safe_int(cfg.get("h", 30), 30))
+    font_size = window._safe_int(cfg.get("font_size", 14), 14)
+    min_chars = max(1, window._safe_int(cfg.get("min_chars", 2), 2))
+    placeholder = str(cfg.get("placeholder", "Fertigkeit suchen...") or "")
+    text_color = str(cfg.get("text_color", "#ffffff"))
+    placeholder_color = str(cfg.get("placeholder_color", "#9a8560"))
+    border_color = str(cfg.get("border_color", "rgba(242, 210, 139, 110)"))
+    background = str(cfg.get("background", "rgba(5, 5, 5, 150)"))
+
+    editor = QLineEdit(parent)
+    editor.setGeometry(x, y, w, h)
+    editor.setPlaceholderText(placeholder)
+    editor.setClearButtonEnabled(True)
+    editor.setStyleSheet(
+        "QLineEdit {"
+        f"background: {background};"
+        f"color: {text_color};"
+        f"border: 1px solid {border_color};"
+        "border-radius: 4px;"
+        "padding: 2px 8px;"
+        f"font-size: {font_size}px;"
+        "font-weight: 700;"
+        "}"
+        f"QLineEdit::placeholder {{ color: {placeholder_color}; }}"
+    )
+
+    def run_search():
+        query = editor.text().strip()
+        if len(query) < min_chars:
+            return
+        category_id = _find_skill_category_for_query(categories, query)
+        if category_id:
+            window.on_skill_category_clicked(category_id)
+            return
+        editor.setStyleSheet(
+            "QLineEdit {"
+            f"background: {background};"
+            f"color: {text_color};"
+            "border: 1px solid rgba(200, 70, 70, 160);"
+            "border-radius: 4px;"
+            "padding: 2px 8px;"
+            f"font-size: {font_size}px;"
+            "font-weight: 700;"
+            "}"
+            f"QLineEdit::placeholder {{ color: {placeholder_color}; }}"
+        )
+
+    editor.returnPressed.connect(run_search)
+    editor.show()
+    return editor
+
+
 def apply_skills_row_field_frame_if_enabled(window, parent, row_fields_cfg, field_id, rect_cfg, raise_frame=False):
     field_cfg = row_fields_cfg.get(field_id, {}) if isinstance(row_fields_cfg, dict) else {}
     frame_cfg = field_cfg.get("frame", {}) if isinstance(field_cfg, dict) else {}
@@ -698,6 +794,7 @@ def render_skills_section(window):
     if str(window.current_skill_category).strip().lower() == "se":
         render_skills_se_table(window, screen, screen_cfg, se_cfg)
         return screen
+    render_skill_search_box(window, screen, screen_cfg, categories)
     render_skills_table(window, screen, screen_cfg.get("table", {}), active_category, attribute_map)
     return screen
 

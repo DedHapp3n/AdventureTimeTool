@@ -36,9 +36,9 @@
     },
     "table": {
       "x": 20,
-      "y": 75,
+      "y": 116,
       "w": 1380,
-      "h": 700,
+      "h": 659,
       "header_h": 42,
       "row_h": 42,
       "min_row_h": 42,
@@ -539,6 +539,20 @@
         "exp": "#73d68a",
         "label": "#f2d28b"
       }
+    },
+    "search_box": {
+      "enabled": true,
+      "x": 1050,
+      "y": 82,
+      "w": 350,
+      "h": 28,
+      "placeholder": "Fertigkeit suchen...",
+      "min_chars": 2,
+      "font_size": 14,
+      "text_color": "#ffffff",
+      "placeholder_color": "#9a8560",
+      "border_color": "rgba(242, 210, 139, 110)",
+      "background": "rgba(5, 5, 5, 150)"
     }
   }
 }
