@@ -380,6 +380,9 @@ def rename_inventory_category(window, slot_id):
         "inventory_03": "Inventar 03",
         "inventory_04": "Inventar 04",
         "inventory_05": "Inventar 05",
+        "inventory_06": "Inventar 06",
+        "inventory_07": "Inventar 07",
+        "inventory_08": "Inventar 08",
     }
     current_label = window.get_inventory_tab_label(slot_id, default_labels.get(slot_id, slot_id))
     new_label, ok = QInputDialog.getText(
@@ -421,6 +424,8 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
     button_w = window._safe_int(tabs_cfg.get("button_w", 220), 220)
     button_h = window._safe_int(tabs_cfg.get("button_h", 42), 42)
     button_gap = window._safe_int(tabs_cfg.get("gap", 18), 18)
+    row_gap = window._safe_int(tabs_cfg.get("row_gap", button_gap), button_gap)
+    columns_per_row = max(0, window._safe_int(tabs_cfg.get("columns_per_row", 0), 0))
     tab_font_size = window._safe_int(tabs_cfg.get("font_size", 20), 20)
     active_color = str(tabs_cfg.get("active_color", "#f2d28b"))
     inactive_color = str(tabs_cfg.get("inactive_color", "#9a8560"))
@@ -439,7 +444,12 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
             continue
         title = str(category.get("title", category_id))
         is_active = category_id == window.current_inventory_category
-        button_x = index * (button_w + button_gap)
+        if columns_per_row > 0:
+            button_x = (index % columns_per_row) * (button_w + button_gap)
+            button_y = (index // columns_per_row) * (button_h + row_gap)
+        else:
+            button_x = index * (button_w + button_gap)
+            button_y = 0
         color = active_color if is_active else inactive_color
         border = "#b88a35" if is_active else "rgba(180, 140, 70, 90)"
         bg = "rgba(35, 24, 12, 185)" if is_active else "rgba(8, 8, 8, 125)"
@@ -449,10 +459,10 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
         has_asset = bool(use_asset_buttons and asset_path is not None and asset_path.exists() and asset_pixmap is not None)
         if has_asset:
             _create_inventory_alpha_pixmap_shadow(
-                window, tabs_container, asset_pixmap, button_x, 0, button_w, button_h, shadow_cfg
+                window, tabs_container, asset_pixmap, button_x, button_y, button_w, button_h, shadow_cfg
             )
         button = QPushButton(tabs_container)
-        button.setGeometry(button_x, 0, button_w, button_h)
+        button.setGeometry(button_x, button_y, button_w, button_h)
         button.setText(title)
         button.setCursor(Qt.PointingHandCursor)
         button.setProperty("inventory_category_id", category_id)

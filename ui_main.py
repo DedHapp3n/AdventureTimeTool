@@ -3956,6 +3956,24 @@ class MainWindow(QMainWindow):
                 "header_title": dynamic_sections[1]["title"] if len(dynamic_sections) > 1 else "Inventar",
                 "rows": list(dynamic_sections[1]["rows"]) if len(dynamic_sections) > 1 else [],
             },
+            {
+                "id": "inventory_06",
+                "default_label": "Inventar 06",
+                "header_title": "Inventar",
+                "rows": [],
+            },
+            {
+                "id": "inventory_07",
+                "default_label": "Inventar 07",
+                "header_title": "Inventar",
+                "rows": [],
+            },
+            {
+                "id": "inventory_08",
+                "default_label": "Inventar 08",
+                "header_title": "Inventar",
+                "rows": [],
+            },
         ]
 
         for slot in slots:
