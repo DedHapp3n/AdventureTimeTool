@@ -5,7 +5,7 @@ import html
 
 from PySide6.QtCore import QDateTime, QUrl, Qt
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QWidget
+from PySide6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QPushButton, QWidget
 
 from app_logger import log_debug, log_warning_once
 from app_paths import data_path, load_settings, resource_path, save_settings
@@ -36,12 +36,14 @@ DEFAULT_BROWSER_LAYOUT = {
         "allow_new_windows": False,
         "margin": 8,
         "default_url": DEFAULT_URL,
-        "show_url_bar": True,
+        "show_url_bar": False,
         "url_bar_h": 36,
-        "gap": 8,
-        "inner_margin": 10,
-        "background": "rgba(5, 5, 5, 125)",
-        "border_color": "rgba(242, 210, 139, 95)",
+        "gap": 0,
+        "inner_margin": 0,
+        "background": "transparent",
+        "border_color": "transparent",
+        "reload_button_size": 24,
+        "reload_button_margin": 8,
         "debug": {
             "enabled": False,
             "console_messages": False,
@@ -910,12 +912,25 @@ def _apply_browser_geometry(window, cfg):
     if _is_qt_widget_alive(fallback):
         fallback.setGeometry(inner_margin, web_y, web_w, min(140, web_h))
 
+    reload_button = getattr(window, "_browser_reload_button", None)
+    if _is_qt_widget_alive(reload_button):
+        button_size = _safe_int(window, cfg.get("reload_button_size", 24), 24)
+        button_margin = _safe_int(window, cfg.get("reload_button_margin", 8), 8)
+        reload_button.setGeometry(
+            max(inner_margin, inner_margin + web_w - button_size - button_margin),
+            web_y + button_margin,
+            button_size,
+            button_size,
+        )
+        reload_button.raise_()
+
 
 def _clear_dead_browser_refs(window):
     if getattr(window, "_browser_container", None) is not None and not _is_qt_widget_alive(window._browser_container):
         window._browser_container = None
         window._browser_web_view = None
         window._browser_url_edit = None
+        window._browser_reload_button = None
         window._browser_fallback_label = None
         window._browser_initialized = False
 
@@ -965,6 +980,19 @@ def ensure_browser_created(window):
                 web_view.setUrl(url)
 
             url_edit.returnPressed.connect(load_url)
+
+            reload_button = QPushButton("R", container)
+            reload_button.setToolTip("Reload Roll20")
+            reload_button.setCursor(Qt.PointingHandCursor)
+            reload_button.setStyleSheet(
+                "QPushButton { background: rgba(0, 0, 0, 150); color: #ffffff; "
+                "border: 1px solid rgba(242, 210, 139, 150); padding: 0; font-size: 12px; "
+                "font-weight: bold; } "
+                "QPushButton:hover { background: rgba(40, 35, 25, 190); } "
+                "QPushButton:pressed { background: rgba(70, 58, 35, 220); }"
+            )
+            reload_button.clicked.connect(web_view.reload)
+            window._browser_reload_button = reload_button
         else:
             log_warning_once("browser", "webengine-unavailable", "QtWebEngine is unavailable; browser fallback will open URLs externally.")
             fallback = QLabel(container)
@@ -985,6 +1013,17 @@ def ensure_browser_created(window):
                 QDesktopServices.openUrl(url)
 
             url_edit.returnPressed.connect(open_external_url)
+
+            reload_button = QPushButton("R", container)
+            reload_button.setToolTip("Reload Roll20")
+            reload_button.setCursor(Qt.PointingHandCursor)
+            reload_button.setStyleSheet(
+                "QPushButton { background: rgba(0, 0, 0, 150); color: #ffffff; "
+                "border: 1px solid rgba(242, 210, 139, 150); padding: 0; font-size: 12px; "
+                "font-weight: bold; }"
+            )
+            reload_button.clicked.connect(open_external_url)
+            window._browser_reload_button = reload_button
 
         window._browser_initialized = True
 

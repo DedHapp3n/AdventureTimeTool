@@ -3974,6 +3974,30 @@ class MainWindow(QMainWindow):
                 "header_title": "Inventar",
                 "rows": [],
             },
+            {
+                "id": "inventory_09",
+                "default_label": "Inventar 09",
+                "header_title": "Inventar",
+                "rows": [],
+            },
+            {
+                "id": "inventory_10",
+                "default_label": "Inventar 10",
+                "header_title": "Inventar",
+                "rows": [],
+            },
+            {
+                "id": "inventory_11",
+                "default_label": "Inventar 11",
+                "header_title": "Inventar",
+                "rows": [],
+            },
+            {
+                "id": "inventory_12",
+                "default_label": "Inventar 12",
+                "header_title": "Inventar",
+                "rows": [],
+            },
         ]
 
         for slot in slots:

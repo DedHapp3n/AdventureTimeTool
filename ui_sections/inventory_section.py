@@ -383,6 +383,10 @@ def rename_inventory_category(window, slot_id):
         "inventory_06": "Inventar 06",
         "inventory_07": "Inventar 07",
         "inventory_08": "Inventar 08",
+        "inventory_09": "Inventar 09",
+        "inventory_10": "Inventar 10",
+        "inventory_11": "Inventar 11",
+        "inventory_12": "Inventar 12",
     }
     current_label = window.get_inventory_tab_label(slot_id, default_labels.get(slot_id, slot_id))
     new_label, ok = QInputDialog.getText(
