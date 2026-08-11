@@ -44,6 +44,8 @@ DEFAULT_BROWSER_LAYOUT = {
         "border_color": "transparent",
         "reload_button_size": 24,
         "reload_button_margin": 8,
+        "reload_button_asset": "icons/checkmark_true.png",
+        "reload_button_text_color": "",
         "debug": {
             "enabled": False,
             "console_messages": False,
@@ -401,6 +403,64 @@ def _path_child_count(path):
         return sum(1 for _child in path.iterdir())
     except Exception:
         return 0
+
+
+def _theme_default_text_color(window):
+    theme_style = getattr(window, "theme_style", {})
+    if isinstance(theme_style, dict):
+        default_text = theme_style.get("default_text", {})
+        if isinstance(default_text, dict):
+            color = str(default_text.get("color", "") or "").strip()
+            if color:
+                return color
+    return "#e8e0c8"
+
+
+def _browser_asset_path(window, asset_rel_path):
+    asset_name = str(asset_rel_path or "").strip().replace("\\", "/").lstrip("/")
+    if not asset_name:
+        return None
+    primary_base = getattr(window, "theme_asset_base_path", None)
+    assets_dir = getattr(window, "assets_dir", resource_path("assets"))
+    candidates = []
+    if primary_base is not None:
+        candidates.append(primary_base / asset_name)
+    candidates.extend([
+        assets_dir / "themes" / "diablo" / "ui" / asset_name,
+        assets_dir / asset_name,
+    ])
+    expanded = []
+    for path in candidates:
+        expanded.append(path)
+        if path.suffix.lower() == ".png":
+            expanded.append(path.with_suffix(".jpg"))
+            expanded.append(path.with_suffix(".jpeg"))
+    for path in expanded:
+        try:
+            if path.exists():
+                return path
+        except Exception:
+            pass
+    return None
+
+
+def _reload_button_stylesheet(window, cfg):
+    text_color = str(cfg.get("reload_button_text_color", "") or "").strip() or _theme_default_text_color(window)
+    asset = _browser_asset_path(window, cfg.get("reload_button_asset", "icons/checkmark_true.png"))
+    if asset is None:
+        return (
+            f"QPushButton {{ background: rgba(0, 0, 0, 150); color: {text_color}; "
+            "border: 1px solid rgba(242, 210, 139, 150); padding: 0; font-size: 12px; "
+            "font-weight: bold; }"
+        )
+    asset_url = asset.as_posix()
+    return (
+        f"QPushButton {{ border-image: url(\"{asset_url}\") 0 0 0 0 stretch stretch; "
+        f"background: transparent; color: {text_color}; border: none; padding: 0; "
+        "font-size: 12px; font-weight: bold; } "
+        "QPushButton:hover { border: 1px solid rgba(255, 255, 255, 110); } "
+        "QPushButton:pressed { padding-top: 1px; padding-left: 1px; }"
+    )
 
 
 def _write_test_profile_path(window, path):
@@ -984,13 +1044,7 @@ def ensure_browser_created(window):
             reload_button = QPushButton("R", container)
             reload_button.setToolTip("Reload Roll20")
             reload_button.setCursor(Qt.PointingHandCursor)
-            reload_button.setStyleSheet(
-                "QPushButton { background: rgba(0, 0, 0, 150); color: #ffffff; "
-                "border: 1px solid rgba(242, 210, 139, 150); padding: 0; font-size: 12px; "
-                "font-weight: bold; } "
-                "QPushButton:hover { background: rgba(40, 35, 25, 190); } "
-                "QPushButton:pressed { background: rgba(70, 58, 35, 220); }"
-            )
+            reload_button.setStyleSheet(_reload_button_stylesheet(window, cfg))
             reload_button.clicked.connect(web_view.reload)
             window._browser_reload_button = reload_button
         else:
@@ -1017,11 +1071,7 @@ def ensure_browser_created(window):
             reload_button = QPushButton("R", container)
             reload_button.setToolTip("Reload Roll20")
             reload_button.setCursor(Qt.PointingHandCursor)
-            reload_button.setStyleSheet(
-                "QPushButton { background: rgba(0, 0, 0, 150); color: #ffffff; "
-                "border: 1px solid rgba(242, 210, 139, 150); padding: 0; font-size: 12px; "
-                "font-weight: bold; }"
-            )
+            reload_button.setStyleSheet(_reload_button_stylesheet(window, cfg))
             reload_button.clicked.connect(open_external_url)
             window._browser_reload_button = reload_button
 

@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit, QWidget
 
@@ -492,10 +492,10 @@ def _normalize_skill_search_text(value):
     return "".join(ch if ch.isalnum() else " " for ch in text).strip()
 
 
-def _find_skill_category_for_query(categories, query):
+def _find_skill_for_query(window, categories, query):
     normalized_query = _normalize_skill_search_text(query)
     if not normalized_query:
-        return ""
+        return None
     for category in categories:
         if not isinstance(category, dict):
             continue
@@ -513,8 +513,12 @@ def _find_skill_category_for_query(categories, query):
                 for key in ("name", "id", "specialization", "note")
             )
             if normalized_query in haystack:
-                return category_id
-    return ""
+                return {
+                    "category_id": category_id,
+                    "source_key": window.get_skill_source_key(category_id, skill),
+                    "query": str(query or "").strip(),
+                }
+    return None
 
 
 def render_skill_search_box(window, parent, screen_cfg, categories):
@@ -555,10 +559,24 @@ def render_skill_search_box(window, parent, screen_cfg, categories):
         query = editor.text().strip()
         if len(query) < min_chars:
             return
-        category_id = _find_skill_category_for_query(categories, query)
-        if category_id:
-            window.on_skill_category_clicked(category_id)
+        result = _find_skill_for_query(window, categories, query)
+        if result:
+            window.skills_search_highlight = result
+            window.on_skill_category_clicked(str(result.get("category_id", "")))
+
+            def clear_search_highlight(expected=result):
+                current = getattr(window, "skills_search_highlight", None)
+                if current != expected:
+                    return
+                window.skills_search_highlight = None
+                section_id = getattr(window, "current_main_section", "skills")
+                if section_id not in ("skills", "fertigkeiten"):
+                    section_id = "skills"
+                window.show_main_section(section_id)
+
+            QTimer.singleShot(max(600, window._safe_int(cfg.get("highlight_ms", 2500), 2500)), clear_search_highlight)
             return
+        window.skills_search_highlight = None
         editor.setStyleSheet(
             "QLineEdit {"
             f"background: {background};"
@@ -1505,6 +1523,18 @@ def render_skills_table(window, parent, table_cfg, category, attribute_map):
             attributes = []
         attribute_sum = window.calculate_skill_attribute_sum(skill, attribute_map)
         source_key = window.get_skill_source_key(category_id, skill)
+        highlight_info = getattr(window, "skills_search_highlight", None)
+        is_search_hit = (
+            isinstance(highlight_info, dict)
+            and str(highlight_info.get("category_id", "") or "") == category_id
+            and str(highlight_info.get("source_key", "") or "") == source_key
+        )
+        if is_search_hit:
+            row_bg.setStyleSheet(
+                "background: rgba(242, 210, 139, 42);"
+                "border: 2px solid rgba(127, 208, 255, 190);"
+                "border-radius: 4px;"
+            )
         source_info = window.skill_source_infos.get(source_key)
         if not isinstance(source_info, dict):
             source_info = window.build_skill_source_info(skill, category_id, attribute_map)

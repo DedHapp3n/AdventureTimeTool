@@ -16,6 +16,8 @@
     "border_color": "transparent",
     "reload_button_size": 24,
     "reload_button_margin": 8,
+    "reload_button_asset": "icons/checkmark_true.png",
+    "reload_button_text_color": "#f0ffe0",
     "debug": {
       "enabled": false,
       "console_messages": false,

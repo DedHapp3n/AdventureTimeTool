@@ -349,8 +349,8 @@
       "type": "perk",
       "category": "species",
       "bp": 2,
-      "effect": "Initiative +4; Athletik-Würfe zur Mobilitaetsbestimmung im Vorteil.",
-      "description": "",
+      "effect": "Initiative +4; Athletik-Würfe zur Mobilitätsbestimmung im Vorteil.",
+      "description": "Kann als aufwertbarer Perk gewählt werden.",
       "species": [
         "Lepurii"
       ],
@@ -358,10 +358,13 @@
       "tags": [
         "spezies",
         "bewegung",
-        "initiative"
+        "initiative",
+        "aufwertbar"
       ],
       "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 29",
-      "enabled": true
+      "enabled": true,
+      "level": 1,
+      "max_level": 4
     },
     {
       "id": "gefahreninstinkt",
@@ -1274,8 +1277,8 @@
       "type": "perk",
       "category": "species",
       "bp": 0,
-      "effect": "Spezies-gebundener Sinnesvorteil für Gehoer.",
-      "description": "",
+      "effect": "Spezies-gebundener Sinnesvorteil für Gehör.",
+      "description": "Kann als aufwertbarer Perk gewählt werden.",
       "species": [
         "Lepurii",
         "Kitsune"
@@ -1283,10 +1286,13 @@
       "requirements": [],
       "tags": [
         "spezies",
-        "sinn"
+        "sinn",
+        "aufwertbar"
       ],
       "source": "docs/Charakter_Erstellung_5.2.2_-_FIN.pdf Seiten 2, 19",
-      "enabled": true
+      "enabled": true,
+      "level": 1,
+      "max_level": 4
     },
     {
       "id": "illusion_magie",

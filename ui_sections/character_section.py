@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit
 
-from game_rules_loader import get_perks_by_type, load_perk_catalog
+from game_rules_loader import get_selectable_perks_by_type, load_perk_catalog
 
 
 def _get_perk_catalog(window):
@@ -15,11 +15,11 @@ def _get_perk_catalog(window):
 
 
 def _get_available_perks(window):
-    return get_perks_by_type(_get_perk_catalog(window), "perk")
+    return get_selectable_perks_by_type(_get_perk_catalog(window), "perk")
 
 
 def _get_available_disadvantages(window):
-    return get_perks_by_type(_get_perk_catalog(window), "disadvantage")
+    return get_selectable_perks_by_type(_get_perk_catalog(window), "disadvantage")
 
 
 def _optional_theme_ui_pixmap(window, asset_rel_path):

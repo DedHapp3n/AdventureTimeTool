@@ -3080,6 +3080,8 @@ class MainWindow(QMainWindow):
         if not isinstance(suggestions, list):
             return []
         context = str(roll_context or "").strip().lower()
+        if context == "character_initiative":
+            context = "initiative"
         if context != "initiative":
             return suggestions
 
@@ -3132,8 +3134,10 @@ class MainWindow(QMainWindow):
         return deduped
 
     def get_fixed_roll_bonuses_for_context(self, skill_info, roll_context=None):
-        result = {"extra_bonuses": [], "lines": []}
+        result = {"extra_bonuses": [], "lines": [], "advantages": 0, "disadvantages": 0}
         context = str(roll_context or "").strip().lower()
+        if context == "character_initiative":
+            context = "initiative"
         if context != "initiative":
             return result
         try:
@@ -3146,6 +3150,7 @@ class MainWindow(QMainWindow):
             return result
 
         flink_rule = None
+        lahm_rule = None
         for rule in rules:
             if not isinstance(rule, dict):
                 continue
@@ -3153,35 +3158,53 @@ class MainWindow(QMainWindow):
             label = self._norm_match_text(rule.get("label", ""))
             if rule_id == "flink_initiative_bonus" or ("flink" in label and "initiative" in label):
                 flink_rule = rule
-                break
-        if not isinstance(flink_rule, dict):
-            return result
+            elif rule_id == "lahm_initiative_malus" or ("lahm" in label and "initiative" in label):
+                lahm_rule = rule
 
         has_flink = False
+        has_lahm = False
         for entry in character_entries:
             if not isinstance(entry, dict):
                 continue
-            if self._norm_match_text(entry.get("type", "")) != "perk":
-                continue
-            if "flink" in self._norm_match_text(entry.get("name", "")):
+            entry_type = self._norm_match_text(entry.get("type", ""))
+            entry_name = self._norm_match_text(entry.get("name", ""))
+            entry_effect = self._norm_match_text(entry.get("effect", ""))
+            if entry_type == "perk" and "flink" in entry_name:
                 has_flink = True
-                break
-        if not has_flink:
-            return result
+            elif entry_type == "disadvantage" and ("lahm" in entry_name or "lahm" in entry_effect):
+                has_lahm = True
 
-        effect = flink_rule.get("suggested_effect", {})
-        if not isinstance(effect, dict):
-            effect = {}
-        try:
-            flat_bonus = int(effect.get("flat_bonus", effect.get("bonus", 0)) or 0)
-        except Exception:
-            flat_bonus = 0
-        if flat_bonus == 0:
-            return result
+        if has_flink and isinstance(flink_rule, dict):
+            effect = flink_rule.get("suggested_effect", {})
+            if not isinstance(effect, dict):
+                effect = {}
+            try:
+                flat_bonus = int(effect.get("flat_bonus", effect.get("bonus", 0)) or 0)
+            except Exception:
+                flat_bonus = 0
+            if flat_bonus != 0:
+                result["extra_bonuses"].append(flat_bonus)
+                result["lines"].append(f"Flink: Initiative +{flat_bonus} aktiv")
+                log_debug("roll20", f"ROLL FIXED BONUS context=initiative source=Flink bonus={flat_bonus} auto=True")
 
-        result["extra_bonuses"].append(flat_bonus)
-        result["lines"].append(f"Flink: Initiative +{flat_bonus} aktiv")
-        log_debug("roll20", f"ROLL FIXED BONUS context=initiative source=Flink bonus={flat_bonus} auto=True")
+        if has_lahm:
+            effect = lahm_rule.get("suggested_effect", {}) if isinstance(lahm_rule, dict) else {}
+            if not isinstance(effect, dict):
+                effect = {}
+            try:
+                flat_malus = int(effect.get("flat_malus", 4) or 0)
+            except Exception:
+                flat_malus = 4
+            try:
+                disadvantage = int(effect.get("disadvantage", 1) or 0)
+            except Exception:
+                disadvantage = 1
+            if flat_malus:
+                result["extra_bonuses"].append(-abs(flat_malus))
+            if disadvantage > 0:
+                result["disadvantages"] += disadvantage
+            result["lines"].append(f"Lahm: Initiative -{abs(flat_malus)} und {max(1, disadvantage)} Nachteil aktiv")
+            log_debug("roll20", f"ROLL FIXED BONUS context=initiative source=Lahm malus={flat_malus} disadvantage={disadvantage} auto=True")
         return result
 
     def build_specialization_preview_text(self, full_text, max_chars):
@@ -3463,7 +3486,7 @@ class MainWindow(QMainWindow):
         }
         if isinstance(roll_info, dict) and not bool(roll_info.get("perk_suggestions_enabled", True)):
             perk_suggestions = []
-            fixed_bonus_data = {"extra_bonuses": [], "lines": []}
+            fixed_bonus_data = self.get_fixed_roll_bonuses_for_context(skill_info_for_perks, roll_context=roll_context)
         else:
             try:
                 perk_rules_config = self.load_perk_rules_config()
@@ -3485,6 +3508,8 @@ class MainWindow(QMainWindow):
             fixed_bonus_data = {"extra_bonuses": [], "lines": []}
         fixed_bonus_lines = fixed_bonus_data.get("lines", [])
         fixed_extra_bonuses = fixed_bonus_data.get("extra_bonuses", [])
+        fixed_advantages = self._safe_int(fixed_bonus_data.get("advantages", 0), 0)
+        fixed_disadvantages = self._safe_int(fixed_bonus_data.get("disadvantages", 0), 0)
         if not isinstance(fixed_bonus_lines, list):
             fixed_bonus_lines = []
         if not isinstance(fixed_extra_bonuses, list):
@@ -3580,6 +3605,8 @@ class MainWindow(QMainWindow):
                 "wellbeing_suggestions": wellbeing_suggestions,
                 "fixed_bonus_lines": fixed_bonus_lines,
                 "fixed_extra_bonuses": fixed_extra_bonuses,
+                "fixed_advantages": fixed_advantages,
+                "fixed_disadvantages": fixed_disadvantages,
             },
             {
                 "safe_int": self._safe_int,
@@ -4780,18 +4807,19 @@ class MainWindow(QMainWindow):
                 missing_costs = True
                 continue
 
-            try:
-                display_value = int(str(info.get("display_value", "") or "0"))
-            except Exception:
-                display_value = 0
-            next_index = 1 if display_value > 0 else 0
-            if next_index >= len(se_costs) or next_index >= len(xp_costs):
+            available_se = int(entry.get("value", 0))
+            next_index = None
+            for idx, required_se in enumerate(se_costs):
+                if available_se < int(required_se):
+                    next_index = idx
+                    break
+            if next_index is None or next_index >= len(xp_costs):
                 suggestions.append(
                     {
                         "skill_name": skill_name,
                         "category_id": category_id,
                         "needed_se": 0,
-                        "available_se": int(entry.get("value", 0)),
+                        "available_se": available_se,
                         "needed_xp": 0,
                         "available_xp": int(available_xp),
                         "status": "unknown",
@@ -4802,7 +4830,6 @@ class MainWindow(QMainWindow):
 
             needed_se = int(se_costs[next_index])
             needed_xp = int(xp_costs[next_index])
-            available_se = int(entry.get("value", 0))
             if self.skills_debug_sources:
                 log_debug(
                     "skills",

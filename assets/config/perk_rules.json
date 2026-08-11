@@ -67,6 +67,35 @@
       "notes": "Nur Vorschlag. Nicht automatisch anwenden."
     },
     {
+      "id": "lahm_initiative_malus",
+      "type": "disadvantage",
+      "enabled": true,
+      "name_keywords": [
+        "lahm"
+      ],
+      "effect_keywords": [
+        "initiative",
+        "-4",
+        "nachteil"
+      ],
+      "skill_keywords": [
+        "initiative",
+        "ini-wurf"
+      ],
+      "specialization_keywords": [
+        "initiative"
+      ],
+      "context_keywords": [
+        "initiative"
+      ],
+      "label": "Lahm: Initiative -4 und im Nachteil",
+      "suggested_effect": {
+        "flat_malus": 4,
+        "disadvantage": 1
+      },
+      "notes": "PDF Charakter_Erstellung_5.2.2_-_FIN.pdf: Lahm gibt Initiative -4 und Initiative im Nachteil."
+    },
+    {
       "id": "flink_mobilitaet_athletik",
       "type": "perk",
       "enabled": true,

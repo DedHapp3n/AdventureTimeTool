@@ -1,6 +1,7 @@
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -8,12 +9,13 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QRadioButton,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
-from game_rules_loader import get_perks_by_type, load_perk_catalog
+from game_rules_loader import get_selectable_perks_by_type, load_perk_catalog
 
 
 def _get_perk_catalog(window):
@@ -125,7 +127,7 @@ def _dialog_stylesheet(window):
 
 def _entries_for_type(window, perk_type):
     requested_type = "disadvantage" if str(perk_type) == "disadvantage" else "perk"
-    return requested_type, get_perks_by_type(_get_perk_catalog(window), requested_type)
+    return requested_type, get_selectable_perks_by_type(_get_perk_catalog(window), requested_type)
 
 
 def _entry_search_text(entry):
@@ -139,18 +141,57 @@ def _entry_search_text(entry):
     return " ".join(str(part) for part in parts).casefold()
 
 
-def _format_detail(entry):
+def _safe_int(value, fallback=0):
+    try:
+        return int(value)
+    except Exception:
+        return fallback
+
+
+def _entry_max_level(entry):
+    if not isinstance(entry, dict):
+        return 1
+    return max(1, min(4, _safe_int(entry.get("max_level", 4), 4)))
+
+
+def _entry_level_bp(entry, selected_level):
+    base_bp = _safe_int(entry.get("bp", 0), 0)
+    if _entry_max_level(entry) <= 1:
+        return base_bp
+    return base_bp * max(1, min(4, _safe_int(selected_level, 1)))
+
+
+def _entry_with_selected_level(entry, selected_level):
+    selected = dict(entry)
+    level = max(1, min(_entry_max_level(entry), _safe_int(selected_level, 1)))
+    selected["selected_level"] = level
+    selected["level"] = level
+    selected["bp"] = _entry_level_bp(entry, level)
+    effect = str(entry.get("effect") or entry.get("description") or "")
+    if _entry_max_level(entry) > 1:
+        selected["effect"] = f"Stufe {level}: {effect}"
+    return selected
+
+
+def _format_detail(entry, selected_level=1):
     if not isinstance(entry, dict):
         return "Keine Einträge gefunden"
+    max_level = _entry_max_level(entry)
     rows = [
         f"Name: {entry.get('name', '')}",
         f"Typ: {entry.get('type', '')}",
         f"Kategorie: {entry.get('category', '')}",
-        f"BP: {entry.get('bp', 0)}",
-        "",
-        f"Effekt: {entry.get('effect', '')}",
-        f"Beschreibung: {entry.get('description', '')}",
+        f"BP: {_entry_level_bp(entry, selected_level)}",
     ]
+    if max_level and max_level != 1:
+        rows.append(f"Stufe: {selected_level} / {max_level}")
+    rows.extend(
+        [
+            "",
+            f"Effekt: {entry.get('effect', '')}",
+            f"Beschreibung: {entry.get('description', '')}",
+        ]
+    )
     species = entry.get("species", [])
     requirements = entry.get("requirements", [])
     tags = entry.get("tags", [])
@@ -301,6 +342,28 @@ def open_perk_picker(window, perk_type, current_entry=None):
     detail.setReadOnly(True)
     body.addWidget(detail, 3)
 
+    level_row = QHBoxLayout()
+    level_label = QLabel("Stufe:", dialog)
+    level_label.setStyleSheet("color: #d8aa4c; font-weight: 700;")
+    level_row.addWidget(level_label)
+    level_group = QButtonGroup(dialog)
+    level_buttons = []
+    selected_level = {"value": 1}
+    for level in range(1, 5):
+        button = QRadioButton(str(level), dialog)
+        button.setStyleSheet(
+            "QRadioButton { color: #eadfca; spacing: 5px; }"
+            "QRadioButton::indicator:checked { background: #d8aa4c; border: 1px solid #f3dfb2; }"
+            "QRadioButton::indicator:unchecked { background: #211812; border: 1px solid #6b4a22; }"
+        )
+        button.setProperty("perk_level", level)
+        level_group.addButton(button, level)
+        level_buttons.append(button)
+        level_row.addWidget(button)
+    level_buttons[0].setChecked(True)
+    level_row.addStretch(1)
+    root.addLayout(level_row)
+
     buttons = QHBoxLayout()
     buttons.addStretch(1)
     delete_button = QPushButton("Löschen", dialog)
@@ -318,6 +381,9 @@ def open_perk_picker(window, perk_type, current_entry=None):
         query = search.text().strip().casefold()
         list_widget.clear()
         selected_entry["value"] = None
+        selected_level["value"] = 1
+        level_buttons[0].setChecked(True)
+        refresh_level_controls(None)
         select_button.setEnabled(False)
         detail.setPlainText("")
         filtered = [entry for entry in entries if not query or query in _entry_search_text(entry)]
@@ -329,6 +395,19 @@ def open_perk_picker(window, perk_type, current_entry=None):
             list_widget.setItemWidget(item, PerkPickerRowWidget(window, entry, list_widget, item, confirm_selection))
         if not filtered:
             detail.setPlainText("Keine Einträge gefunden")
+
+    def refresh_level_controls(entry):
+        max_level = _entry_max_level(entry)
+        for index, button in enumerate(level_buttons, start=1):
+            button.setEnabled(index <= max_level)
+            button.setVisible(max_level > 1)
+        level_label.setVisible(max_level > 1)
+        if selected_level["value"] > max_level:
+            selected_level["value"] = max_level
+            level_buttons[max_level - 1].setChecked(True)
+        elif max_level <= 1:
+            selected_level["value"] = 1
+            level_buttons[0].setChecked(True)
 
     def refresh_row_selection():
         current = list_widget.currentItem()
@@ -342,13 +421,20 @@ def open_perk_picker(window, perk_type, current_entry=None):
         entry = current.data(Qt.UserRole) if current is not None else None
         selected_entry["value"] = entry if isinstance(entry, dict) else None
         select_button.setEnabled(isinstance(entry, dict))
-        detail.setPlainText(_format_detail(entry))
+        refresh_level_controls(entry)
+        detail.setPlainText(_format_detail(entry, selected_level["value"]))
         refresh_row_selection()
+
+    def on_level_changed(button_id):
+        selected_level["value"] = max(1, min(4, int(button_id)))
+        entry = selected_entry.get("value")
+        if isinstance(entry, dict):
+            detail.setPlainText(_format_detail(entry, selected_level["value"]))
 
     def confirm_selection():
         entry = selected_entry.get("value")
         if isinstance(entry, dict):
-            result["value"] = {"action": "select", "entry": entry}
+            result["value"] = {"action": "select", "entry": _entry_with_selected_level(entry, selected_level["value"])}
             dialog.accept()
 
     def delete_row():
@@ -358,6 +444,7 @@ def open_perk_picker(window, perk_type, current_entry=None):
     search.textChanged.connect(refresh_list)
     list_widget.currentItemChanged.connect(on_current_changed)
     list_widget.itemDoubleClicked.connect(lambda _item: confirm_selection())
+    level_group.idClicked.connect(on_level_changed)
     select_button.clicked.connect(confirm_selection)
     delete_button.clicked.connect(delete_row)
     cancel_button.clicked.connect(dialog.reject)

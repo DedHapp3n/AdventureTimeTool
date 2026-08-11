@@ -135,6 +135,8 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     fixed_extra_bonuses = model.get("fixed_extra_bonuses", [])
     if not isinstance(fixed_extra_bonuses, list):
         fixed_extra_bonuses = []
+    fixed_advantages = max(0, safe_int(model.get("fixed_advantages", 0), 0))
+    fixed_disadvantages = max(0, safe_int(model.get("fixed_disadvantages", 0), 0))
 
     dynamic_extra = 0
     dynamic_extra += max(0, len(specialization_items) - 6) * 14
@@ -393,11 +395,11 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     controls = QVBoxLayout()
     advantages_spin = QSpinBox(dialog)
     advantages_spin.setRange(0, 99)
-    advantages_spin.setValue(0)
+    advantages_spin.setValue(fixed_advantages)
     advantages_spin.setButtonSymbols(QSpinBox.NoButtons)
     disadvantages_spin = QSpinBox(dialog)
     disadvantages_spin.setRange(0, 99)
-    disadvantages_spin.setValue(0)
+    disadvantages_spin.setValue(fixed_disadvantages)
     disadvantages_spin.setButtonSymbols(QSpinBox.NoButtons)
     manual_bonus_spin = QSpinBox(dialog)
     manual_bonus_spin.setRange(-999, 999)

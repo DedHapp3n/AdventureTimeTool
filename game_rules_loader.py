@@ -34,6 +34,10 @@ DEFAULT_PERK_ENTRY: dict[str, Any] = {
     "requirements": [],
     "tags": [],
     "source": "",
+    "level": 1,
+    "max_level": 4,
+    "upgrade_of": "",
+    "levels": [],
     "enabled": True,
 }
 
@@ -75,7 +79,7 @@ def load_perk_catalog() -> dict[str, Any]:
 def _normalize_perk_entry(perk: dict[str, Any]) -> dict[str, Any]:
     normalized = deepcopy(DEFAULT_PERK_ENTRY)
     normalized.update(perk)
-    for key in ("species", "requirements", "tags"):
+    for key in ("species", "requirements", "tags", "levels"):
         if not isinstance(normalized.get(key), list):
             normalized[key] = []
     normalized["enabled"] = bool(normalized.get("enabled", True))
@@ -92,3 +96,21 @@ def get_enabled_perks(catalog: dict) -> list:
 def get_perks_by_type(catalog: dict, perk_type: str) -> list:
     normalized_type = str(perk_type or "").strip()
     return [perk for perk in get_enabled_perks(catalog) if perk.get("type") == normalized_type]
+
+
+def _safe_int(value: Any, fallback: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return fallback
+
+
+def get_selectable_perks_by_type(catalog: dict, perk_type: str) -> list:
+    selectable = []
+    for perk in get_perks_by_type(catalog, perk_type):
+        entry = dict(perk)
+        entry["level"] = _safe_int(entry.get("level", 1), 1)
+        entry["max_level"] = max(1, min(4, _safe_int(entry.get("max_level", 4), 4)))
+        entry["levels"] = []
+        selectable.append(entry)
+    return selectable

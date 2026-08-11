@@ -561,6 +561,7 @@ def _render_attributes_step(window, panel, state):
     body_attrs = attributes.get("body", {})
     mind_attrs = attributes.get("mind", {})
     total = _attribute_total(attributes)
+    total_color = "#d86b3a" if total > 5 else "#cdbb8a"
 
     outer = _create_framed_panel(window, panel, pad, pad, body_w, body_h)
 
@@ -572,8 +573,8 @@ def _render_attributes_step(window, panel, state):
 
     points = QLabel(outer)
     points.setGeometry(26, 60, body_w - 52, 26)
-    points.setText(f"Verteilte Punkte: {total}")
-    points.setStyleSheet("background: transparent; color: #cdbb8a; font-size: 15px; font-weight: 700;")
+    points.setText(f"Verteilte AP: {total} / 5")
+    points.setStyleSheet(f"background: transparent; color: {total_color}; font-size: 15px; font-weight: 700;")
     points.show()
 
     group_gap = 22
@@ -694,6 +695,20 @@ def _clamp_attribute_value(value):
 
 
 def _attribute_total(attributes):
+    total = 0
+    for group_key in ("body", "mind"):
+        group = attributes.get(group_key, {})
+        if isinstance(group, dict):
+            total += sum(_attribute_point_cost(value) for value in group.values())
+    return total
+
+
+def _attribute_point_cost(value):
+    value = _clamp_attribute_value(value)
+    return (value * (value + 1)) // 2
+
+
+def _attribute_raw_total(attributes):
     total = 0
     for group_key in ("body", "mind"):
         group = attributes.get(group_key, {})
@@ -994,7 +1009,8 @@ def build_character_state(window) -> dict:
     clean_attributes = {
         "body": body,
         "mind": mind,
-        "total": sum(body.values()) + sum(mind.values()),
+        "total": _attribute_total({"body": body, "mind": mind}),
+        "raw_total": _attribute_raw_total({"body": body, "mind": mind}),
     }
     clean_skills = _build_clean_skills(window, state)
     clean_perks = _build_clean_perks(state)
@@ -1489,7 +1505,8 @@ def _summary_attributes_section(parent, x, y, w, character_state):
         [
             ("Körper", body_text),
             ("Geist", mind_text),
-            ("Verteilte Punkte", str(attributes.get("total", 0))),
+            ("Verteilte AP", f"{attributes.get('total', 0)} / 5"),
+            ("Attributsumme", str(attributes.get("raw_total", 0))),
         ],
     )
 
