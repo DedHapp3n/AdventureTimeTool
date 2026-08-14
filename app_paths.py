@@ -14,6 +14,17 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "theme": "diablo",
     "themes": [],
     "last_character": "",
+    "startup": {
+        "load_last_character": True,
+        "start_tab": "character",
+        "debug_on_start": False,
+    },
+    "appearance": {
+        "ui_scale": 1.0,
+    },
+    "roll20": {
+        "open_browser_on_roll": True,
+    },
     "window": {
         "width": 1500,
         "height": 900,
@@ -109,6 +120,62 @@ def normalize_browser_settings(value: Any) -> tuple[dict[str, Any], bool]:
     return browser, changed
 
 
+def normalize_startup_settings(value: Any) -> tuple[dict[str, Any], bool]:
+    changed = False
+    source = dict(value) if isinstance(value, dict) else {}
+    if not isinstance(value, dict):
+        changed = True
+    valid_tabs = {"character", "skills", "inventory", "equipment", "magic", "notes"}
+    start_tab = str(source.get("start_tab", DEFAULT_SETTINGS["startup"]["start_tab"]) or "").strip()
+    if start_tab not in valid_tabs:
+        start_tab = DEFAULT_SETTINGS["startup"]["start_tab"]
+        changed = True
+    startup = {
+        "load_last_character": bool(source.get("load_last_character", DEFAULT_SETTINGS["startup"]["load_last_character"])),
+        "start_tab": start_tab,
+        "debug_on_start": bool(source.get("debug_on_start", DEFAULT_SETTINGS["startup"]["debug_on_start"])),
+    }
+    if (
+        source.get("load_last_character") != startup["load_last_character"]
+        or source.get("start_tab") != startup["start_tab"]
+        or source.get("debug_on_start") != startup["debug_on_start"]
+    ):
+        changed = True
+    return startup, changed
+
+
+def normalize_appearance_settings(value: Any) -> tuple[dict[str, Any], bool]:
+    changed = False
+    source = dict(value) if isinstance(value, dict) else {}
+    if not isinstance(value, dict):
+        changed = True
+    try:
+        ui_scale = float(source.get("ui_scale", DEFAULT_SETTINGS["appearance"]["ui_scale"]))
+    except Exception:
+        ui_scale = DEFAULT_SETTINGS["appearance"]["ui_scale"]
+        changed = True
+    if ui_scale not in {0.9, 1.0, 1.1, 1.25}:
+        ui_scale = DEFAULT_SETTINGS["appearance"]["ui_scale"]
+        changed = True
+    appearance = {"ui_scale": ui_scale}
+    if source.get("ui_scale") != appearance["ui_scale"]:
+        changed = True
+    return appearance, changed
+
+
+def normalize_roll20_settings(value: Any) -> tuple[dict[str, Any], bool]:
+    changed = False
+    source = dict(value) if isinstance(value, dict) else {}
+    if not isinstance(value, dict):
+        changed = True
+    roll20 = {
+        "open_browser_on_roll": bool(source.get("open_browser_on_roll", DEFAULT_SETTINGS["roll20"]["open_browser_on_roll"])),
+    }
+    if source.get("open_browser_on_roll") != roll20["open_browser_on_roll"]:
+        changed = True
+    return roll20, changed
+
+
 def load_settings() -> tuple[dict[str, Any], bool]:
     settings_file = data_path("settings.json")
     loaded = _safe_json_load(settings_file)
@@ -116,6 +183,9 @@ def load_settings() -> tuple[dict[str, Any], bool]:
     created = False
     settings = dict(DEFAULT_SETTINGS)
     settings["window"] = dict(DEFAULT_SETTINGS["window"])
+    settings["startup"] = dict(DEFAULT_SETTINGS["startup"])
+    settings["appearance"] = dict(DEFAULT_SETTINGS["appearance"])
+    settings["roll20"] = dict(DEFAULT_SETTINGS["roll20"])
     settings["browser"] = {
         "last_url": DEFAULT_SETTINGS["browser"]["last_url"],
         "debug": dict(DEFAULT_SETTINGS["browser"]["debug"]),
@@ -146,6 +216,12 @@ def load_settings() -> tuple[dict[str, Any], bool]:
     else:
         settings["themes"] = []
     settings["last_character"] = str(loaded.get("last_character", "") or "")
+    settings["startup"], startup_changed = normalize_startup_settings(loaded.get("startup"))
+    changed = changed or startup_changed
+    settings["appearance"], appearance_changed = normalize_appearance_settings(loaded.get("appearance"))
+    changed = changed or appearance_changed
+    settings["roll20"], roll20_changed = normalize_roll20_settings(loaded.get("roll20"))
+    changed = changed or roll20_changed
 
     window_loaded = loaded.get("window", {})
     if isinstance(window_loaded, dict):
@@ -180,6 +256,9 @@ def save_settings(settings: dict[str, Any]) -> None:
         "theme": str(settings.get("theme", DEFAULT_SETTINGS["theme"]) or DEFAULT_SETTINGS["theme"]),
         "themes": [str(item) for item in themes if str(item).strip()],
         "last_character": str(settings.get("last_character", "") or ""),
+        "startup": normalize_startup_settings(settings.get("startup"))[0],
+        "appearance": normalize_appearance_settings(settings.get("appearance"))[0],
+        "roll20": normalize_roll20_settings(settings.get("roll20"))[0],
         "window": {
             "width": int(settings.get("window", {}).get("width", DEFAULT_SETTINGS["window"]["width"])),
             "height": int(settings.get("window", {}).get("height", DEFAULT_SETTINGS["window"]["height"])),

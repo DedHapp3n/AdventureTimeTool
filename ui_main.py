@@ -114,6 +114,13 @@ class MainWindow(QMainWindow):
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
 
         self.loader = DataLoader()
+        startup_settings = self.settings.get("startup", {}) if isinstance(self.settings, dict) else {}
+        if not bool(startup_settings.get("load_last_character", True)):
+            self.loader.cell_cache = {}
+            self.loader.app_meta = {}
+            self.loader.active_cache_path = ""
+            self.loader.current_character_name = "unknown_character"
+            self.loader.source_file_path = ""
         self.parser = FormulaParser()
         self.base_dir = app_base_dir()
         self.assets_dir = resource_path("assets")
@@ -140,14 +147,20 @@ class MainWindow(QMainWindow):
         self.current_active_grid_cell = None
         self.current_reference_color_map = {}
         self.current_indirect_references = []
-        self.current_main_section = "character" if self.has_real_character_loaded() else "start"
+        startup_tab = str(startup_settings.get("start_tab", "character") or "character")
+        valid_start_tabs = {"character", "skills", "inventory", "equipment", "magic", "notes"}
+        self.current_main_section = startup_tab if self.has_real_character_loaded() and startup_tab in valid_start_tabs else "start"
         self.current_skill_category = "allgemein"
         self._skills_se_loading = False
         self.current_inventory_category = "inventory_01"
         self.skill_source_infos = {}
         self.skills_debug_sources = False
         self.skill_sheet_mapping_config = None
-        self.settings_debug_on_start = False
+        self.settings_debug_on_start = bool(
+            startup_settings.get("debug_on_start", False)
+            if isinstance(startup_settings, dict)
+            else False
+        )
         self.nav_buttons = {}
         self.debug_dialog = None
         self.content_layer = None
@@ -677,6 +690,8 @@ class MainWindow(QMainWindow):
 
         self.update_main_nav_button_styles()
         self.show_main_section(self.current_main_section)
+        if bool(getattr(self, "settings_debug_on_start", False)):
+            self.open_debug_dialog()
         self.window_close_button.raise_()
         self.settings_button.raise_()
 
@@ -2918,6 +2933,10 @@ class MainWindow(QMainWindow):
         return f"/r {dice_part}{''.join(bonus_parts)}"
 
     def open_roll20_browser_section(self):
+        roll20_settings = self.settings.get("roll20", {}) if isinstance(self.settings, dict) else {}
+        if not bool(roll20_settings.get("open_browser_on_roll", True)):
+            log_debug("roll20", "ROLL OPEN_BROWSER skipped=settings")
+            return
         log_debug("roll20", "ROLL OPEN_BROWSER section=browser")
         self.show_main_section("browser")
 
