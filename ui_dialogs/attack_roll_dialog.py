@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui_dialogs.attack_roll_logic import build_attack_roll_command, parse_weapon_row, safe_int, weapon_roll_components
+from ui_dialogs.window_chrome import install_frameless_dialog_chrome
 
 
 def open_attack_roll_dialog(window, weapon_data: dict):
@@ -22,6 +23,9 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     weapon = parse_weapon_row(weapon_data)
     dialog = QDialog(window)
     dialog.setWindowTitle("Attacke")
+    install_frameless_dialog_chrome(dialog)
+    dialog.setAttribute(Qt.WA_TranslucentBackground, True)
+    dialog.setAutoFillBackground(False)
     dialog.resize(760, 620)
     dialog.setModal(False)
     dialog.setStyleSheet(_dialog_stylesheet(window))
@@ -38,6 +42,7 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     title.setObjectName("Title")
     title.setAlignment(Qt.AlignCenter)
     title.setGeometry(64, 10, 632, 34)
+    title.installEventFilter(dialog._frameless_drag_filter)
     title.raise_()
 
     root = QHBoxLayout(dialog)
@@ -588,9 +593,9 @@ def _dialog_stylesheet(window):
     )
     return """
 QDialog {
-    background: #0f0b08;
+    background: transparent;
     color: #eadfca;
-    border: 2px solid #8a6128;
+    border: none;
     font-size: 13px;
 }
 QWidget#Panel {

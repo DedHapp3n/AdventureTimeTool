@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ui_dialogs.window_chrome import install_frameless_dialog_chrome
+
 
 def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     callbacks = callbacks if isinstance(callbacks, dict) else {}
@@ -147,18 +149,22 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     dialog = QDialog(parent)
     dialog.setWindowTitle(custom_dialog_title or dialog_title)
     dialog.setModal(True)
-    if frameless_window:
-        dialog.setWindowFlag(Qt.FramelessWindowHint, True)
+    install_frameless_dialog_chrome(dialog)
+    if use_main_theme_background or main_frame_enabled:
+        dialog.setAttribute(Qt.WA_TranslucentBackground, True)
+        dialog.setAutoFillBackground(False)
     if fixed_size:
         dialog.setFixedSize(dialog_w, dialog_h)
     else:
         dialog.resize(dialog_w, min(980, dialog_h + dynamic_extra))
+    dialog_style_bg = "transparent" if use_main_theme_background or main_frame_enabled else dialog_bg
+    dialog_border_color = "transparent" if use_main_theme_background or main_frame_enabled else str(dialog_cfg.get("border_color", accent_color))
     dialog.setStyleSheet(
         _dialog_style(
-            dialog_bg,
+            dialog_style_bg,
             text_color,
             base_font_size,
-            str(dialog_cfg.get("border_color", accent_color)),
+            dialog_border_color,
             {} if main_frame_enabled else dialog_frame_cfg,
             resolve_roll_asset_path,
         )
@@ -177,6 +183,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     root = QWidget(dialog)
     root.setObjectName("roll20Root")
     root.setGeometry(0, 0, dialog_w, dialog_h)
+    root.installEventFilter(dialog._frameless_drag_filter)
     root_background = "transparent" if use_main_theme_background or main_frame_enabled else dialog_bg
     root.setStyleSheet(f"QWidget#roll20Root {{ background: {root_background}; }}")
 
@@ -218,6 +225,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     )
     header.setAlignment(header_alignment | Qt.AlignVCenter)
     header.setText(_elided_text(header, header_text, title_rect[2]))
+    header.installEventFilter(dialog._frameless_drag_filter)
     title_layout.addWidget(header)
 
     if is_character_initiative:

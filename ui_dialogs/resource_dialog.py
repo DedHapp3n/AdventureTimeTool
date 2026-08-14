@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QIcon
 
+from ui_dialogs.window_chrome import install_frameless_dialog_chrome
+
 
 def open_resource_dialog(parent, model, callbacks=None, style_context=None):
     callbacks = callbacks if isinstance(callbacks, dict) else {}
@@ -64,6 +66,7 @@ def open_resource_dialog(parent, model, callbacks=None, style_context=None):
     dialog = QDialog(parent)
     dialog.setWindowTitle(title)
     dialog.setModal(True)
+    install_frameless_dialog_chrome(dialog)
     dialog.resize(
         int(style_context.get("width", 390) or 390),
         int(style_context.get("height", 260) or 260),
@@ -75,6 +78,7 @@ def open_resource_dialog(parent, model, callbacks=None, style_context=None):
 
     title_label = QLabel(title, dialog)
     title_label.setStyleSheet(f"font-size: {title_font_size}px; font-weight: 700; color: {accent_color};")
+    title_label.installEventFilter(dialog._frameless_drag_filter)
     layout.addWidget(title_label)
 
     info_label = QLabel(dialog)

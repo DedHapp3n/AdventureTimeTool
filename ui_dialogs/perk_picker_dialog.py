@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from game_rules_loader import get_selectable_perks_by_type, load_perk_catalog
+from ui_dialogs.window_chrome import install_frameless_dialog_chrome
 
 
 def _get_perk_catalog(window):
@@ -311,6 +312,7 @@ def open_perk_picker(window, perk_type, current_entry=None):
     requested_type, entries = _entries_for_type(window, perk_type)
     dialog = QDialog(window)
     dialog.setWindowTitle("Nachteil auswählen" if requested_type == "disadvantage" else "Perk auswählen")
+    install_frameless_dialog_chrome(dialog)
     dialog.resize(760, 540)
     dialog.setStyleSheet(_dialog_stylesheet(window))
 
@@ -323,6 +325,7 @@ def open_perk_picker(window, perk_type, current_entry=None):
 
     title = QLabel("Nachteil-Katalog" if requested_type == "disadvantage" else "Perk-Katalog", dialog)
     title.setObjectName("PickerTitle")
+    title.installEventFilter(dialog._frameless_drag_filter)
     root.addWidget(title)
 
     search = QLineEdit(dialog)

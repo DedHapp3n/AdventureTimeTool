@@ -30,6 +30,7 @@ from calculation_center import CalculationCenterDialog
 from ui_dialogs.perk_picker_dialog import open_perk_picker
 from ui_dialogs.resource_dialog import open_resource_dialog
 from ui_dialogs.roll20_dialog import open_roll20_dialog
+from ui_dialogs.window_chrome import install_frameless_dialog_chrome
 from ui_sections.equipment_section import render_equipment_section
 from ui_sections import inventory_section
 from ui_sections.magic_section import render_magic_section
@@ -103,6 +104,9 @@ class MainWindow(QMainWindow):
 
         ensure_runtime_defaults()
         self.setWindowTitle("Adventure Time Tool")
+        self.setWindowFlag(Qt.FramelessWindowHint, True)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setStyleSheet("background: transparent;")
         self.settings, _ = load_settings()
         set_debug_settings(self.settings.get("debug", {}) if isinstance(self.settings, dict) else {})
         window_settings = self.settings.get("window", {}) if isinstance(self.settings, dict) else {}
@@ -178,8 +182,12 @@ class MainWindow(QMainWindow):
         self._browser_initialized = False
         self._browser_last_url = ""
         self._browser_popup_pages = []
+        self._window_drag_offset = None
         self.game_canvas = QWidget()
-        self.game_canvas.setStyleSheet("background-color: #101010;")
+        self.game_canvas.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.game_canvas.setAutoFillBackground(False)
+        self.game_canvas.setStyleSheet("background: transparent;")
+        self.game_canvas.installEventFilter(self)
         self.setCentralWidget(self.game_canvas)
         self.reload_theme()
 
@@ -5408,8 +5416,13 @@ class MainWindow(QMainWindow):
     def _open_large_text_dialog(self, title, value):
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
+        install_frameless_dialog_chrome(dialog)
         dialog.resize(640, 420)
         layout = QVBoxLayout(dialog)
+        title_label = QLabel(title, dialog)
+        title_label.setStyleSheet("font-size: 16px; font-weight: 700;")
+        title_label.installEventFilter(dialog._frameless_drag_filter)
+        layout.addWidget(title_label)
         editor = QTextEdit(dialog)
         editor.setPlainText("" if value is None else str(value))
         layout.addWidget(editor)
@@ -5430,8 +5443,40 @@ class MainWindow(QMainWindow):
         initial_text = "" if initial_value is None else str(initial_value)
         if multiline:
             return self._open_large_text_dialog(title, initial_text)
-        text, ok = QInputDialog.getText(self, title, "Wert:", text=initial_text)
-        return text, bool(ok)
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        install_frameless_dialog_chrome(dialog)
+        dialog.resize(420, 150)
+        dialog.setStyleSheet(
+            "QDialog { background: rgba(20, 15, 12, 245); color: #eadfca; border: 1px solid #8a642c; }"
+            "QLabel { color: #eadfca; }"
+            "QLineEdit { background: #211812; color: #eadfca; border: 1px solid #6b4a22; padding: 4px; }"
+            "QPushButton { background: #3a2019; color: #f3dfb2; border: 1px solid #8a642c; padding: 5px 14px; font-weight: 700; }"
+            "QPushButton:hover { color: #fff3d6; }"
+        )
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(8)
+        title_label = QLabel(title, dialog)
+        title_label.setStyleSheet("color: #d8aa4c; font-size: 16px; font-weight: 700;")
+        title_label.installEventFilter(dialog._frameless_drag_filter)
+        layout.addWidget(title_label)
+        editor = QLineEdit(dialog)
+        editor.setText(initial_text)
+        editor.selectAll()
+        layout.addWidget(editor)
+        button_row = QHBoxLayout()
+        ok_button = QPushButton("OK", dialog)
+        cancel_button = QPushButton("Abbrechen", dialog)
+        button_row.addStretch()
+        button_row.addWidget(ok_button)
+        button_row.addWidget(cancel_button)
+        layout.addLayout(button_row)
+        ok_button.clicked.connect(dialog.accept)
+        cancel_button.clicked.connect(dialog.reject)
+        if dialog.exec() == QDialog.Accepted:
+            return editor.text(), True
+        return initial_text, False
 
     def _handle_character_widget_double_click(self, widget):
         field_key = str(widget.property("character_field_key") or "")
@@ -5927,6 +5972,17 @@ class MainWindow(QMainWindow):
                 )
 
     def eventFilter(self, obj, event):
+        if obj is self.game_canvas:
+            if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                self._window_drag_offset = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                return True
+            if event.type() == QEvent.MouseMove and self._window_drag_offset is not None:
+                if event.buttons() & Qt.LeftButton:
+                    self.move(event.globalPosition().toPoint() - self._window_drag_offset)
+                    return True
+            if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+                self._window_drag_offset = None
+                return True
         if isinstance(obj, QPushButton):
             inventory_category_id = obj.property("inventory_category_id")
             if isinstance(inventory_category_id, str) and inventory_category_id.startswith("inventory_"):
