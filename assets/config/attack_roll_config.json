@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "dice": [
+    {
+      "id": "d4",
+      "label": "d4",
+      "sides": 4
+    },
+    {
+      "id": "d6",
+      "label": "d6",
+      "sides": 6
+    },
+    {
+      "id": "d8",
+      "label": "d8",
+      "sides": 8
+    },
+    {
+      "id": "d10",
+      "label": "d10",
+      "sides": 10
+    },
+    {
+      "id": "d12",
+      "label": "d12",
+      "sides": 12
+    },
+    {
+      "id": "d20",
+      "label": "d20",
+      "sides": 20
+    },
+    {
+      "id": "d100",
+      "label": "d100",
+      "sides": 100
+    }
+  ],
+  "default_keep": "none",
+  "roll20_prefix": "/r"
+}

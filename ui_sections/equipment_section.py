@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, QBrush, QPainter, QPixmap
 from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem
 
 from app_logger import log_debug, log_error, log_warning
+from ui_dialogs.attack_roll_dialog import open_attack_roll_dialog
 from ui_sections.equipment_analysis import (
     analyze_equipment_sheet,
     clear_custom_equipment_row,
@@ -296,6 +297,9 @@ def _create_equipment_framed_title(window, parent, panel_cfg, panel_w, title_tex
 
 def on_equipment_category_clicked(window, category_id):
     category = str(category_id or "").strip()
+    if category == "attack":
+        open_equipment_attack_from_button(window)
+        return
     if category not in {"armor", "weapons"}:
         category = "armor"
     window.current_equipment_category = category
@@ -321,16 +325,16 @@ def render_equipment_category_tabs(window, parent, screen_cfg):
     active_asset = str(tabs_cfg.get("active_asset", default_asset) or "").strip()
     inactive_asset = str(tabs_cfg.get("inactive_asset", default_asset) or "").strip()
 
+    categories = [("armor", "Ausrüstung"), ("weapons", "Waffen"), ("attack", "Attacke")]
     tabs = QFrame(parent)
-    tabs.setGeometry(x, y, w, h)
+    tabs.setGeometry(x, y, max(w, (len(categories) * button_w) + ((len(categories) - 1) * gap)), h)
     tabs.setStyleSheet("background: transparent; border: none;")
     tabs.show()
 
-    categories = [("armor", "Ausrüstung"), ("weapons", "Waffen")]
     active_category = str(getattr(window, "current_equipment_category", "armor") or "armor")
     shadow_cfg = tabs_cfg.get("shadow", {}) if isinstance(tabs_cfg.get("shadow", {}), dict) else {}
     for index, (category_id, title) in enumerate(categories):
-        is_active = category_id == active_category
+        is_active = category_id == active_category and category_id != "attack"
         button_x = index * (button_w + gap)
         asset = active_asset if is_active else inactive_asset
         asset_path = _optional_equipment_ui_asset_path(window, asset)
@@ -421,6 +425,7 @@ def render_equipment_section(window, parent, layout_config):
         weapon_rows = []
     if not any(bool(row.get("is_data_row")) for row in weapon_rows if isinstance(row, dict)):
         weapon_rows = ensure_custom_equipment_min_rows(window, "weapons", 12)
+    window._equipment_weapon_rows = weapon_rows
     row_delete_cfg = _finalize_equipment_row_delete_config(window, screen_cfg)
 
     if window.current_equipment_category == "weapons":
@@ -542,7 +547,7 @@ def _equipment_row_delete_config(screen_cfg):
         "enabled": bool(cfg.get("enabled", True)),
         "show_on_selected_row": bool(cfg.get("show_on_selected_row", True)),
         "column_w": None,
-        "icon_asset": str(cfg.get("icon_asset", cfg.get("trash_icon_asset", "icons/x.jpg")) or "icons/x.jpg"),
+        "icon_asset": str(cfg.get("icon_asset", "icons/x.jpg") or "icons/x.jpg"),
         "fallback_text": fallback_text,
         "font_size": None,
         "color": str(cfg.get("color", "#f2d28b") or "#f2d28b"),
@@ -674,6 +679,67 @@ def on_equipment_table_cell_clicked(window, table, row_index, column_index):
     delete_col = int(binding.get("delete_column", -1)) if isinstance(binding, dict) else -1
     if column_index == delete_col:
         clear_equipment_table_row(window, table, row_index)
+
+
+def _equipment_weapon_data_fields():
+    return [
+        "name",
+        "weapon_type",
+        "pl",
+        "damage_cut",
+        "damage_blunt",
+        "damage_pierce",
+        "physical_dice",
+        "physical_bonus",
+        "elemental_dice",
+        "elemental_elements",
+        "elemental_bonus",
+        "durability_current",
+        "durability_max",
+        "attributes",
+    ]
+
+
+def _equipment_weapon_row_has_data(row_data):
+    if not isinstance(row_data, dict):
+        return False
+    return any(str(row_data.get(field_key, "") or "").strip() for field_key in _equipment_weapon_data_fields())
+
+
+def open_equipment_attack_from_button(window):
+    bindings = getattr(window, "_equipment_table_bindings", {})
+    if isinstance(bindings, dict):
+        for binding in bindings.values():
+            if not isinstance(binding, dict) or str(binding.get("table_type", "")) != "weapons":
+                continue
+            table = binding.get("table")
+            if table is None or table.selectionModel() is None:
+                continue
+            selected_rows = table.selectionModel().selectedRows()
+            if selected_rows:
+                if open_equipment_weapon_attack_dialog(window, binding, selected_rows[0].row()):
+                    return
+
+    rows = getattr(window, "_equipment_weapon_rows", [])
+    if isinstance(rows, list):
+        for row_data in rows:
+            if _equipment_weapon_row_has_data(row_data):
+                window._attack_roll_dialog = open_attack_roll_dialog(window, dict(row_data))
+                return
+
+
+def open_equipment_weapon_attack_dialog(window, binding, row_index):
+    data_row_index = row_index - int(binding.get("data_row_offset", 0))
+    rows = binding.get("rows", [])
+    if not isinstance(rows, list) or data_row_index < 0 or data_row_index >= len(rows):
+        return False
+    row_data = rows[data_row_index]
+    if not isinstance(row_data, dict):
+        return False
+    if not _equipment_weapon_row_has_data(row_data):
+        return False
+    window._attack_roll_dialog = open_attack_roll_dialog(window, dict(row_data))
+    return True
 
 
 def refresh_armor_summary_table_row(window, table):
@@ -1450,6 +1516,7 @@ def render_equipment_weapons_table(window, parent, weapons_cfg, weapon_rows, row
     table.blockSignals(False)
     window._equipment_rendering = False
     window._equipment_table_bindings[id(table)] = {
+        "table": table,
         "table_type": "weapons",
         "rows": weapon_rows,
         "column_order": column_order,
