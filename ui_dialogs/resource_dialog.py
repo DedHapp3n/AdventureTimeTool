@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QVBoxLayout,
 )
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
@@ -40,6 +41,9 @@ def open_resource_dialog(parent, model, callbacks=None, style_context=None):
     menu_button_cfg = ui_layout.get("menu_button_medium", {})
     if not isinstance(menu_button_cfg, dict):
         menu_button_cfg = {}
+    close_button_cfg = ui_layout.get("window_close_button", {})
+    if not isinstance(close_button_cfg, dict):
+        close_button_cfg = {}
 
     resource_id = str(model.get("resource_id", "") or "").strip().lower()
     label = str(model.get("label", resource_id.upper()) or resource_id.upper())
@@ -76,10 +80,31 @@ def open_resource_dialog(parent, model, callbacks=None, style_context=None):
     layout.setContentsMargins(14, 14, 14, 14)
     layout.setSpacing(spacing)
 
+    title_row = QHBoxLayout()
     title_label = QLabel(title, dialog)
     title_label.setStyleSheet(f"font-size: {title_font_size}px; font-weight: 700; color: {accent_color};")
     title_label.installEventFilter(dialog._frameless_drag_filter)
-    layout.addWidget(title_label)
+    title_row.addWidget(title_label, 1)
+
+    exit_button = QPushButton(dialog)
+    exit_button.setText("")
+    exit_button.setCursor(Qt.PointingHandCursor)
+    exit_size = int(close_button_cfg.get("w", close_button_cfg.get("h", 28)) or 28)
+    exit_size = max(18, min(36, exit_size))
+    exit_button.setFixedSize(exit_size, exit_size)
+    exit_button.setStyleSheet("QPushButton { background: transparent; border: none; padding: 0px; }")
+    close_asset = str(close_button_cfg.get("asset", "") or "")
+    load_ui_pixmap = style_context.get("load_ui_pixmap")
+    if close_asset and callable(load_ui_pixmap):
+        close_pixmap = load_ui_pixmap(close_asset)
+        if close_pixmap is not None:
+            exit_button.setIcon(QIcon(close_pixmap))
+            exit_button.setIconSize(exit_button.size())
+    if exit_button.icon().isNull():
+        exit_button.setText("X")
+    exit_button.clicked.connect(dialog.reject)
+    title_row.addWidget(exit_button, 0)
+    layout.addLayout(title_row)
 
     info_label = QLabel(dialog)
     info_label.setStyleSheet(f"color: {text_color}; font-weight: 600; font-size: {base_font_size}px;")
