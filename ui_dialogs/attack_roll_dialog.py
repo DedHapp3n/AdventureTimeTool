@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from ui_dialogs.attack_roll_logic import build_attack_roll_command, parse_weapon_row, safe_int, weapon_roll_components
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
+from app_paths import ui_icon_path
 
 
 def open_attack_roll_dialog(window, weapon_data: dict):
@@ -415,6 +416,10 @@ def _asset_path(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip()
     if not asset_name:
         return None
+    normalized_asset_name = asset_name.replace("\\", "/").lstrip("/")
+    if normalized_asset_name.startswith("icons/") or normalized_asset_name.startswith("ui_elements/icons/"):
+        path = ui_icon_path(asset_name)
+        return path if path.exists() else None
     try:
         primary = window.theme_asset_base_path / asset_name
         if primary.exists():
@@ -449,7 +454,7 @@ def _add_dialog_background(dialog, window, w, h):
 
 
 def _make_close_button(dialog, window):
-    path = _asset_path(window, "icons/x.jpg")
+    path = _asset_path(window, "ui_elements/icons/x.jpg")
     if path is None:
         return None
     button = QPushButton(dialog)

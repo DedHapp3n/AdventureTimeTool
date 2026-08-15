@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, QBrush, QPainter, QPixmap
 from PySide6.QtWidgets import QLabel, QAbstractItemView, QFrame, QPushButton, QTableWidget, QTableWidgetItem
 
 from app_logger import log_debug, log_error, log_warning
+from app_paths import ui_icon_path
 from ui_dialogs.attack_roll_dialog import open_attack_roll_dialog
 from ui_sections.equipment_analysis import (
     analyze_equipment_sheet,
@@ -17,6 +18,10 @@ def _optional_equipment_ui_pixmap(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip()
     if not asset_name:
         return None
+    normalized_asset_name = asset_name.replace("\\", "/").lstrip("/")
+    if normalized_asset_name.startswith("icons/") or normalized_asset_name.startswith("ui_elements/icons/"):
+        pixmap = QPixmap(str(ui_icon_path(asset_name)))
+        return pixmap if not pixmap.isNull() else None
     try:
         primary = window.theme_asset_base_path / asset_name
         if primary.exists():
@@ -37,6 +42,10 @@ def _optional_equipment_ui_asset_path(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip()
     if not asset_name:
         return None
+    normalized_asset_name = asset_name.replace("\\", "/").lstrip("/")
+    if normalized_asset_name.startswith("icons/") or normalized_asset_name.startswith("ui_elements/icons/"):
+        path = ui_icon_path(asset_name)
+        return path if path.exists() else None
     try:
         primary = window.theme_asset_base_path / asset_name
         if primary.exists():
@@ -547,7 +556,7 @@ def _equipment_row_delete_config(screen_cfg):
         "enabled": bool(cfg.get("enabled", True)),
         "show_on_selected_row": bool(cfg.get("show_on_selected_row", True)),
         "column_w": None,
-        "icon_asset": str(cfg.get("icon_asset", "icons/x.jpg") or "icons/x.jpg"),
+        "icon_asset": str(cfg.get("icon_asset", "ui_elements/icons/x.jpg") or "ui_elements/icons/x.jpg"),
         "fallback_text": fallback_text,
         "font_size": None,
         "color": str(cfg.get("color", "#f2d28b") or "#f2d28b"),
@@ -572,7 +581,7 @@ def _equipment_delete_icon_pixmap(window, delete_cfg):
     painter = QPainter(rendered)
     painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
-    icon = _optional_equipment_ui_pixmap(window, delete_cfg.get("icon_asset", "icons/x.jpg"))
+    icon = _optional_equipment_ui_pixmap(window, delete_cfg.get("icon_asset", "ui_elements/icons/x.jpg"))
     if icon is not None:
         icon_size = max(12, min(18, icon_w - 6))
         x = int((icon_w - icon_size) / 2)

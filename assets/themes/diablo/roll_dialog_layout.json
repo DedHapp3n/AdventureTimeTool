@@ -61,7 +61,7 @@
   },
   "close_button": {
     "enabled": true,
-    "asset": "icons/x.jpg",
+    "asset": "ui_elements/icons/x.jpg",
     "anchor": "top_right",
     "right": 8,
     "top": 12,
@@ -108,8 +108,8 @@
     "kh_text": "Höchsten behalten (kh1)",
     "kl_text": "Niedrigsten behalten (kl1)",
     "none_text": "Kein Keep",
-    "active_asset": "icons/x.jpg",
-    "inactive_asset": "icons/checkmark_false.png",
+    "active_asset": "ui_elements/icons/x.jpg",
+    "inactive_asset": "ui_elements/icons/checkmark_false.png",
     "indicator_w": 18,
     "indicator_h": 18
   },
@@ -166,8 +166,8 @@
     "bonus": 10,
     "tooltip": "Manueller Schalter. Es wird kein Paradigma automatisch verbraucht.",
     "indicator": {
-      "active_asset": "icons/checkmark_true.png",
-      "inactive_asset": "icons/checkmark_false.png",
+      "active_asset": "ui_elements/icons/checkmark_true.png",
+      "inactive_asset": "ui_elements/icons/checkmark_false.png",
       "indicator_w": 18,
       "indicator_h": 18
     }
@@ -228,8 +228,8 @@
   },
   "checkbox": {
     "use_assets": true,
-    "asset_checked": "icons/checkmark_true.png",
-    "asset_unchecked": "icons/checkmark_false.png",
+    "asset_checked": "ui_elements/icons/checkmark_true.png",
+    "asset_unchecked": "ui_elements/icons/checkmark_false.png",
     "indicator_w": 18,
     "indicator_h": 18,
     "text_color": "#f2f2f2",

@@ -2,6 +2,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit
 
+from app_paths import ui_icon_path
+
 from game_rules_loader import get_selectable_perks_by_type, load_perk_catalog
 
 
@@ -26,6 +28,10 @@ def _optional_theme_ui_pixmap(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip()
     if not asset_name:
         return None
+    normalized_asset_name = asset_name.replace("\\", "/").lstrip("/")
+    if normalized_asset_name.startswith("icons/") or normalized_asset_name.startswith("ui_elements/icons/"):
+        pixmap = QPixmap(str(ui_icon_path(asset_name)))
+        return pixmap if not pixmap.isNull() else None
     try:
         primary = window.theme_asset_base_path / asset_name
         if primary.exists():
@@ -710,9 +716,9 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
     header_y = padding + title_h + 6
     row_y_start = header_y + name_h
     marker_use_icon = bool(marker_cfg.get("use_icon", True))
-    marker_active_asset = str(marker_cfg.get("active_asset", "icons/x.jpg") or "").strip()
+    marker_active_asset = str(marker_cfg.get("active_asset", "ui_elements/icons/x.jpg") or "").strip()
     marker_fallback_text = str(marker_cfg.get("fallback_text", "X"))
-    marker_inactive_asset = str(marker_cfg.get("inactive_asset", "icons/checkmark_false.png") or "").strip()
+    marker_inactive_asset = str(marker_cfg.get("inactive_asset", "ui_elements/icons/checkmark_false.png") or "").strip()
     marker_icon_padding = max(0, window._safe_int(marker_cfg.get("icon_padding", 4), 4))
     marker_box_w = max(1, window._safe_int(marker_cfg.get("box_w", marker_w), marker_w))
     marker_box_h = max(1, window._safe_int(marker_cfg.get("box_h", marker_h), marker_h))

@@ -21,6 +21,7 @@ from app_paths import (
     load_settings,
     resource_path,
     save_settings,
+    ui_icon_path,
 )
 from app_logger import log_debug, log_error, log_info, log_warning, set_debug_settings
 from data_loader import DataLoader
@@ -167,8 +168,8 @@ class MainWindow(QMainWindow):
         self.settings_theme_label = None
         self.settings_checkbox_icon_label = None
         self.settings_checkbox_text_label = None
-        self._settings_checkbox_asset_true = "icons/checkmark_true.png"
-        self._settings_checkbox_asset_false = "icons/checkmark_false.png"
+        self._settings_checkbox_asset_true = "ui_elements/icons/checkmark_true.png"
+        self._settings_checkbox_asset_false = "ui_elements/icons/checkmark_false.png"
         self.settings_character_active_label = None
         self.settings_character_combo = None
         self.calculation_center_dialog = None
@@ -283,10 +284,13 @@ class MainWindow(QMainWindow):
     def resolve_ui_asset_path(self, filename):
         if not filename:
             return None
-        primary = self.get_theme_asset_base_path() / filename
+        asset_name = str(filename or "").strip().replace("\\", "/").lstrip("/")
+        if asset_name.startswith("icons/") or asset_name.startswith("ui_elements/icons/"):
+            return ui_icon_path(asset_name)
+        primary = self.get_theme_asset_base_path() / asset_name
         if primary.exists():
             return primary
-        fallback = self.assets_dir / "themes" / "diablo" / "ui" / filename
+        fallback = self.assets_dir / "themes" / "diablo" / "ui" / asset_name
         if fallback.exists():
             return fallback
         log_warning("theme", f"missing asset: {primary}")

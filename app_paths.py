@@ -60,6 +60,15 @@ def resource_path(relative_path: str) -> Path:
     return resource_base_dir() / Path(relative_path)
 
 
+def ui_icon_path(name: str) -> Path:
+    icon_name = str(name or "").strip().replace("\\", "/").lstrip("/")
+    if icon_name.startswith("ui_elements/icons/"):
+        icon_name = icon_name[len("ui_elements/icons/") :]
+    if icon_name.startswith("icons/"):
+        icon_name = icon_name[len("icons/") :]
+    return resource_path("assets/ui_elements/icons") / Path(icon_name)
+
+
 def user_data_dir() -> Path:
     data_dir = app_base_dir() / "data"
     data_dir.mkdir(parents=True, exist_ok=True)

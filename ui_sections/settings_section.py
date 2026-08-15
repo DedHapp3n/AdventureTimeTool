@@ -102,8 +102,8 @@ def _settings_style(window):
         "field_bg": "rgba(8, 8, 8, 165)",
         "button_asset": "buttons/menu_button_medium.png",
         "wide_button_asset": "buttons/menu_button_wide.png",
-        "checkbox_true": "icons/checkmark_true.png",
-        "checkbox_false": "icons/checkmark_false.png",
+        "checkbox_true": "ui_elements/icons/checkmark_true.png",
+        "checkbox_false": "ui_elements/icons/checkmark_false.png",
     }
 
 

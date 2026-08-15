@@ -35,7 +35,7 @@
     "font_size": 28
   },
   "window_close_button": {
-    "asset": "icons/x.jpg",
+    "asset": "ui_elements/icons/x.jpg",
     "x": 1480,
     "y": 20,
     "w": 32,
@@ -252,8 +252,8 @@
       "text": "Berechnungen"
     },
     "checkbox_debug_start": {
-      "asset_true": "icons/checkmark_true.png",
-      "asset_false": "icons/checkmark_false.png",
+      "asset_true": "ui_elements/icons/checkmark_true.png",
+      "asset_false": "ui_elements/icons/checkmark_false.png",
       "x": 110,
       "y": 695,
       "w": 50,
@@ -502,8 +502,8 @@
         }
       ],
       "marker": {
-        "active_asset": "icons/x.jpg",
-        "inactive_asset": "icons/checkmark_false.png",
+        "active_asset": "ui_elements/icons/x.jpg",
+        "inactive_asset": "ui_elements/icons/checkmark_false.png",
         "use_icon": true,
         "fallback_text": "X",
         "icon_padding": 0,

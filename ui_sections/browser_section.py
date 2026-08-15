@@ -8,7 +8,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QPushButton, QWidget
 
 from app_logger import log_debug, log_warning_once
-from app_paths import data_path, load_settings, resource_path, save_settings
+from app_paths import data_path, load_settings, resource_path, save_settings, ui_icon_path
 
 try:
     from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
@@ -44,7 +44,7 @@ DEFAULT_BROWSER_LAYOUT = {
         "border_color": "transparent",
         "reload_button_size": 24,
         "reload_button_margin": 8,
-        "reload_button_asset": "icons/checkmark_true.png",
+        "reload_button_asset": "ui_elements/icons/checkmark_true.png",
         "reload_button_text_color": "",
         "debug": {
             "enabled": False,
@@ -420,6 +420,9 @@ def _browser_asset_path(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip().replace("\\", "/").lstrip("/")
     if not asset_name:
         return None
+    if asset_name.startswith("icons/") or asset_name.startswith("ui_elements/icons/"):
+        path = ui_icon_path(asset_name)
+        return path if path.exists() else None
     primary_base = getattr(window, "theme_asset_base_path", None)
     assets_dir = getattr(window, "assets_dir", resource_path("assets"))
     candidates = []
@@ -446,7 +449,7 @@ def _browser_asset_path(window, asset_rel_path):
 
 def _reload_button_stylesheet(window, cfg):
     text_color = str(cfg.get("reload_button_text_color", "") or "").strip() or _theme_default_text_color(window)
-    asset = _browser_asset_path(window, cfg.get("reload_button_asset", "icons/checkmark_true.png"))
+    asset = _browser_asset_path(window, cfg.get("reload_button_asset", "ui_elements/icons/checkmark_true.png"))
     if asset is None:
         return (
             f"QPushButton {{ background: rgba(0, 0, 0, 150); color: {text_color}; "

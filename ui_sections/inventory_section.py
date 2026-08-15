@@ -9,12 +9,17 @@ from PySide6.QtWidgets import (
 )
 
 from app_logger import log_debug, log_error
+from app_paths import ui_icon_path
 
 
 def _optional_inventory_ui_pixmap(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip()
     if not asset_name:
         return None
+    normalized_asset_name = asset_name.replace("\\", "/").lstrip("/")
+    if normalized_asset_name.startswith("icons/") or normalized_asset_name.startswith("ui_elements/icons/"):
+        pixmap = QPixmap(str(ui_icon_path(asset_name)))
+        return pixmap if not pixmap.isNull() else None
     try:
         primary = window.theme_asset_base_path / asset_name
         if primary.exists():

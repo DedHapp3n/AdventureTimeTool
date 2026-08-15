@@ -16,7 +16,7 @@
     "border_color": "transparent",
     "reload_button_size": 24,
     "reload_button_margin": 8,
-    "reload_button_asset": "icons/checkmark_true.png",
+    "reload_button_asset": "ui_elements/icons/checkmark_true.png",
     "reload_button_text_color": "#e8e0c8",
     "debug": {
       "enabled": false,
