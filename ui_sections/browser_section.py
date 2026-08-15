@@ -944,7 +944,7 @@ def _browser_geometry(window, cfg):
     )
 
 
-def _apply_browser_geometry(window, cfg):
+def _apply_browser_geometry(window, cfg, preload=False):
     container = window._browser_container
     if not _is_qt_widget_alive(container):
         return
@@ -985,7 +985,8 @@ def _apply_browser_geometry(window, cfg):
             button_size,
             button_size,
         )
-        reload_button.raise_()
+        if not preload:
+            reload_button.raise_()
 
 
 def _clear_dead_browser_refs(window):
@@ -998,7 +999,7 @@ def _clear_dead_browser_refs(window):
         window._browser_initialized = False
 
 
-def ensure_browser_created(window):
+def ensure_browser_created(window, preload=False):
     if getattr(window, "content_layer", None) is None:
         return False
 
@@ -1014,6 +1015,9 @@ def ensure_browser_created(window):
         container.setStyleSheet(
             f"QFrame {{ background: {background}; border: 1px solid {border_color}; }}"
         )
+        if preload:
+            container.hide()
+            container.setVisible(False)
         window._browser_container = container
 
         url_edit = QLineEdit(container)
@@ -1082,7 +1086,10 @@ def ensure_browser_created(window):
 
     if _is_qt_widget_alive(window._browser_container) and window._browser_container.parent() is not window.content_layer:
         window._browser_container.setParent(window.content_layer)
-    _apply_browser_geometry(window, cfg)
+    _apply_browser_geometry(window, cfg, preload=preload)
+    if preload and _is_qt_widget_alive(getattr(window, "_browser_container", None)):
+        window._browser_container.hide()
+        window._browser_container.setVisible(False)
     return _is_qt_widget_alive(window._browser_container)
 
 

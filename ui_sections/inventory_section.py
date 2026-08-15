@@ -4,12 +4,13 @@ import math
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTextDocument, QFont, QFontMetrics
 from PySide6.QtWidgets import (
-    QLabel, QAbstractItemView, QFrame, QInputDialog, QLineEdit, QPushButton,
+    QLabel, QAbstractItemView, QDialog, QFrame, QInputDialog, QLineEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QTextEdit,
 )
 
 from app_logger import log_debug, log_error
 from app_paths import ui_icon_path
+from ui_dialogs.inventory_roll_bonus_dialog import InventoryRollBonusDialog
 
 
 def _optional_inventory_ui_pixmap(window, asset_rel_path):
@@ -559,22 +560,26 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
     name_col = columns.get("name", {})
     pl_col = columns.get("pl", {})
     count_col = columns.get("count", {})
+    bonus_col = columns.get("roll_bonus", {})
     if not isinstance(name_col, dict):
         name_col = {}
     if not isinstance(pl_col, dict):
         pl_col = {}
     if not isinstance(count_col, dict):
         count_col = {}
+    if not isinstance(bonus_col, dict):
+        bonus_col = {}
 
     header_title = str(category.get("title", "") or category.get("header_title", "Inventar"))
     table = QTableWidget(table_frame)
     table.setGeometry(6, 6, max(1, table_frame.width() - 12), max(1, table_frame.height() - 12))
-    table.setColumnCount(3)
+    table.setColumnCount(4)
     table.setHorizontalHeaderLabels(
         [
             header_title,
             str(pl_col.get("title", "PL")),
             str(count_col.get("title", "Anzahl")),
+            str(bonus_col.get("title", "Rollbonus")),
         ]
     )
     table.setEditTriggers(
@@ -632,27 +637,34 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
             "" if is_empty_slot else (str(row.get("name", "")).strip() or "(ohne Name)"),
             "" if is_empty_slot else (str(row.get("pl", "")).strip() or "-"),
             "" if is_empty_slot else (str(row.get("count", "")).strip() or "-"),
+            "",
         ]
         raw_values = [
             str(row.get("name", "") or ""),
             str(row.get("pl", "") or ""),
             str(row.get("count", "") or ""),
+            "",
         ]
         for column_index, value in enumerate(display_values):
             item = QTableWidgetItem(value)
             item.setData(Qt.UserRole, raw_values[column_index])
-            item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            if column_index < 3:
+                item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            else:
+                item.setFlags((item.flags() & ~Qt.ItemIsEditable) | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             item.setBackground(QColor(0, 0, 0, 0))
             item.setForeground(QColor(value_color if column_index in (1, 2) else text_color))
             item.setTextAlignment(
             Qt.AlignCenter if column_index in (1, 2) else Qt.AlignLeft | Qt.AlignVCenter
             )
             table.setItem(row_index, column_index, item)
+        _set_inventory_roll_bonus_button(window, table, row_index, row, font_size)
 
     column_widths = [
         window._safe_int(name_col.get("w", 1140), 1140),
         window._safe_int(pl_col.get("w", 80), 80),
         window._safe_int(count_col.get("w", 120), 120),
+        window._safe_int(bonus_col.get("w", 90), 90),
     ]
     available_width = max(1, table.width() - 4)
     configured_width = sum(column_widths)
@@ -675,6 +687,7 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
         (name_col, header_title),
         (pl_col, str(pl_col.get("title", "PL"))),
         (count_col, str(count_col.get("title", "Anzahl"))),
+        (bonus_col, str(bonus_col.get("title", "Rollbonus"))),
     )):
         column_header_cfg = column_cfg.get("header_frame", {}) if isinstance(column_cfg.get("header_frame", {}), dict) else {}
         effective_header_cfg = column_header_cfg if column_header_cfg else header_frame_cfg
@@ -699,6 +712,7 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
         "rows": rows,
         "min_row_h": min_row_h,
         "max_row_h": max_row_h,
+        "font_size": font_size,
     }
     table.cellChanged.connect(
         lambda row_index, column_index, widget=table: window.on_inventory_table_cell_changed(
@@ -706,6 +720,74 @@ def render_inventory_single_table_widget(window, parent, table_cfg, category):
         )
     )
     table.show()
+
+
+def _inventory_row_storage_key(row, row_index=0):
+    if not isinstance(row, dict):
+        return ("", "")
+    storage = str(row.get("storage", "") or "").strip().lower()
+    if storage == "sheet":
+        return ("sheet", str(row.get("name_cell", "") or "").strip().upper())
+    if storage == "custom":
+        try:
+            return ("custom", int(row.get("custom_row_index", row_index)))
+        except Exception:
+            return ("custom", int(row_index))
+    return ("", "")
+
+
+def _set_inventory_roll_bonus_button(window, table, row_index, row, font_size):
+    table.removeCellWidget(row_index, 3)
+    if window._is_inventory_row_empty(row):
+        return
+    button = QPushButton("Bonus", table)
+    button.setCursor(Qt.PointingHandCursor)
+    button.setStyleSheet(
+        "QPushButton {"
+        "background: rgba(35, 24, 12, 185);"
+        "color: #f2d28b;"
+        "border: 1px solid rgba(242, 210, 139, 90);"
+        "border-radius: 3px;"
+        f"font-size: {max(10, int(font_size) - 2)}px;"
+        "font-weight: 700;"
+        "padding: 0px;"
+        "}"
+        "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
+    )
+    button.clicked.connect(lambda checked=False, widget=table, row=row_index: open_inventory_roll_bonus_dialog(window, widget, row))
+    table.setCellWidget(row_index, 3, button)
+
+
+def open_inventory_roll_bonus_dialog(window, table, row_index):
+    binding = window._inventory_table_bindings.get(id(table))
+    if not isinstance(binding, dict):
+        return
+    rows = binding.get("rows", [])
+    if not isinstance(rows, list) or row_index < 0 or row_index >= len(rows):
+        return
+    row = rows[row_index]
+    if not isinstance(row, dict) or window._is_inventory_row_empty(row):
+        return
+    slot_id = str(row.get("custom_slot_id", binding.get("section_id", "")) or binding.get("section_id", "") or "").strip()
+    storage, row_key = _inventory_row_storage_key(row, row_index)
+    if not slot_id or not storage:
+        return
+    options = window.get_inventory_roll_options()
+    item_name = str(row.get("name", "") or "").strip() or "(ohne Name)"
+    current_modifiers = row.get("roll_modifiers", [])
+    if not isinstance(current_modifiers, list):
+        current_modifiers = []
+    dialog = InventoryRollBonusDialog(window, item_name, options, current_modifiers)
+    if dialog.exec() != QDialog.Accepted:
+        return
+    modifiers = dialog.modifiers()
+    try:
+        window.loader.set_inventory_row_roll_modifiers(slot_id, storage, row_key, modifiers)
+        window.loader.save_active_character_json()
+        row["roll_modifiers"] = modifiers
+        log_debug("inventory", f"INVENTORY ROLL BONUS SAVE {slot_id}[{row_key}] count={len(modifiers)}")
+    except Exception as exc:
+        log_error("inventory", f"roll bonus save failed: {exc}")
 
 
 def render_inventory_money_panel(window, parent, money_cfg, money):
@@ -1437,10 +1519,13 @@ def _append_inventory_visual_empty_rows(window, table, binding, count):
             rows.append(row_data)
             qt_row = table.rowCount()
             table.insertRow(qt_row)
-            for column_index in range(3):
+            for column_index in range(4):
                 item = QTableWidgetItem("")
                 item.setData(Qt.UserRole, "")
-                item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                if column_index < 3:
+                    item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                else:
+                    item.setFlags((item.flags() & ~Qt.ItemIsEditable) | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 if column_index in (1, 2):
                     item.setTextAlignment(Qt.AlignCenter)
                 else:
@@ -1533,6 +1618,22 @@ def on_inventory_table_cell_changed(window, table, row_index, column_index):
             table.blockSignals(False)
 
         is_row_empty_now = window._is_inventory_row_empty(row)
+        if is_row_empty_now:
+            storage, row_key = _inventory_row_storage_key(row, row_index)
+            slot_id = str(row.get("custom_slot_id", binding.get("section_id", "")) or binding.get("section_id", "") or "").strip()
+            if slot_id and storage:
+                window.loader.set_inventory_row_roll_modifiers(slot_id, storage, row_key, [])
+                window.loader.save_active_character_json()
+            row["roll_modifiers"] = []
+            table.removeCellWidget(row_index, 3)
+        else:
+            _set_inventory_roll_bonus_button(
+                window,
+                table,
+                row_index,
+                row,
+                window._safe_int(binding.get("font_size", 15), 15),
+            )
         row_is_near_end = row_index >= max(0, row_count_before - 3)
         if was_row_empty and not is_row_empty_now and row_is_near_end:
             window._append_inventory_visual_empty_rows(table, binding, 3)

@@ -875,13 +875,15 @@ class DataLoader:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            result.append(
-                {
-                    "name": str(row.get("name", "") or ""),
-                    "pl": str(row.get("pl", "") or ""),
-                    "count": str(row.get("count", "") or ""),
-                }
-            )
+            row_data = {
+                "name": str(row.get("name", "") or ""),
+                "pl": str(row.get("pl", "") or ""),
+                "count": str(row.get("count", "") or ""),
+            }
+            modifiers = self._normalize_inventory_roll_modifiers(row.get("roll_modifiers", []))
+            if modifiers:
+                row_data["roll_modifiers"] = modifiers
+            result.append(row_data)
         return result
 
     def set_inventory_custom_row_value(self, slot_id: str, row_index: int, field: str, value: str):
@@ -916,7 +918,111 @@ class DataLoader:
         for key in ("name", "pl", "count"):
             rows[index].setdefault(key, "")
         rows[index][field_key] = str(value)
+        if not any(str(rows[index].get(key, "") or "") for key in ("name", "pl", "count")):
+            rows[index].pop("roll_modifiers", None)
         return True
+
+    def _normalize_inventory_roll_modifiers(self, modifiers) -> list[dict[str, Any]]:
+        if not isinstance(modifiers, list):
+            return []
+        result = []
+        for modifier in modifiers:
+            if not isinstance(modifier, dict):
+                continue
+            roll_id = str(modifier.get("roll_id", "") or "").strip()
+            roll_name = str(modifier.get("roll_name", "") or "").strip()
+            if not roll_id and not roll_name:
+                continue
+            try:
+                value = int(modifier.get("modifier", 0))
+            except Exception:
+                continue
+            result.append(
+                {
+                    "roll_id": roll_id,
+                    "roll_name": roll_name,
+                    "modifier": value,
+                }
+            )
+        return result
+
+    def get_inventory_sheet_row_roll_modifiers(self, slot_id: str, row_key: str) -> list[dict[str, Any]]:
+        inventory_meta = self.app_meta.get("inventory", {})
+        if not isinstance(inventory_meta, dict):
+            return []
+        sheet_rows = inventory_meta.get("sheet_row_roll_modifiers", {})
+        if not isinstance(sheet_rows, dict):
+            return []
+        slot_rows = sheet_rows.get(str(slot_id or "").strip(), {})
+        if not isinstance(slot_rows, dict):
+            return []
+        row_meta = slot_rows.get(str(row_key or "").strip().upper(), {})
+        if not isinstance(row_meta, dict):
+            return []
+        return self._normalize_inventory_roll_modifiers(row_meta.get("roll_modifiers", []))
+
+    def set_inventory_row_roll_modifiers(
+        self,
+        slot_id: str,
+        storage: str,
+        row_key,
+        modifiers,
+    ) -> bool:
+        slot_key = str(slot_id or "").strip()
+        storage_key = str(storage or "").strip().lower()
+        normalized = self._normalize_inventory_roll_modifiers(modifiers)
+        if not slot_key:
+            return False
+        inventory_meta = self.app_meta.setdefault("inventory", {})
+        if not isinstance(inventory_meta, dict):
+            inventory_meta = {}
+            self.app_meta["inventory"] = inventory_meta
+        if storage_key == "sheet":
+            key = str(row_key or "").strip().upper()
+            if not key:
+                return False
+            sheet_rows = inventory_meta.setdefault("sheet_row_roll_modifiers", {})
+            if not isinstance(sheet_rows, dict):
+                sheet_rows = {}
+                inventory_meta["sheet_row_roll_modifiers"] = sheet_rows
+            slot_rows = sheet_rows.setdefault(slot_key, {})
+            if not isinstance(slot_rows, dict):
+                slot_rows = {}
+                sheet_rows[slot_key] = slot_rows
+            if normalized:
+                slot_rows[key] = {"roll_modifiers": normalized}
+            else:
+                slot_rows.pop(key, None)
+            if not slot_rows:
+                sheet_rows.pop(slot_key, None)
+            return True
+        if storage_key == "custom":
+            try:
+                index = int(row_key)
+            except Exception:
+                return False
+            if index < 0:
+                return False
+            custom_rows = inventory_meta.setdefault("custom_rows", {})
+            if not isinstance(custom_rows, dict):
+                custom_rows = {}
+                inventory_meta["custom_rows"] = custom_rows
+            rows = custom_rows.setdefault(slot_key, [])
+            if not isinstance(rows, list):
+                rows = []
+                custom_rows[slot_key] = rows
+            while len(rows) <= index:
+                rows.append({"name": "", "pl": "", "count": ""})
+            if not isinstance(rows[index], dict):
+                rows[index] = {"name": "", "pl": "", "count": ""}
+            for key in ("name", "pl", "count"):
+                rows[index].setdefault(key, "")
+            if normalized:
+                rows[index]["roll_modifiers"] = normalized
+            else:
+                rows[index].pop("roll_modifiers", None)
+            return True
+        return False
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = str(data_path("current_character.json"))

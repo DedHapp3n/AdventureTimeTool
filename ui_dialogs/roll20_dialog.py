@@ -131,6 +131,9 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     wellbeing_suggestions = model.get("wellbeing_suggestions", [])
     if not isinstance(wellbeing_suggestions, list):
         wellbeing_suggestions = []
+    inventory_modifiers = model.get("inventory_modifiers", [])
+    if not isinstance(inventory_modifiers, list):
+        inventory_modifiers = []
     fixed_bonus_lines = model.get("fixed_bonus_lines", [])
     if not isinstance(fixed_bonus_lines, list):
         fixed_bonus_lines = []
@@ -142,6 +145,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
 
     dynamic_extra = 0
     dynamic_extra += max(0, len(specialization_items) - 6) * 14
+    dynamic_extra += max(0, len(inventory_modifiers) - 2) * 18
     dynamic_extra += max(0, len(perk_suggestions) - 2) * 18
     dynamic_extra += max(0, len(wellbeing_suggestions) - 2) * 18
 
@@ -400,6 +404,32 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         skill_usage_label.setStyleSheet(f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;")
         left_layout.addWidget(skill_usage_label)
 
+    inventory_modifier_checkboxes = []
+    if inventory_modifiers:
+        inventory_title_label = QLabel("Inventar:")
+        inventory_title_label.setStyleSheet(f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;")
+        right_layout.addWidget(inventory_title_label)
+        for modifier in inventory_modifiers:
+            if not isinstance(modifier, dict):
+                continue
+            try:
+                modifier_value = int(modifier.get("modifier", 0))
+            except Exception:
+                continue
+            if modifier_value == 0:
+                continue
+            label_text = str(modifier.get("label", "") or "").strip()
+            if not label_text:
+                item_name = str(modifier.get("item_name", "Inventar") or "Inventar")
+                label_text = f"Inventar: {item_name} {modifier_value:+d}"
+            checkbox = QCheckBox(label_text, right_content)
+            checkbox.setChecked(False)
+            checkbox.setStyleSheet(checkbox_style)
+            checkbox.setProperty("inventory_modifier", modifier_value)
+            checkbox.setToolTip(label_text)
+            right_layout.addWidget(checkbox)
+            inventory_modifier_checkboxes.append(checkbox)
+
     controls = QVBoxLayout()
     advantages_spin = QSpinBox(dialog)
     advantages_spin.setRange(0, 99)
@@ -636,6 +666,13 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             if debug_paradigm_enabled and callable(log_debug):
                 log_debug("roll20", f"ROLL PARADIGM active=True bonus={paradigm_bonus}")
         extra_bonuses.extend(fixed_extra_bonuses)
+        for checkbox in inventory_modifier_checkboxes:
+            if checkbox is None or not checkbox.isChecked():
+                continue
+            try:
+                extra_bonuses.append(int(checkbox.property("inventory_modifier")))
+            except Exception:
+                continue
         extra_bonuses.extend(perk_effects["extra_bonuses"])
         extra_bonuses.extend(wellbeing_effects["extra_bonuses"])
         command = build_command(dice_count, current_keep_mode(), skill_bonus, manual_bonus, extra_bonuses)
@@ -697,6 +734,8 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     manual_minus.clicked.connect(lambda: adjust_spin(manual_bonus_spin, -1))
     manual_plus.clicked.connect(lambda: adjust_spin(manual_bonus_spin, 1))
     for checkbox in specialization_checkboxes:
+        checkbox.toggled.connect(update_roll_preview)
+    for checkbox in inventory_modifier_checkboxes:
         checkbox.toggled.connect(update_roll_preview)
     for checkbox in perk_suggestion_checkboxes:
         checkbox.toggled.connect(lambda checked=False, cb=checkbox: on_perk_suggestion_toggled(cb, checked))

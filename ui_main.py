@@ -3560,9 +3560,19 @@ class MainWindow(QMainWindow):
             log_warning("roll20", f"wellbeing suggestions failed: {exc}")
         if not isinstance(wellbeing_suggestions, list):
             wellbeing_suggestions = []
+        inventory_modifiers = []
+        if not is_initiative_context:
+            try:
+                inventory_modifiers = self.get_inventory_roll_modifiers_for_roll(source_key, display_name)
+            except Exception as exc:
+                inventory_modifiers = []
+                log_warning("roll20", f"inventory roll modifiers failed: {exc}")
+        if not isinstance(inventory_modifiers, list):
+            inventory_modifiers = []
 
         dynamic_extra = 0
         dynamic_extra += max(0, len(specialization_items) - 6) * 14
+        dynamic_extra += max(0, len(inventory_modifiers) - 2) * 18
         dynamic_extra += max(0, len(perk_suggestions) - 2) * 18
         dynamic_extra += max(0, len(wellbeing_suggestions) - 2) * 18
 
@@ -3632,6 +3642,7 @@ class MainWindow(QMainWindow):
                 "raw_value": roll_info.get("raw_value", skill_value) if isinstance(roll_info, dict) else skill_value,
                 "bonus_value": roll_info.get("bonus_value", 0) if isinstance(roll_info, dict) else 0,
                 "specialization_items": specialization_items,
+                "inventory_modifiers": inventory_modifiers,
                 "perk_suggestions": perk_suggestions,
                 "wellbeing_suggestions": wellbeing_suggestions,
                 "fixed_bonus_lines": fixed_bonus_lines,
@@ -3903,9 +3914,15 @@ class MainWindow(QMainWindow):
             if self._has_inventory_sheet_mapping(row):
                 row["storage"] = "sheet"
                 has_sheet_mapping = True
+                row["roll_modifiers"] = self.loader.get_inventory_sheet_row_roll_modifiers(
+                    slot_id,
+                    str(row.get("name_cell", "") or "").strip().upper(),
+                )
             else:
                 row.setdefault("storage", "custom")
                 row.setdefault("custom_slot_id", slot_id)
+                if not isinstance(row.get("roll_modifiers", []), list):
+                    row["roll_modifiers"] = []
             row["is_empty_slot"] = not bool(
                 str(row.get("name", "") or "")
                 or str(row.get("pl", "") or "")
@@ -3914,6 +3931,19 @@ class MainWindow(QMainWindow):
             normalized_rows.append(row)
 
         custom_rows = self.get_inventory_custom_rows(slot_id)
+        for custom_index, row in enumerate(custom_rows):
+            if not isinstance(row, dict):
+                continue
+            row["storage"] = "custom"
+            row["custom_slot_id"] = slot_id
+            row["custom_row_index"] = custom_index
+            if not isinstance(row.get("roll_modifiers", []), list):
+                row["roll_modifiers"] = []
+            row["is_empty_slot"] = not bool(
+                str(row.get("name", "") or "")
+                or str(row.get("pl", "") or "")
+                or str(row.get("count", "") or "")
+            )
         if not has_sheet_mapping:
             normalized_rows = custom_rows
         else:
@@ -3946,6 +3976,82 @@ class MainWindow(QMainWindow):
             )
             next_custom_index += 1
         return normalized_rows
+
+    def get_inventory_roll_options(self):
+        definitions = self.load_skill_definitions()
+        categories = definitions.get("categories", []) if isinstance(definitions, dict) else []
+        if not isinstance(categories, list):
+            return []
+        options = []
+        for category in categories:
+            if not isinstance(category, dict):
+                continue
+            category_id = str(category.get("id", "") or "").strip()
+            skills = category.get("skills", [])
+            if not category_id or not isinstance(skills, list):
+                continue
+            for skill in skills:
+                if not isinstance(skill, dict):
+                    continue
+                skill_id = str(skill.get("id", "") or "").strip()
+                skill_name = str(skill.get("name", "") or "").strip()
+                if not skill_id and not skill_name:
+                    continue
+                roll_id = f"{category_id}/{skill_id or self.normalize_skill_name(skill_name)}"
+                options.append({"roll_id": roll_id, "roll_name": skill_name or roll_id})
+        return options
+
+    def get_inventory_roll_modifiers_for_roll(self, source_key, display_name):
+        roll_id = str(source_key or "").strip()
+        roll_name = str(display_name or "").strip()
+        if not roll_id and not roll_name:
+            return []
+        try:
+            inventory_data = self.get_inventory_display_data()
+            categories = self.build_inventory_slot_categories(inventory_data.get("sections", []))
+        except Exception as exc:
+            log_warning("inventory", f"roll modifier collection failed: {exc}")
+            return []
+        matches = []
+        for category in categories:
+            if not isinstance(category, dict):
+                continue
+            rows = self.build_inventory_table_rows(category, 0)
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                if self._is_inventory_row_empty(row):
+                    continue
+                item_name = str(row.get("name", "") or "").strip()
+                if not item_name:
+                    continue
+                modifiers = row.get("roll_modifiers", [])
+                if not isinstance(modifiers, list):
+                    continue
+                for modifier in modifiers:
+                    if not isinstance(modifier, dict):
+                        continue
+                    modifier_roll_id = str(modifier.get("roll_id", "") or "").strip()
+                    modifier_roll_name = str(modifier.get("roll_name", "") or "").strip()
+                    is_match = bool(roll_id and modifier_roll_id and modifier_roll_id == roll_id)
+                    if not is_match and not modifier_roll_id and roll_name and modifier_roll_name == roll_name:
+                        is_match = True
+                    if not is_match:
+                        continue
+                    try:
+                        value = int(modifier.get("modifier", 0))
+                    except Exception:
+                        continue
+                    if value == 0:
+                        continue
+                    matches.append(
+                        {
+                            "label": f"Inventar: {item_name} {value:+d}",
+                            "item_name": item_name,
+                            "modifier": value,
+                        }
+                    )
+        return matches
 
     def build_inventory_slot_categories(self, sections):
         section_map = {}
@@ -4301,11 +4407,8 @@ class MainWindow(QMainWindow):
             cfg = browser_section.load_browser_layout_config(self).get("browser_screen", {})
             if not isinstance(cfg, dict) or not bool(cfg.get("preload_on_start", False)):
                 return
-            if browser_section.ensure_browser_created(self):
-                if self.current_main_section in ("browser", "webbrowser") or bool(cfg.get("show_on_start", False)):
-                    browser_section.show_browser_section(self)
-                else:
-                    browser_section.hide_browser_section(self)
+            if browser_section.ensure_browser_created(self, preload=True):
+                browser_section.hide_browser_section(self)
         except Exception as exc:
             log_warning("browser", f"browser preload failed: {exc}")
 
