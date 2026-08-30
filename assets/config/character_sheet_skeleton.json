@@ -1,0 +1,6344 @@
+{
+  "version": 1,
+  "description": "Empty canonical Adventure Time Tool character sheet skeleton. Static labels/formulas only; no real character data.",
+  "cell_cache": {
+    "Charakterbogen": {
+      "B1": {
+        "value": "Name",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G1": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q1": {
+        "value": "",
+        "formula": "=#VALUE!",
+        "references": [],
+        "error": null
+      },
+      "Y1": {
+        "value": "Attribute",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV1": {
+        "value": "Perk",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB1": {
+        "value": "BP",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD1": {
+        "value": "Effekt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS1": {
+        "value": "Nachteile",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY1": {
+        "value": "BP",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "CA1": {
+        "value": "Effekt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B3": {
+        "value": "Rasse",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G3": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV3": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD3": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS3": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY3": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "CA3": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y4": {
+        "value": "Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG4": {
+        "value": "",
+        "formula": "=(AG7+AG9+AG11+AG13)/4",
+        "references": [],
+        "error": null
+      },
+      "AJ4": {
+        "value": "Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR4": {
+        "value": "",
+        "formula": "=(AR7+AR9+AR11+AR13)/4",
+        "references": [],
+        "error": null
+      },
+      "CA4": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B5": {
+        "value": "Größe",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G5": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV5": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD5": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD6": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B7": {
+        "value": "Gewicht",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y7": {
+        "value": "Kraft",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG7": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AJ7": {
+        "value": "Intelligenz",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR7": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y9": {
+        "value": "Geschick",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AJ9": {
+        "value": "Willenskraft",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "CA9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B10": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E10": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F10": {
+        "value": "",
+        "formula": "=(1+G5+(AG4*G5)+(F16/10))",
+        "references": [],
+        "error": null
+      },
+      "I10": {
+        "value": "HP",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q11": {
+        "value": "Bildoption",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y11": {
+        "value": "Zähigkeit",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG11": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AJ11": {
+        "value": "Charisma",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR11": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "CA11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "CA12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B13": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E13": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F13": {
+        "value": "",
+        "formula": "=(AR7+AR9+AR18)",
+        "references": [],
+        "error": null
+      },
+      "I13": {
+        "value": "MP",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M13": {
+        "value": "Sprachen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y13": {
+        "value": "Reflex",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG13": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AJ13": {
+        "value": "Sinne",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR13": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B16": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E16": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "I16": {
+        "value": "Exp",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD16": {
+        "value": "Initiative:",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG16": {
+        "value": "",
+        "formula": "=IF(G5=3,0+AG4/2,IF(G5=2,1+AG4/2,IF(G5=1,2+AG4/2,IF(G5=0,4+AG4/2,IF(G5=4,-1+AG4/2,IF(G5=5,-2+AG4/2,-4+AG4/2))))))+AG18+4",
+        "references": [],
+        "error": null
+      },
+      "AJ16": {
+        "value": "Magie-Typus:",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD18": {
+        "value": "Bonus:",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG18": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO18": {
+        "value": "Bonus:",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR18": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B20": {
+        "value": "Paradigmen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y21": {
+        "value": "Wohlbefinden",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM21": {
+        "value": "Lifeforce",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB23": {
+        "value": " -1 Würfel",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM23": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO23": {
+        "value": "",
+        "formula": "=((1+AU9)+(G5))",
+        "references": [],
+        "error": null
+      },
+      "B24": {
+        "value": "Grad",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB24": {
+        "value": "-1 Vorteil",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ24": {
+        "value": "bei wurf +0",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AS24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B25": {
+        "value": "Brand",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "I25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB25": {
+        "value": "-1 Wurf Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM25": {
+        "value": "Sanity",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B26": {
+        "value": "Daily",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "H26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "I26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "L26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB27": {
+        "value": "-1 Wurf Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM27": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO27": {
+        "value": "",
+        "formula": "=1+AR4+AR4",
+        "references": [],
+        "error": null
+      },
+      "B28": {
+        "value": "SE´s",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB29": {
+        "value": "Bewegung - 1/3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM29": {
+        "value": "Faith",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B30": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J30": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB31": {
+        "value": "Initiative im Nachteil",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM31": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO31": {
+        "value": "",
+        "formula": "=((1)+(AR7+AR9+AR11)/2)",
+        "references": [],
+        "error": null
+      },
+      "B32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB33": {
+        "value": "+/- 0",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B34": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J34": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA34": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB35": {
+        "value": "Initiative im Vorteil",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB37": {
+        "value": "Bewegung +1/3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB39": {
+        "value": "+1 Wurf Körper/Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B42": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J42": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB43": {
+        "value": " +1 Würfel",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB44": {
+        "value": "-1 Nachteil",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B46": {
+        "value": "Freie BP ",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J46": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B50": {
+        "value": "Se gesammt : ",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J50": {
+        "value": "",
+        "formula": "=SUM(J29:K45,U29:V45)",
+        "references": [],
+        "error": null
+      },
+      "AV15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA44": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA42": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "L25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "L24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "CA7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB5": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV6": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB6": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BB7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AV16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BD16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BS4": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY4": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AU9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      }
+    },
+    "Fertigkeiten": {
+      "E5": {
+        "value": "Allgemein",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD7": {
+        "value": "SE benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD9": {
+        "value": "EXP benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D12": {
+        "value": "Fertigkeit",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V12": {
+        "value": "Attribut",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD12": {
+        "value": "+ / -",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG12": {
+        "value": "Spezialisierung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE12": {
+        "value": "Notizen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BW13": {
+        "value": "WAFFE:",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BY13": {
+        "value": "",
+        "formula": "=Ausrüstung!K35",
+        "references": [],
+        "error": null
+      },
+      "D15": {
+        "value": "Klettern, Athletik, Ini-Wurf",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE15": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT15": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "BW15": {
+        "value": "K",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX15": {
+        "value": "",
+        "formula": "=Charakterbogen!$AG$7",
+        "references": [],
+        "error": null
+      },
+      "BW16": {
+        "value": "G",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX16": {
+        "value": "",
+        "formula": "=Charakterbogen!$AG$9",
+        "references": [],
+        "error": null
+      },
+      "D17": {
+        "value": "Schwimmen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE17": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT17": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "BW17": {
+        "value": "Z",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX17": {
+        "value": "",
+        "formula": "=Charakterbogen!$AG$11",
+        "references": [],
+        "error": null
+      },
+      "BW18": {
+        "value": "R",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX18": {
+        "value": "",
+        "formula": "=Charakterbogen!$AG$13",
+        "references": [],
+        "error": null
+      },
+      "D19": {
+        "value": "Tanz und Akrobatik",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE19": {
+        "value": "Anfangsattribut: Körper oder freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BW19": {
+        "value": "I",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX19": {
+        "value": "",
+        "formula": "=Charakterbogen!$AR$7",
+        "references": [],
+        "error": null
+      },
+      "BW20": {
+        "value": "W",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX20": {
+        "value": "",
+        "formula": "=Charakterbogen!$AR$9",
+        "references": [],
+        "error": null
+      },
+      "D21": {
+        "value": "Gesang und Musizieren",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE21": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BW21": {
+        "value": "C",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX21": {
+        "value": "",
+        "formula": "=Charakterbogen!$AR$11",
+        "references": [],
+        "error": null
+      },
+      "BW22": {
+        "value": "S",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BX22": {
+        "value": "",
+        "formula": "=Charakterbogen!$AR$13",
+        "references": [],
+        "error": null
+      },
+      "D23": {
+        "value": "Gaukelei und Trickbetrug",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE23": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT23": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "BW24": {
+        "value": "",
+        "formula": "=Charakterbogen!$AG$4",
+        "references": [],
+        "error": null
+      },
+      "BY24": {
+        "value": "B",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D25": {
+        "value": "Mustern und Menschenkenntnis",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE25": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BW26": {
+        "value": "",
+        "formula": "=Charakterbogen!$AR$4",
+        "references": [],
+        "error": null
+      },
+      "BY26": {
+        "value": "M",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D27": {
+        "value": "Etikette und Redegewandheit",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE27": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BW28": {
+        "value": "",
+        "formula": "=Charakterbogen!$AR$11",
+        "references": [],
+        "error": null
+      },
+      "BY28": {
+        "value": "CH",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D29": {
+        "value": "Reiten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE29": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT29": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D31": {
+        "value": "Fahrzeug lenken und Geräte bedienen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE31": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT31": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D33": {
+        "value": "Schleichen, Verstecken und Heimlichkeit",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE33": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT33": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D35": {
+        "value": "Willensstärke",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE35": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E39": {
+        "value": "Kampf",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB41": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD41": {
+        "value": "SE benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD43": {
+        "value": "EXP benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D46": {
+        "value": "Fähigkeiten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V46": {
+        "value": "Attribut",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD46": {
+        "value": "+ / -",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG46": {
+        "value": "Spezialisierung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE46": {
+        "value": "Notizen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D49": {
+        "value": "Ausweichen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V49": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD49": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG49": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE49": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT49": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D51": {
+        "value": "Nahkampf",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V51": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X51": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD51": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG51": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE51": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT51": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D53": {
+        "value": "Fernkampf",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD53": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE53": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT53": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D55": {
+        "value": "Führen, Taktik und Kriegskunst",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD55": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE55": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT55": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D57": {
+        "value": "Blocken mit Schilden",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD57": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE57": {
+        "value": "Anfangsattribut: Körper",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT57": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D59": {
+        "value": "Kriegsmaschinerie",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD59": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE59": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D61": {
+        "value": "Magieanwendung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD61": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE61": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT61": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "E65": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V67": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X67": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z67": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB67": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD67": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V69": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X69": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z69": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB69": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD69": {
+        "value": "SE benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D72": {
+        "value": "Fähigkeiten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V72": {
+        "value": "Attribut",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD72": {
+        "value": "+ / -",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG72": {
+        "value": "Spezialisierung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE72": {
+        "value": "Notizen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D75": {
+        "value": "Religion, Götter und Dämonen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V75": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD75": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG75": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE75": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT75": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D77": {
+        "value": "Heraldik, Rechts- und Altertumskunde",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD77": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE77": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT77": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D79": {
+        "value": "Handel und Wertgegenstände",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V79": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD79": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG79": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE79": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT79": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D81": {
+        "value": "Monster und Unwesenskunde",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD81": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE81": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT81": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D83": {
+        "value": "Magische Phänomene",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD83": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE83": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT83": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D85": {
+        "value": "Wildnis, Navigation und Wetterkunde",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD85": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE85": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT85": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D87": {
+        "value": "Stadtleben und Gassenwissen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V87": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD87": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG87": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE87": {
+        "value": "Anfangsattribut: Geist",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT87": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "E91": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V93": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X93": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z93": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB93": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD93": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V95": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X95": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z95": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB95": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD95": {
+        "value": "SE benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D98": {
+        "value": "Fähigkeiten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V98": {
+        "value": "Attribut",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD98": {
+        "value": "+ / -",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG98": {
+        "value": "Spezialisierung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE98": {
+        "value": "Notizen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D101": {
+        "value": "Schreiber, Maler und Kartograph",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD101": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE101": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT101": {
+        "value": "",
+        "formula": "=Charakterbogen!$J$14",
+        "references": [
+          "J14"
+        ],
+        "error": null
+      },
+      "D103": {
+        "value": "Holzfäller, Zimmermann und Schnitzer",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD103": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE103": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D105": {
+        "value": "Schmied, Gießer und Metallurgie",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD105": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE105": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D107": {
+        "value": "Bergbau und Steinmetz",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD107": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE107": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D109": {
+        "value": "Weber, Schneider und Färber",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD109": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE109": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D111": {
+        "value": "Jäger und Kürschner",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD111": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE111": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D113": {
+        "value": "Tierkunde und Abrichten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD113": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE113": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D115": {
+        "value": "Chemiker und Glasbläser",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD115": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE115": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT115": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D117": {
+        "value": "Kochen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V117": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD117": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG117": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE117": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D119": {
+        "value": "Ritualistik",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD119": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE119": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D121": {
+        "value": "Pflanzenkunde und Landwirtschaft",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD121": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE121": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BT121": {
+        "value": "",
+        "formula": "=Charakterbogen!$W$14",
+        "references": [
+          "W14"
+        ],
+        "error": null
+      },
+      "D123": {
+        "value": "Medizin und Heilkunde",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V123": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD123": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG123": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE123": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "D125": {
+        "value": "Feinschliff und Präzisionsmechanik",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V125": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD125": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG125": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BE125": {
+        "value": "Anfangsattribut: freie Wahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z49": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB53": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z53": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X53": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG53": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z51": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AB21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V119": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG119": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V101": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG101": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X79": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X49": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E67": {
+        "value": "Wissen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD71": {
+        "value": "EXP benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E93": {
+        "value": "Handwerk",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AD97": {
+        "value": "EXP benötigt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG55": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG57": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG59": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG61": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG77": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG81": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG83": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG85": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG103": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG105": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG107": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG109": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG111": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG113": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG115": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG121": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      }
+    },
+    "Inventar": {
+      "B2": {
+        "value": "Inventar",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B5": {
+        "value": "Geldbeutel",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B7": {
+        "value": "Gulden",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E7": {
+        "value": "Schilling",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "H7": {
+        "value": "Heller",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K7": {
+        "value": "Pfifferling",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "H9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B12": {
+        "value": "Im Inventar",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P12": {
+        "value": "PL",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q12": {
+        "value": "Anzahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH12": {
+        "value": "PL",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI12": {
+        "value": "Anzahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL12": {
+        "value": "Bücher",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AZ12": {
+        "value": "PL",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "BA12": {
+        "value": "Anzahl",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B28": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T28": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T30": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH30": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI30": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AZ13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K9": {
+        "value": 0,
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AH19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "P15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q15": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      }
+    },
+    "Ausrüstung": {
+      "C2": {
+        "value": "Ausrüstung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C5": {
+        "value": "Rüstung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M5": {
+        "value": "Physische-Resistenzen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U5": {
+        "value": "Elementare-Resistenzen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C7": {
+        "value": "Wo getragen:",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G7": {
+        "value": "Name",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K7": {
+        "value": "PL",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M7": {
+        "value": "Kopf",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O7": {
+        "value": "Brust",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q7": {
+        "value": "Arme",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S7": {
+        "value": "Beine",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U7": {
+        "value": "Feuer",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W7": {
+        "value": "Wasser",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y7": {
+        "value": "Erde",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA7": {
+        "value": "Wind",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC7": {
+        "value": "Blitz",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE7": {
+        "value": "Eis",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG7": {
+        "value": "Säure",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI7": {
+        "value": "Licht",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK7": {
+        "value": "Dunkel",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM7": {
+        "value": "Haltbarkeit",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AR7": {
+        "value": "Attribute / Sonderfertigkeiten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO9": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO11": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO13": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO15": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO17": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO19": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO21": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO23": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO25": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M27": {
+        "value": "",
+        "formula": "=SUM(M9,M11,M13,M15,M17,M21,M23,M25)",
+        "references": [],
+        "error": null
+      },
+      "O27": {
+        "value": "",
+        "formula": "=SUM(O9,O11,O13,O15,O17,O21,O23,O25)",
+        "references": [],
+        "error": null
+      },
+      "Q27": {
+        "value": "",
+        "formula": "=SUM(Q9,Q11,Q13,Q15,Q17,Q21,Q23,Q25)",
+        "references": [],
+        "error": null
+      },
+      "S27": {
+        "value": "",
+        "formula": "=SUM(S9,S11,S13,S15,S17,S21,S23,S25)",
+        "references": [],
+        "error": null
+      },
+      "U27": {
+        "value": "",
+        "formula": "=SUM(U9,U11,U13,U15,U17,U21,U23,U25)",
+        "references": [],
+        "error": null
+      },
+      "W27": {
+        "value": "",
+        "formula": "=SUM(W9,W11,W13,W17,W15,W21,W23,W25)",
+        "references": [],
+        "error": null
+      },
+      "Y27": {
+        "value": "",
+        "formula": "=SUM(Y9,Y11,Y13,Y15,Y17,Y21,Y23,Y25)",
+        "references": [],
+        "error": null
+      },
+      "AA27": {
+        "value": "",
+        "formula": "=SUM(AA9,AA11,AA13,AA15,AA17,AA21,AA23,AA25)",
+        "references": [],
+        "error": null
+      },
+      "AC27": {
+        "value": "",
+        "formula": "=SUM(AC9,AC11,AC13,AC15,AC17,AC21,AC23,AC25)",
+        "references": [],
+        "error": null
+      },
+      "AE27": {
+        "value": "",
+        "formula": "=SUM(AE9,AE11,AE13,AE15,AE17,AE21,AE23,AE25)",
+        "references": [],
+        "error": null
+      },
+      "AG27": {
+        "value": "",
+        "formula": "=SUM(AG9,AG11,AG13,AG15,AG17,AG21,AG23,AG25)",
+        "references": [],
+        "error": null
+      },
+      "AI27": {
+        "value": "",
+        "formula": "=SUM(AI9,AI11,AI13,AI15,AI17,AI21,AI23,AI25)",
+        "references": [],
+        "error": null
+      },
+      "AK27": {
+        "value": "",
+        "formula": "=SUM(AK9,AK11,AK13,AK15,AK17,AK21,AK23,AK25)",
+        "references": [],
+        "error": null
+      },
+      "C31": {
+        "value": "Waffe",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M31": {
+        "value": "Schadensart",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T31": {
+        "value": "Physisch",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA31": {
+        "value": "Elementar",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C33": {
+        "value": "Name",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G33": {
+        "value": "Waffentyp",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K33": {
+        "value": "PL",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M33": {
+        "value": "Schnitt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O33": {
+        "value": "Stoß",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q33": {
+        "value": "Stich",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T33": {
+        "value": "Würfel",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X33": {
+        "value": "Bonus",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA33": {
+        "value": "Würfel",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE33": {
+        "value": "Element(e)",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI33": {
+        "value": "Bonus",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL33": {
+        "value": "Haltbarkeit",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ33": {
+        "value": "Attribute / Sonderfertigkeiten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN35": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN37": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN39": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN41": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN43": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN45": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN47": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AN49": {
+        "value": "/",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M53": {
+        "value": "Elementare-Boni / Affinitäten",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G54": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M55": {
+        "value": "Feuer",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O55": {
+        "value": "Wasser",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q55": {
+        "value": "Erde",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S55": {
+        "value": "Wind",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U55": {
+        "value": "Blitz",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W55": {
+        "value": "Eis",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y55": {
+        "value": "Säure",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA55": {
+        "value": "Licht",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC55": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA37": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "S16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "U16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Y16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AC16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AK16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AP16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AT16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "X47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "K47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Q47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ47": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "O38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AL38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AO38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AQ38": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C44": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "G44": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "T44": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AA43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AI43": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      }
+    },
+    "Magie": {
+      "B2": {
+        "value": "Upgrade Tabelle",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F5": {
+        "value": "Base",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J5": {
+        "value": "Dice Up I",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N5": {
+        "value": "Dice Up II",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R5": {
+        "value": "Dice Up III",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V5": {
+        "value": "Dice Up IV",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z5": {
+        "value": "Dice Up V",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B7": {
+        "value": "Base",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F7": {
+        "value": "1d4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J7": {
+        "value": "1d6+1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N7": {
+        "value": "1d8+2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R7": {
+        "value": "1d10+3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V7": {
+        "value": "1d12+4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z7": {
+        "value": "1d20+5",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B9": {
+        "value": "Scale Up I",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F9": {
+        "value": "2d4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J9": {
+        "value": "2d6+1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N9": {
+        "value": "2d8+2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R9": {
+        "value": "2d10+3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V9": {
+        "value": "2d12+4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z9": {
+        "value": "2d20+5",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B11": {
+        "value": "Scale Up II",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F11": {
+        "value": "3d4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J11": {
+        "value": "3d6+1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N11": {
+        "value": "3d8+2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R11": {
+        "value": "3d10+3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V11": {
+        "value": "3d12+4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z11": {
+        "value": "3d20+5",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B13": {
+        "value": "Scale Up III",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F13": {
+        "value": "4d4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J13": {
+        "value": "4d6+1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N13": {
+        "value": "4d8+2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R13": {
+        "value": "4d10+3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V13": {
+        "value": "4d12+4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z13": {
+        "value": "4d20+5",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B15": {
+        "value": "Scale Up IV",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F15": {
+        "value": "5d4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J15": {
+        "value": "5d6+1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N15": {
+        "value": "5d8+2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R15": {
+        "value": "5d10+3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V15": {
+        "value": "5d12+4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z15": {
+        "value": "5d20+5",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B17": {
+        "value": "Scale Up V",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "F17": {
+        "value": "6d4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J17": {
+        "value": "6d6+1",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "N17": {
+        "value": "6d8+2",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "R17": {
+        "value": "6d10+3",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "V17": {
+        "value": "6d12+4",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z17": {
+        "value": "6d20+5",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B20": {
+        "value": "Magie",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B23": {
+        "value": "Magieschule",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "L23": {
+        "value": "Info",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W23": {
+        "value": "Vorbereiteter Zauber",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AG23": {
+        "value": "Ladung",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AJ23": {
+        "value": "Dauer",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AM23": {
+        "value": "Effekt",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B39": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      }
+    },
+    "Notizen": {
+      "B2": {
+        "value": "Notizen",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B7": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B8": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z8": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B9": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B10": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "Z11": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B12": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B13": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B14": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W16": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B17": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B18": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W19": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W20": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W21": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "E22": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W23": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "A24": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W25": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W26": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W27": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "W28": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE29": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "AE31": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C32": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C33": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B34": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B35": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "B36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "C36": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "J40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      },
+      "M40": {
+        "value": "",
+        "formula": null,
+        "references": [],
+        "error": null
+      }
+    }
+  },
+  "app_meta": {
+    "inventory": {},
+    "custom_sections": {
+      "notes": {
+        "text": ""
+      },
+      "equipment": {
+        "armor_rows": [],
+        "weapon_rows": []
+      }
+    }
+  }
+}

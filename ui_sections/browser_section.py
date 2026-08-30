@@ -193,6 +193,8 @@ def _remember_url(window, url):
     url_text = url_text.strip()
     if not _is_storable_browser_url(url):
         return
+    if _is_incomplete_roll20_editor_url(url):
+        return
     window._browser_last_url = url_text
     try:
         settings, _created = load_settings()
@@ -260,6 +262,17 @@ def _is_storable_browser_url(url):
     if _is_internal_persistence_test_url(qurl):
         return False
     return scheme in {"http", "https"}
+
+
+def _is_incomplete_roll20_editor_url(url):
+    qurl = url if isinstance(url, QUrl) else QUrl(str(url or ""))
+    try:
+        host = str(qurl.host() or "").lower()
+        path = str(qurl.path() or "").rstrip("/").lower()
+        query = str(qurl.query() or "").lower()
+    except Exception:
+        return False
+    return host == "app.roll20.net" and path == "/editor" and "campaignid=" not in query
 
 
 def _profile_summary_lines(window, reason):
@@ -360,10 +373,10 @@ def _initial_url(window, cfg):
     saved_url = ""
     if isinstance(browser_settings, dict):
         saved_url = str(browser_settings.get("last_url", "") or "").strip()
-    if not _is_storable_browser_url(saved_url):
+    if not _is_storable_browser_url(saved_url) or _is_incomplete_roll20_editor_url(saved_url):
         saved_url = ""
     memory_url = str(getattr(window, "_browser_last_url", "") or "").strip()
-    if not _is_storable_browser_url(memory_url):
+    if not _is_storable_browser_url(memory_url) or _is_incomplete_roll20_editor_url(memory_url):
         memory_url = ""
     return saved_url or memory_url or configured_url
 
@@ -420,12 +433,11 @@ def _browser_asset_path(window, asset_rel_path):
     asset_name = str(asset_rel_path or "").strip().replace("\\", "/").lstrip("/")
     if not asset_name:
         return None
-    if asset_name.startswith("icons/") or asset_name.startswith("ui_elements/icons/"):
-        path = ui_icon_path(asset_name)
-        return path if path.exists() else None
     primary_base = getattr(window, "theme_asset_base_path", None)
     assets_dir = getattr(window, "assets_dir", resource_path("assets"))
     candidates = []
+    if asset_name.startswith("icons/") or asset_name.startswith("ui_elements/icons/"):
+        candidates.append(ui_icon_path(asset_name))
     if primary_base is not None:
         candidates.append(primary_base / asset_name)
     candidates.extend([

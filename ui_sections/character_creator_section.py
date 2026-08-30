@@ -1,11 +1,14 @@
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
-from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QScrollArea, QTextEdit, QWidget
+from PySide6.QtWidgets import QLabel, QComboBox, QLineEdit, QPushButton, QScrollArea, QTextEdit, QWidget
 
+from app_logger import log_error, log_debug
 from app_paths import data_path, resource_path
+from ui_dialogs.perk_picker_dialog import open_perk_picker
 
 
 STEPS = [
@@ -16,6 +19,38 @@ STEPS = [
     ("equipment", "Ausrüstung"),
     ("summary", "Zusammenfassung"),
 ]
+
+CREATOR_ATTRIBUTE_OPTIONS = [
+    ("K", "Kraft"),
+    ("G", "Geschick"),
+    ("Z", "Zähigkeit"),
+    ("R", "Reflex"),
+    ("I", "Intelligenz"),
+    ("W", "Willenskraft"),
+    ("C", "Charisma"),
+    ("S", "Sinne"),
+]
+CREATOR_ATTRIBUTE_ALIASES = {
+    "K": "K",
+    "KRAFT": "K",
+    "G": "G",
+    "GESCHICK": "G",
+    "GESCHICKLICHKEIT": "G",
+    "Z": "Z",
+    "ZAEHIGKEIT": "Z",
+    "ZÄHIGKEIT": "Z",
+    "R": "R",
+    "REFLEX": "R",
+    "REFLEXE": "R",
+    "I": "I",
+    "INTELLIGENZ": "I",
+    "W": "W",
+    "WILLENSKRAFT": "W",
+    "C": "C",
+    "CHARISMA": "C",
+    "S": "S",
+    "SINNE": "S",
+}
 
 SPECIES = [
     {
@@ -277,6 +312,12 @@ def _ensure_creator_state(window):
     state.setdefault("species_id", SPECIES[0]["id"])
     state.setdefault("species_name", SPECIES[0]["name"])
     state.setdefault("species_image_path", SPECIES[0]["image_path"])
+    start_values = state.get("start_values")
+    if not isinstance(start_values, dict):
+        start_values = {}
+        state["start_values"] = start_values
+    start_values["ap"] = _clamp_start_ap(start_values.get("ap", 5))
+    start_values["xp"] = _non_negative_int(start_values.get("xp", 0))
     concept = state.get("concept")
     if not isinstance(concept, dict):
         concept = {}
@@ -288,6 +329,17 @@ def _ensure_creator_state(window):
     concept.setdefault("role", "")
     concept.setdefault("motivation", "")
     concept.setdefault("description", "")
+    paradigms = state.get("paradigms")
+    if not isinstance(paradigms, list):
+        paradigms = []
+        state["paradigms"] = paradigms
+    while len(paradigms) < 3:
+        paradigms.append({"name": "", "grad": 1})
+    del paradigms[3:]
+    for paradigm in paradigms:
+        if isinstance(paradigm, dict):
+            paradigm.setdefault("name", "")
+            paradigm["grad"] = 2 if int(paradigm.get("grad", 1) or 1) == 2 else 1
     attributes = state.get("attributes")
     if not isinstance(attributes, dict):
         attributes = {}
@@ -312,6 +364,10 @@ def _ensure_creator_state(window):
     if not isinstance(perks, list):
         perks = []
         state["perks"] = perks
+    disadvantages = state.get("disadvantages")
+    if not isinstance(disadvantages, list):
+        disadvantages = []
+        state["disadvantages"] = disadvantages
     equipment = state.get("equipment")
     if not isinstance(equipment, dict):
         equipment = {}
@@ -352,7 +408,7 @@ def _render_step_buttons(window, x, y, w, h, state):
     button_w = max(112, (w - (gap * (len(STEPS) - 1))) // len(STEPS))
     for index, (step_id, label) in enumerate(STEPS):
         active = step_id == state.get("step")
-        window.create_asset_text_button(
+        result = window.create_asset_text_button(
             window.content_layer,
             {
                 "x": x + (index * (button_w + gap)),
@@ -365,8 +421,15 @@ def _render_step_buttons(window, x, y, w, h, state):
                 "color": "#f2d28b" if active else "#9a8560",
             },
             label,
-            lambda step=step_id: _set_step(window, step),
+            lambda checked=False, step=step_id: _set_step(window, step),
         )
+        button = result.get("button") if isinstance(result, dict) else None
+        if button is not None:
+            button.setStyleSheet(
+                "QPushButton { background: transparent; padding: 0px; "
+                f"border: {'2px solid rgba(242, 210, 139, 190)' if active else 'none'}; }}"
+                "QPushButton:hover { border: 2px solid rgba(242, 210, 139, 130); }"
+            )
 
 
 def _render_placeholder_step(panel, state):
@@ -449,6 +512,8 @@ def _render_concept_step(window, panel, state):
         _create_concept_line_edit(host, 8, cursor_y, inner_w - 16, "Kurzkonzept", concept, "short_concept")
         cursor_y += row_h + 4
 
+    cursor_y = _render_creator_paradigms_editor(window, host, 8, cursor_y + 10, inner_w - 16, state)
+
     cursor_y = _create_bio_section_heading(host, 8, cursor_y + 10, inner_w - 16, "Persönlichkeit & Motivation")
     cursor_y = _create_concept_text_edit(host, 8, cursor_y, inner_w - 16, "Motivation", concept, "motivation", 104)
     cursor_y = _create_concept_text_edit(host, 8, cursor_y + 14, inner_w - 16, "Kurzbeschreibung", concept, "description", 128)
@@ -472,6 +537,41 @@ def _create_bio_section_heading(parent, x, y, w, text):
     line.setStyleSheet("background: rgba(160, 110, 35, 150);")
     line.show()
     return y + 44
+
+
+def _render_creator_paradigms_editor(window, parent, x, y, w, state):
+    paradigms = state.setdefault("paradigms", [{"name": "", "grad": 1}, {"name": "", "grad": 1}, {"name": "", "grad": 1}])
+    y = _create_bio_section_heading(parent, x, y, w, "Paradigmen / Wesentlichkeiten")
+    row_h = 42
+    for index in range(3):
+        entry = paradigms[index] if index < len(paradigms) and isinstance(paradigms[index], dict) else {"name": "", "grad": 1}
+        paradigms[index] = entry
+        label = QLabel(parent)
+        label.setGeometry(x, y + 8, 92, 28)
+        label.setText(f"Paradigma {index + 1}")
+        label.setStyleSheet("background: transparent; color: #e2c678; font-size: 13px; font-weight: 800;")
+        label.show()
+
+        editor = QLineEdit(parent)
+        editor.setGeometry(x + 102, y + 4, max(140, w - 248), 34)
+        editor.setText(str(entry.get("name", "") or ""))
+        editor.setPlaceholderText("Name / Wesentlichkeit")
+        editor.setStyleSheet(_concept_input_style())
+        editor.textChanged.connect(lambda value, target=entry: target.__setitem__("name", value))
+        editor.show()
+
+        grad = QComboBox(parent)
+        grad.setGeometry(x + w - 132, y + 4, 132, 34)
+        grad.addItem("Grad 1", 1)
+        grad.addItem("Grad 2", 2)
+        grad.setCurrentIndex(1 if int(entry.get("grad", 1) or 1) == 2 else 0)
+        grad.setStyleSheet(_concept_input_style())
+        grad.currentIndexChanged.connect(
+            lambda _idx, target=entry, widget=grad: target.__setitem__("grad", int(widget.currentData() or 1))
+        )
+        grad.show()
+        y += row_h
+    return y + 4
 
 
 def _render_bio_species_reference(window, parent, x, y, w, h, state):
@@ -560,8 +660,10 @@ def _render_attributes_step(window, panel, state):
     attributes = state.get("attributes", {})
     body_attrs = attributes.get("body", {})
     mind_attrs = attributes.get("mind", {})
+    start_ap = _creator_start_ap(state)
+    start_xp = _creator_start_xp(state)
     total = _attribute_total(attributes)
-    total_color = "#d86b3a" if total > 5 else "#cdbb8a"
+    total_color = "#d86b3a" if total > start_ap else "#cdbb8a"
 
     outer = _create_framed_panel(window, panel, pad, pad, body_w, body_h)
 
@@ -571,15 +673,23 @@ def _render_attributes_step(window, panel, state):
     title.setStyleSheet("background: transparent; color: #f2d28b; font-size: 26px; font-weight: 800;")
     title.show()
 
+    start_label = QLabel(outer)
+    start_label.setGeometry(26, 58, 90, 28)
+    start_label.setText("Startwerte")
+    start_label.setStyleSheet("background: transparent; color: #e2c678; font-size: 14px; font-weight: 800;")
+    start_label.show()
+    _render_start_value_control(window, outer, 126, 56, "Start-AP", start_ap, 1, 50, lambda delta: _change_start_ap(window, delta))
+    _render_start_value_control(window, outer, 330, 56, "Start-XP", start_xp, 0, 999999, lambda delta: _change_start_xp(window, delta), step=10)
+
     points = QLabel(outer)
-    points.setGeometry(26, 60, body_w - 52, 26)
-    points.setText(f"Verteilte AP: {total} / 5")
+    points.setGeometry(560, 58, max(220, body_w - 612), 26)
+    points.setText(f"Verteilte AP: {total} / {start_ap}")
     points.setStyleSheet(f"background: transparent; color: {total_color}; font-size: 15px; font-weight: 700;")
     points.show()
 
     group_gap = 22
-    group_y = 102
-    group_h = max(260, body_h - group_y - 28)
+    group_y = 108
+    group_h = 286
     group_w = (body_w - 52 - group_gap) // 2
     left_x = 26
     right_x = left_x + group_w + group_gap
@@ -600,6 +710,7 @@ def _render_attributes_step(window, panel, state):
             ("reflex", "Reflex"),
         ],
         body_attrs,
+        "#8f2f2a",
     )
     _render_attribute_group(
         window,
@@ -617,41 +728,69 @@ def _render_attributes_step(window, panel, state):
             ("sinne", "Sinne"),
         ],
         mind_attrs,
+        "#2f85b7",
     )
 
 
-def _render_attribute_group(window, parent, x, y, w, h, title_text, group_key, rows, values):
-    group = _create_framed_panel(window, parent, x, y, w, h)
+def _render_start_value_control(window, parent, x, y, label_text, value, min_value, max_value, callback, step=1):
+    label = QLabel(parent)
+    label.setGeometry(x, y, 72, 30)
+    label.setText(label_text)
+    label.setStyleSheet("background: transparent; color: #cdbb8a; font-size: 13px; font-weight: 800;")
+    label.show()
+    _create_attribute_button(window, parent, x + 76, y, 28, 30, "-", lambda: callback(-step))
+    value_label = QLabel(parent)
+    value_label.setGeometry(x + 108, y, 62, 30)
+    value_label.setText(str(max(min_value, min(max_value, int(value or 0)))))
+    value_label.setAlignment(Qt.AlignCenter)
+    value_label.setStyleSheet(
+        "background: rgba(9, 7, 6, 170); color: #9fc7ff; "
+        "border: 1px solid rgba(160, 110, 35, 150); font-size: 15px; font-weight: 800;"
+    )
+    value_label.show()
+    _create_attribute_button(window, parent, x + 174, y, 28, 30, "+", lambda: callback(step))
+
+
+def _render_attribute_group(window, parent, x, y, w, h, title_text, group_key, rows, values, accent):
+    group = QWidget(parent)
+    group.setGeometry(x, y, w, h)
+    group.setStyleSheet("background: transparent; border: none;")
+    group.show()
 
     title = QLabel(group)
-    title.setGeometry(18, 16, w - 36, 30)
+    title.setGeometry(0, 0, w, 32)
     title.setText(title_text)
-    title.setStyleSheet("background: transparent; color: #f2d28b; font-size: 22px; font-weight: 800;")
+    title.setStyleSheet(f"background: transparent; color: {accent}; font-size: 24px; font-weight: 900;")
     title.show()
 
     separator = QLabel(group)
-    separator.setGeometry(18, 52, w - 36, 2)
-    separator.setStyleSheet("background: rgba(160, 110, 35, 170);")
+    separator.setGeometry(0, 38, w, 3)
+    separator.setStyleSheet(f"background: {accent};")
     separator.show()
 
-    row_y = 74
-    row_h = 48
+    row_y = 58
+    row_h = 44
     for attr_key, attr_label in rows:
-        _render_attribute_row(window, group, 18, row_y, w - 36, row_h, group_key, attr_key, attr_label, values)
-        row_y += row_h + 12
+        _render_attribute_row(window, group, 0, row_y, w, row_h, group_key, attr_key, attr_label, values, accent)
+        row_y += row_h + 14
 
 
-def _render_attribute_row(window, parent, x, y, w, h, group_key, attr_key, attr_label, values):
+def _render_attribute_row(window, parent, x, y, w, h, group_key, attr_key, attr_label, values, accent):
+    row_bg = QLabel(parent)
+    row_bg.setGeometry(x, y, w, h)
+    row_bg.setStyleSheet(f"background: rgba(9, 7, 6, 100); border-left: 3px solid {accent};")
+    row_bg.show()
+
     label = QLabel(parent)
-    label.setGeometry(x, y, max(120, w - 168), h)
+    label.setGeometry(x + 14, y, max(120, w - 182), h)
     label.setText(attr_label)
     label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
     label.setStyleSheet("background: transparent; color: #e8dcc0; font-size: 17px; font-weight: 700;")
     label.show()
 
-    minus_x = x + w - 148
-    value_x = x + w - 100
-    plus_x = x + w - 46
+    minus_x = x + w - 146
+    value_x = x + w - 96
+    plus_x = x + w - 42
     _create_attribute_button(window, parent, minus_x, y + 7, 34, 34, "-", lambda: _change_attribute(window, group_key, attr_key, -1))
 
     value = QLabel(parent)
@@ -686,12 +825,50 @@ def _change_attribute(window, group_key, attr_key, delta):
     state = _ensure_creator_state(window)
     attributes = state["attributes"]
     group = attributes[group_key]
-    group[attr_key] = _clamp_attribute_value(int(group.get(attr_key, 0) or 0) + delta)
+    current = _clamp_attribute_value(group.get(attr_key, 0))
+    next_value = _clamp_attribute_value(current + delta)
+    if delta > 0:
+        before_total = _attribute_total(attributes)
+        added_cost = _attribute_point_cost(next_value) - _attribute_point_cost(current)
+        if before_total + added_cost > _creator_start_ap(state):
+            return
+    group[attr_key] = next_value
     _rerender(window)
 
 
+def _change_start_ap(window, delta):
+    state = _ensure_creator_state(window)
+    start_values = state.setdefault("start_values", {})
+    start_values["ap"] = _clamp_start_ap(_creator_start_ap(state) + int(delta or 0))
+    _rerender(window)
+
+
+def _change_start_xp(window, delta):
+    state = _ensure_creator_state(window)
+    start_values = state.setdefault("start_values", {})
+    start_values["xp"] = max(0, _creator_start_xp(state) + int(delta or 0))
+    _rerender(window)
+
+
+def _creator_start_ap(state):
+    start_values = state.get("start_values", {}) if isinstance(state.get("start_values"), dict) else {}
+    return _clamp_start_ap(start_values.get("ap", 5))
+
+
+def _creator_start_xp(state):
+    start_values = state.get("start_values", {}) if isinstance(state.get("start_values"), dict) else {}
+    return _non_negative_int(start_values.get("xp", 0))
+
+
+def _clamp_start_ap(value):
+    try:
+        return max(1, min(50, int(value or 5)))
+    except Exception:
+        return 5
+
+
 def _clamp_attribute_value(value):
-    return max(0, min(5, int(value or 0)))
+    return max(0, min(2, int(value or 0)))
 
 
 def _attribute_total(attributes):
@@ -721,7 +898,8 @@ def _render_skills_perks_step(window, panel, state):
     pad = 18
     body_w = panel.width() - (pad * 2)
     body_h = panel.height() - (pad * 2)
-    spent_bp = _creator_spent_bp(state)
+    bp_parts = _creator_bp_parts(state)
+    spent_bp = bp_parts["spent"]
     remaining_bp = 25 - spent_bp
 
     outer = _create_framed_panel(window, panel, pad, pad, body_w, body_h)
@@ -735,11 +913,22 @@ def _render_skills_perks_step(window, panel, state):
     summary = QLabel(outer)
     summary.setGeometry(26, 56, body_w - 52, 28)
     remaining_color = "#d86b3a" if remaining_bp < 0 else "#cdbb8a"
-    summary.setText(f"Start-BP: 25    Ausgegeben: {spent_bp}    Verbleibend: {remaining_bp}")
+    summary.setText(
+        f"Start-BP: 25    Fertigkeiten: {bp_parts['skills']}    Perks: {bp_parts['perks']}    "
+        f"Nachteile: -{bp_parts['disadvantages']}    Verbleibend: {remaining_bp}"
+    )
     summary.setStyleSheet(f"background: transparent; color: {remaining_color}; font-size: 16px; font-weight: 800;")
     summary.show()
 
+    status_text = _clean_string(state.get("skills_perks_status"))
     section_y = 98
+    if status_text:
+        status = QLabel(outer)
+        status.setGeometry(26, 84, body_w - 52, 22)
+        status.setText(status_text)
+        status.setStyleSheet("background: transparent; color: #d8aa4c; font-size: 13px; font-weight: 700;")
+        status.show()
+        section_y = 114
     section_h = max(260, body_h - section_y - 24)
     gap = 22
     left_w = int((body_w - 52 - gap) * 0.58)
@@ -794,59 +983,79 @@ def _render_creator_skill_row(window, parent, x, y, w, skill, state):
     if not skill_id:
         skill_id = _sanitize_filename(str(skill.get("name", "skill") or "skill")).lower()
     skills_state = state.setdefault("skills", {})
-    entry = skills_state.setdefault(skill_id, {"active": False, "attribute": "", "specialization": ""})
-    entry.setdefault("active", False)
+    entry = skills_state.setdefault(skill_id, {"selected": False, "active": False, "attribute": "", "specialization": ""})
+    entry.setdefault("selected", bool(entry.get("active", False)))
     entry.setdefault("attribute", "")
     entry.setdefault("specialization", "")
-    active = bool(entry.get("active", False))
+    allowed_options = _creator_skill_attribute_options(skill)
+    current_attribute = _canonical_creator_attribute(entry.get("attribute"))
+    if current_attribute not in {code for code, _label in allowed_options}:
+        current_attribute = ""
+        entry["attribute"] = ""
+    locked = _creator_skill_is_locked(state, skill)
+    selected = bool(entry.get("selected", False)) and not locked
+    if selected and not current_attribute and len(allowed_options) == 1:
+        current_attribute = allowed_options[0][0]
+        entry["attribute"] = current_attribute
+    active = _creator_skill_is_active(entry) and selected and not locked
+    entry["active"] = active
     row_h = 66
 
     row = QWidget(parent)
     row.setGeometry(x, y, w, row_h)
     row.setStyleSheet("background: rgba(9, 7, 6, 95); border: none;")
 
-    toggle = QPushButton(row)
-    toggle.setGeometry(0, 16, 26, 26)
-    toggle.setText("X" if active else "")
-    toggle.setCursor(Qt.PointingHandCursor)
-    toggle.setStyleSheet(
-        "QPushButton { background: rgba(12, 9, 7, 190); color: #f2d28b; "
-        "border: 1px solid rgba(160, 110, 35, 170); font-size: 15px; font-weight: 900; padding: 0px; }"
-        "QPushButton:hover { border-color: #f2d28b; }"
-    )
-    toggle.clicked.connect(lambda checked=False, sid=skill_id: _toggle_creator_skill(window, sid))
-    toggle.show()
+    _create_creator_skill_checkbox(window, row, 0, 16, 26, 26, selected, locked, lambda: _toggle_creator_skill(window, skill_id))
 
     name = QLabel(row)
-    name.setGeometry(36, 0, max(130, w - 304), 30)
+    name.setGeometry(36, 0, max(130, w - 344), 30)
     name.setText(str(skill.get("name", skill_id) or skill_id))
-    name.setStyleSheet("background: transparent; color: #e8dcc0; font-size: 14px; font-weight: 800;")
+    name_color = "#766c5c" if locked else "#e8dcc0"
+    name.setStyleSheet(f"background: transparent; color: {name_color}; font-size: 14px; font-weight: 800;")
     name.show()
 
-    attr = QLineEdit(row)
-    attr.setGeometry(w - 258, 2, 72, 30)
-    attr.setText(str(entry.get("attribute", "") or ""))
-    attr.setPlaceholderText("Attribut")
-    attr.setEnabled(active)
+    attr = QComboBox(row)
+    attr.setGeometry(w - 298, 2, 112, 30)
+    attr.addItem("-", "")
+    for code, label in allowed_options:
+        attr.addItem(label, code)
+    selected_index = attr.findData(current_attribute)
+    if selected_index >= 0:
+        attr.setCurrentIndex(selected_index)
     attr.setStyleSheet(_concept_input_style())
-    attr.textChanged.connect(lambda value, target=entry: target.__setitem__("attribute", value))
+    attr.setEnabled(selected and not locked)
+    attr.currentIndexChanged.connect(
+        lambda _index, target=entry, widget=attr: _set_creator_skill_attribute(window, target, widget)
+    )
     attr.show()
 
     spec = QLineEdit(row)
     spec.setGeometry(36, 34, w - 36, 30)
     spec.setText(str(entry.get("specialization", "") or ""))
     spec.setPlaceholderText("Spezialisierung")
-    spec.setEnabled(active)
     spec.setStyleSheet(_concept_input_style())
-    spec.textChanged.connect(lambda value, target=entry: target.__setitem__("specialization", value))
-    spec.show()
-
+    spec.setEnabled(selected and not locked)
     cost = QLabel(row)
     cost.setGeometry(w - 176, 2, 176, 30)
-    cost.setText("1 BP" if active else "inaktiv")
+    if locked:
+        state_text = "gesperrt"
+    elif active:
+        state_text = "1 BP"
+    elif selected:
+        state_text = "unvollständig"
+    else:
+        state_text = "inaktiv"
+    cost.setText(state_text)
     cost.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
     cost.setStyleSheet(f"background: transparent; color: {'#f2d28b' if active else '#9a8560'}; font-size: 13px; font-weight: 800;")
     cost.show()
+    spec.textChanged.connect(
+        lambda value, target=entry, cost_label=cost: _set_creator_skill_specialization(
+            value, target, cost_label
+        )
+    )
+    spec.editingFinished.connect(lambda target=entry: _sync_creator_skill_activation(window, target))
+    spec.show()
 
     row.show()
     return y + row_h
@@ -856,7 +1065,7 @@ def _render_creator_perks_panel(window, parent, x, y, w, h, state):
     panel = _create_framed_panel(window, parent, x, y, w, h)
     heading = QLabel(panel)
     heading.setGeometry(18, 14, w - 36, 28)
-    heading.setText("Perks")
+    heading.setText("Perks & Nachteile")
     heading.setStyleSheet("background: transparent; color: #f2d28b; font-size: 22px; font-weight: 800;")
     heading.show()
     line = QLabel(panel)
@@ -864,10 +1073,59 @@ def _render_creator_perks_panel(window, parent, x, y, w, h, state):
     line.setStyleSheet("background: rgba(160, 110, 35, 170);")
     line.show()
 
-    _create_attribute_button(window, panel, 18, 62, min(180, w - 36), 34, "Perk hinzufügen", lambda: _add_creator_perk(window))
+    half_h = max(150, (h - 68) // 2)
+    _render_creator_catalog_section(
+        window,
+        panel,
+        14,
+        62,
+        w - 28,
+        half_h,
+        state,
+        "perks",
+        "Perks",
+        "Perk hinzufügen",
+        "Noch keine Perks hinzugefügt.",
+        "perk",
+    )
+    _render_creator_catalog_section(
+        window,
+        panel,
+        14,
+        70 + half_h,
+        w - 28,
+        max(150, h - half_h - 84),
+        state,
+        "disadvantages",
+        "Nachteile",
+        "Nachteil hinzufügen",
+        "Noch keine Nachteile hinzugefügt.",
+        "disadvantage",
+    )
 
-    scroll = QScrollArea(panel)
-    scroll.setGeometry(14, 108, w - 28, h - 122)
+
+def _render_creator_catalog_section(
+    window, parent, x, y, w, h, state, list_key, title, button_text, empty_text, entry_type
+):
+    title_label = QLabel(parent)
+    title_label.setGeometry(x + 4, y, max(80, w - 178), 28)
+    title_label.setText(title)
+    title_label.setStyleSheet("background: transparent; color: #e8dcc0; font-size: 15px; font-weight: 800;")
+    title_label.show()
+
+    _create_attribute_button(
+        window,
+        parent,
+        x + max(0, w - 162),
+        y,
+        min(158, w),
+        30,
+        button_text,
+        lambda: _add_creator_catalog_entry(window, list_key, entry_type),
+    )
+
+    scroll = QScrollArea(parent)
+    scroll.setGeometry(x, y + 36, w, max(80, h - 40))
     scroll.setWidgetResizable(True)
     scroll.setStyleSheet(
         "QScrollArea { background: transparent; border: none; }"
@@ -876,59 +1134,51 @@ def _render_creator_perks_panel(window, parent, x, y, w, h, state):
     )
     host = QWidget(scroll)
     host.setStyleSheet("background: transparent;")
-    inner_w = max(260, w - 58)
+    inner_w = max(260, w - 30)
     cursor_y = 8
-    perks = state.setdefault("perks", [])
-    if not perks:
+    entries = state.setdefault(list_key, [])
+    if not entries:
         empty = QLabel(host)
         empty.setGeometry(8, cursor_y, inner_w - 16, 30)
-        empty.setText("Noch keine Perks hinzugefügt.")
+        empty.setText(empty_text)
         empty.setStyleSheet("background: transparent; color: #cdbb8a; font-size: 14px; font-weight: 700;")
         empty.show()
         cursor_y += 38
-    for index, perk in enumerate(perks):
-        cursor_y = _render_creator_perk_row(window, host, 8, cursor_y, inner_w - 16, index, perk) + 12
-    host.setMinimumSize(inner_w, max(h - 122, cursor_y + 8))
+    for index, entry in enumerate(entries):
+        cursor_y = _render_creator_catalog_entry_row(window, host, 8, cursor_y, inner_w - 16, list_key, index, entry) + 8
+    host.setMinimumSize(inner_w, max(80, cursor_y + 8))
     scroll.setWidget(host)
     scroll.show()
 
 
-def _render_creator_perk_row(window, parent, x, y, w, index, perk):
-    row_h = 128
+def _render_creator_catalog_entry_row(window, parent, x, y, w, list_key, index, entry):
+    row_h = 78
     row = QWidget(parent)
     row.setGeometry(x, y, w, row_h)
     row.setStyleSheet("background: rgba(9, 7, 6, 105); border: 1px solid rgba(160, 110, 35, 110);")
-    perk.setdefault("name", "")
-    perk.setdefault("bp", 0)
-    perk.setdefault("effect", "")
+    entry = entry if isinstance(entry, dict) else {}
 
-    name = QLineEdit(row)
-    name.setGeometry(10, 10, max(120, w - 120), 30)
-    name.setText(str(perk.get("name", "") or ""))
-    name.setPlaceholderText("Name")
-    name.setStyleSheet(_concept_input_style())
-    name.textChanged.connect(lambda value, target=perk: target.__setitem__("name", value))
+    name = QLabel(row)
+    name.setGeometry(10, 8, max(120, w - 72), 24)
+    name.setText(str(entry.get("name", "") or "Unbenannter Eintrag"))
+    name.setStyleSheet("background: transparent; color: #f2d28b; font-size: 14px; font-weight: 800;")
     name.show()
 
-    minus = lambda: _change_creator_perk_bp(window, index, -1)
-    plus = lambda: _change_creator_perk_bp(window, index, 1)
-    _create_attribute_button(window, row, w - 98, 10, 28, 30, "-", minus)
     bp = QLabel(row)
-    bp.setGeometry(w - 66, 10, 30, 30)
-    bp.setText(str(_perk_bp_value(perk)))
+    bp.setGeometry(w - 58, 8, 32, 24)
+    bp.setText(str(_perk_bp_value(entry)))
     bp.setAlignment(Qt.AlignCenter)
-    bp.setStyleSheet("background: rgba(9, 7, 6, 170); color: #9fc7ff; border: 1px solid rgba(160, 110, 35, 150); font-size: 16px; font-weight: 800;")
+    bp.setStyleSheet("background: rgba(9, 7, 6, 170); color: #9fc7ff; border: 1px solid rgba(160, 110, 35, 150); font-size: 13px; font-weight: 800;")
     bp.show()
-    _create_attribute_button(window, row, w - 32, 10, 28, 30, "+", plus)
 
-    effect = QTextEdit(row)
-    effect.setGeometry(10, 48, w - 20, 70)
-    effect.setPlainText(str(perk.get("effect", "") or ""))
-    effect.setPlaceholderText("Notiz / Effekt")
-    effect.setStyleSheet(_concept_input_style())
-    effect.textChanged.connect(lambda target=perk, widget=effect: target.__setitem__("effect", widget.toPlainText()))
+    effect = QLabel(row)
+    effect.setGeometry(10, 36, max(120, w - 52), 34)
+    effect.setText(str(entry.get("effect", "") or entry.get("description", "") or ""))
+    effect.setWordWrap(True)
+    effect.setStyleSheet("background: transparent; color: #cdbb8a; font-size: 12px; font-weight: 600;")
     effect.show()
 
+    _create_attribute_button(window, row, w - 30, 48, 24, 24, "×", lambda: _remove_creator_catalog_entry(window, list_key, index))
     row.show()
     return y + row_h
 
@@ -949,25 +1199,180 @@ def _creator_skill_categories(window):
     ]
 
 
+def _create_creator_skill_checkbox(window, parent, x, y, w, h, checked, locked, callback):
+    icon = QLabel(parent)
+    icon.setGeometry(x, y, w, h)
+    asset = "ui_elements/icons/checkmark_true.png" if checked else "ui_elements/icons/checkmark_false.png"
+    pixmap = window.load_ui_pixmap(asset)
+    if pixmap is not None and not pixmap.isNull():
+        icon.setPixmap(pixmap.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+    else:
+        icon.setText("X" if checked else "")
+        icon.setAlignment(Qt.AlignCenter)
+    opacity = "90" if locked else "190"
+    icon.setStyleSheet(f"background: rgba(12, 9, 7, {opacity}); border: none;")
+    icon.show()
+
+    button = QPushButton(parent)
+    button.setGeometry(x, y, w, h)
+    button.setText("")
+    button.setEnabled(not locked)
+    button.setCursor(Qt.PointingHandCursor if not locked else Qt.ArrowCursor)
+    button.setStyleSheet("QPushButton { background: transparent; border: none; padding: 0px; }")
+    button.clicked.connect(lambda checked=False: callback())
+    button.raise_()
+    button.show()
+    return button
+
+
+def _canonical_creator_attribute(value):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return CREATOR_ATTRIBUTE_ALIASES.get(text.upper(), "")
+
+
+def _creator_skill_attribute_options(skill):
+    raw_values = skill.get("attributes", []) if isinstance(skill, dict) else []
+    allowed = []
+    if isinstance(raw_values, list):
+        for value in raw_values:
+            code = _canonical_creator_attribute(value)
+            if code and code not in allowed:
+                allowed.append(code)
+    if not allowed:
+        note = str(skill.get("note", "") if isinstance(skill, dict) else "").casefold()
+        body = [code for code, _label in CREATOR_ATTRIBUTE_OPTIONS[:4]]
+        mind = [code for code, _label in CREATOR_ATTRIBUTE_OPTIONS[4:]]
+        if "körper" in note or "koerper" in note:
+            allowed = body
+        elif "geist" in note:
+            allowed = mind
+        else:
+            allowed = body + mind
+        if "freie wahl" in note or ("körper" in note and "geist" in note) or ("koerper" in note and "geist" in note):
+            allowed = body + mind
+    label_by_code = dict(CREATOR_ATTRIBUTE_OPTIONS)
+    return [(code, label_by_code.get(code, code)) for code in allowed if code in label_by_code]
+
+
+def _creator_skill_is_active(entry):
+    if not isinstance(entry, dict):
+        return False
+    selected = bool(entry.get("selected", entry.get("active", False)))
+    return bool(selected and _canonical_creator_attribute(entry.get("attribute")) and _clean_string(entry.get("specialization")))
+
+
+def _set_creator_skill_attribute(window, entry, combo):
+    entry["attribute"] = str(combo.currentData() or "")
+    entry["active"] = _creator_skill_is_active(entry)
+    _rerender(window)
+
+
+def _set_creator_skill_specialization(value, entry, cost_label):
+    entry["specialization"] = value
+    active = _creator_skill_is_active(entry)
+    entry["active"] = active
+    if active:
+        state_text = "1 BP"
+    elif bool(entry.get("selected", entry.get("active", False))):
+        state_text = "unvollständig"
+    else:
+        state_text = "inaktiv"
+    cost_label.setText(state_text)
+    cost_label.setStyleSheet(
+        f"background: transparent; color: {'#f2d28b' if active else '#9a8560'}; font-size: 13px; font-weight: 800;"
+    )
+
+
+def _sync_creator_skill_activation(window, entry):
+    entry["active"] = _creator_skill_is_active(entry)
+    _rerender(window)
+
+
 def _toggle_creator_skill(window, skill_id):
     state = _ensure_creator_state(window)
-    entry = state["skills"].setdefault(skill_id, {"active": False, "attribute": "", "specialization": ""})
-    entry["active"] = not bool(entry.get("active", False))
+    entry = state["skills"].setdefault(skill_id, {"selected": False, "active": False, "attribute": "", "specialization": ""})
+    entry["selected"] = not bool(entry.get("selected", False))
+    entry["active"] = _creator_skill_is_active(entry)
     _rerender(window)
 
 
-def _add_creator_perk(window):
+def _creator_skill_is_locked(state, skill):
+    skill_id = str(skill.get("id", "") if isinstance(skill, dict) else "").strip().casefold()
+    skill_name = str(skill.get("name", "") if isinstance(skill, dict) else "").strip().casefold()
+    if skill_id != "magieanwendung" and "magieanwendung" not in skill_name and "magie anwenden" not in skill_name:
+        return False
+    return not _creator_has_magic_user_perk(state)
+
+
+def _creator_has_magic_user_perk(state):
+    perks = state.get("perks", []) if isinstance(state.get("perks"), list) else []
+    for perk in perks:
+        if not isinstance(perk, dict):
+            continue
+        perk_id = str(perk.get("id", "") or "").strip().casefold()
+        perk_name = str(perk.get("name", "") or "").strip().casefold()
+        if perk_id == "magie_anwender" or perk_name == "magieanwender":
+            return True
+    return False
+
+
+def _add_creator_catalog_entry(window, list_key, entry_type):
     state = _ensure_creator_state(window)
-    state["perks"].append({"name": "", "bp": 0, "effect": ""})
+    result = open_perk_picker(window, entry_type)
+    if not isinstance(result, dict) or result.get("action") != "select":
+        return
+    entry = _normalize_creator_catalog_entry(result.get("entry"), entry_type)
+    if not entry:
+        return
+    entries = state.setdefault(list_key, [])
+    entry_id = str(entry.get("id", "") or "").strip()
+    if entry_id and any(isinstance(existing, dict) and str(existing.get("id", "") or "").strip() == entry_id for existing in entries):
+        state["skills_perks_status"] = f"{entry.get('name', 'Eintrag')} ist bereits ausgewählt."
+        _rerender(window)
+        return
+    entries.append(entry)
+    state["skills_perks_status"] = ""
     _rerender(window)
 
 
-def _change_creator_perk_bp(window, index, delta):
+def _remove_creator_catalog_entry(window, list_key, index):
     state = _ensure_creator_state(window)
-    perks = state["perks"]
-    if 0 <= index < len(perks):
-        perks[index]["bp"] = max(0, _perk_bp_value(perks[index]) + delta)
+    entries = state.get(list_key, [])
+    if isinstance(entries, list) and 0 <= index < len(entries):
+        entries.pop(index)
     _rerender(window)
+
+
+def _normalize_creator_catalog_entry(entry, entry_type):
+    if not isinstance(entry, dict):
+        return {}
+    clean = {}
+    for key in (
+        "id",
+        "name",
+        "type",
+        "category",
+        "bp",
+        "effect",
+        "description",
+        "species",
+        "requirements",
+        "tags",
+        "source",
+        "level",
+        "selected_level",
+        "max_level",
+        "upgrade_of",
+    ):
+        if key in entry:
+            clean[key] = entry.get(key)
+    clean["type"] = entry_type
+    clean["name"] = _clean_string(clean.get("name"))
+    clean["effect"] = _clean_string(clean.get("effect") or clean.get("description"))
+    clean["bp"] = _perk_bp_value(clean)
+    return clean if clean.get("name") or clean.get("id") else {}
 
 
 def _perk_bp_value(perk):
@@ -978,11 +1383,22 @@ def _perk_bp_value(perk):
 
 
 def _creator_spent_bp(state):
+    return _creator_bp_parts(state)["spent"]
+
+
+def _creator_bp_parts(state):
     skills = state.get("skills", {})
-    skill_bp = sum(1 for entry in skills.values() if isinstance(entry, dict) and bool(entry.get("active", False)))
+    skill_bp = sum(1 for entry in skills.values() if isinstance(entry, dict) and _creator_skill_is_active(entry))
     perks = state.get("perks", [])
     perk_bp = sum(_perk_bp_value(perk) for perk in perks if isinstance(perk, dict))
-    return skill_bp + perk_bp
+    disadvantages = state.get("disadvantages", [])
+    disadvantage_bp = sum(_perk_bp_value(disadvantage) for disadvantage in disadvantages if isinstance(disadvantage, dict))
+    return {
+        "skills": skill_bp,
+        "perks": perk_bp,
+        "disadvantages": disadvantage_bp,
+        "spent": skill_bp + perk_bp - disadvantage_bp,
+    }
 
 
 def build_character_state(window) -> dict:
@@ -992,6 +1408,11 @@ def build_character_state(window) -> dict:
     species = _species_by_id(state.get("species_id"))
     concept = state.get("concept", {}) if isinstance(state.get("concept"), dict) else {}
     attributes = state.get("attributes", {}) if isinstance(state.get("attributes"), dict) else {}
+    start_values_src = state.get("start_values", {}) if isinstance(state.get("start_values"), dict) else {}
+    clean_start_values = {
+        "ap": _clamp_start_ap(start_values_src.get("ap", 5)),
+        "xp": _non_negative_int(start_values_src.get("xp", 0)),
+    }
     body_src = attributes.get("body", {}) if isinstance(attributes.get("body"), dict) else {}
     mind_src = attributes.get("mind", {}) if isinstance(attributes.get("mind"), dict) else {}
     body = {
@@ -1014,10 +1435,13 @@ def build_character_state(window) -> dict:
     }
     clean_skills = _build_clean_skills(window, state)
     clean_perks = _build_clean_perks(state)
+    clean_disadvantages = _build_clean_catalog_entries(state, "disadvantages", "disadvantage")
+    clean_paradigms = _build_clean_paradigms(state)
     clean_equipment = _build_clean_equipment(state)
-    spent_bp = sum(int(skill.get("bp", 0) or 0) for skill in clean_skills) + sum(
-        int(perk.get("bp", 0) or 0) for perk in clean_perks
-    )
+    skill_bp = sum(int(skill.get("bp", 0) or 0) for skill in clean_skills)
+    perk_bp = sum(int(perk.get("bp", 0) or 0) for perk in clean_perks)
+    disadvantage_bp = sum(int(disadvantage.get("bp", 0) or 0) for disadvantage in clean_disadvantages)
+    spent_bp = skill_bp + perk_bp - disadvantage_bp
     return {
         "version": 1,
         "status": "draft",
@@ -1036,12 +1460,20 @@ def build_character_state(window) -> dict:
             "motivation": _clean_string(concept.get("motivation")),
             "description": _clean_string(concept.get("description")),
         },
+        "start_values": clean_start_values,
         "attributes": clean_attributes,
+        "paradigms": clean_paradigms,
         "skills": clean_skills,
         "perks": clean_perks,
+        "disadvantages": clean_disadvantages,
         "equipment": clean_equipment,
         "bp": {
             "base": 25,
+            "start_ap": clean_start_values["ap"],
+            "start_xp": clean_start_values["xp"],
+            "skills": skill_bp,
+            "perks": perk_bp,
+            "disadvantages": disadvantage_bp,
             "spent": spent_bp,
             "remaining": 25 - spent_bp,
         },
@@ -1070,6 +1502,42 @@ def save_character_state(window) -> tuple[bool, str]:
         save_path.write_text(json.dumps(character_state, ensure_ascii=False, indent=2), encoding="utf-8")
         return True, str(save_path)
     except Exception as exc:
+        return False, str(exc)
+
+
+def finalize_character_state(window) -> tuple[bool, str]:
+    try:
+        character_state = build_character_state(window)
+        character_name = _clean_string(character_state.get("concept", {}).get("character_name"))
+        if not character_name:
+            return False, "Charaktername fehlt."
+
+        slug = window.loader.make_character_slug(character_name)
+        if not slug or slug == "unknown_character":
+            return False, "Aus dem Charakternamen konnte kein gültiger Dateiname erzeugt werden."
+
+        character_state["status"] = "created"
+        meta = character_state.setdefault("meta", {})
+        meta["saved"] = True
+        meta["save_format"] = "cell_cache"
+        meta["source"] = "character_creator"
+        meta["saved_at"] = datetime.now(timezone.utc).isoformat()
+
+        save_dir = Path(window.loader.get_character_dir())
+        save_dir.mkdir(parents=True, exist_ok=True)
+        save_path = _next_available_character_path(save_dir, slug)
+
+        if not window.loader.finalize_creator_state(character_state, str(save_path)):
+            return False, "Konvertierung in normale Charakterdaten fehlgeschlagen."
+
+        window._start_screen_mode = "menu"
+        window.reset_character_runtime_state()
+        window.create_tabs_from_cache()
+        window.show_main_section("character")
+        log_debug("creator", f"finalized character: {save_path}")
+        return True, str(save_path)
+    except Exception as exc:
+        log_error("creator", f"finalize failed: {exc}")
         return False, str(exc)
 
 
@@ -1107,13 +1575,13 @@ def _build_clean_skills(window, state):
     name_map = _creator_skill_name_map(window)
     clean = []
     for skill_id, entry in skills.items():
-        if not isinstance(entry, dict) or not bool(entry.get("active", False)):
+        if not isinstance(entry, dict) or not _creator_skill_is_active(entry):
             continue
         clean.append(
             {
                 "id": str(skill_id),
                 "name": name_map.get(str(skill_id), str(skill_id)),
-                "attribute": _clean_string(entry.get("attribute")),
+                "attribute": _canonical_creator_attribute(entry.get("attribute")),
                 "specialization": _clean_string(entry.get("specialization")),
                 "bp": 1,
             }
@@ -1131,7 +1599,25 @@ def _creator_skill_name_map(window):
 
 
 def _build_clean_perks(state):
-    perks = state.get("perks", []) if isinstance(state.get("perks"), list) else []
+    return _build_clean_catalog_entries(state, "perks", "perk")
+
+
+def _build_clean_paradigms(state):
+    paradigms = state.get("paradigms", []) if isinstance(state.get("paradigms"), list) else []
+    clean = []
+    for index in range(3):
+        entry = paradigms[index] if index < len(paradigms) and isinstance(paradigms[index], dict) else {}
+        clean.append(
+            {
+                "name": _clean_string(entry.get("name")),
+                "grad": 2 if int(entry.get("grad", 1) or 1) == 2 else 1,
+            }
+        )
+    return clean
+
+
+def _build_clean_catalog_entries(state, list_key, entry_type):
+    perks = state.get(list_key, []) if isinstance(state.get(list_key), list) else []
     clean = []
     for perk in perks:
         if not isinstance(perk, dict):
@@ -1139,8 +1625,19 @@ def _build_clean_perks(state):
         name = _clean_string(perk.get("name"))
         bp = _perk_bp_value(perk)
         effect = _clean_string(perk.get("effect"))
-        if name or bp or effect:
-            clean.append({"name": name, "bp": bp, "effect": effect})
+        if name or bp or effect or perk.get("id"):
+            clean_entry = {
+                "id": _clean_string(perk.get("id")),
+                "name": name,
+                "type": _clean_string(perk.get("type") or entry_type),
+                "category": _clean_string(perk.get("category")),
+                "bp": bp,
+                "effect": effect,
+            }
+            for key in ("description", "species", "requirements", "tags", "source", "level", "selected_level", "max_level", "upgrade_of"):
+                if key in perk:
+                    clean_entry[key] = perk.get(key)
+            clean.append(clean_entry)
     return clean
 
 
@@ -1441,8 +1938,8 @@ def _render_summary_step(window, panel, state):
         body_h - 48,
         200,
         36,
-        "Charakter erstellen",
-        lambda: _save_character_state_from_summary(window, status),
+        "Fertigstellen",
+        lambda: _finalize_character_state_from_summary(window, status),
     )
 
 
@@ -1486,6 +1983,9 @@ def _summary_concept_section(parent, x, y, w, character_state):
 
 def _summary_attributes_section(parent, x, y, w, character_state):
     attributes = character_state.get("attributes", {})
+    start_values = character_state.get("start_values", {}) if isinstance(character_state.get("start_values"), dict) else {}
+    start_ap = _clamp_start_ap(start_values.get("ap", 5))
+    start_xp = _non_negative_int(start_values.get("xp", 0))
     body = attributes.get("body", {})
     mind = attributes.get("mind", {})
     body_text = "\n".join(
@@ -1505,7 +2005,8 @@ def _summary_attributes_section(parent, x, y, w, character_state):
         [
             ("Körper", body_text),
             ("Geist", mind_text),
-            ("Verteilte AP", f"{attributes.get('total', 0)} / 5"),
+            ("Verteilte AP", f"{attributes.get('total', 0)} / {start_ap}"),
+            ("Start-XP", str(start_xp)),
             ("Attributsumme", str(attributes.get("raw_total", 0))),
         ],
     )
@@ -1618,6 +2119,12 @@ def _save_character_state_from_summary(window, status_label):
         status_label.setText(f"Charakter gespeichert: {message}")
     else:
         status_label.setText(f"Speichern fehlgeschlagen: {message}")
+
+
+def _finalize_character_state_from_summary(window, status_label):
+    ok, message = finalize_character_state(window)
+    if not ok:
+        status_label.setText(f"Fertigstellen fehlgeschlagen: {message}")
 
 
 def _dash(value):

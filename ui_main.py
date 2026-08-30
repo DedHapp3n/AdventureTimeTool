@@ -771,6 +771,11 @@ class MainWindow(QMainWindow):
                     self.show_main_section("magic")
                 elif self.current_main_section == "notes":
                     self.show_main_section("notes")
+                elif self.current_main_section in ("start", "settings"):
+                    startup = self.settings.get("startup", {}) if isinstance(self.settings, dict) else {}
+                    start_tab = str(startup.get("start_tab", "character") if isinstance(startup, dict) else "character")
+                    valid_start_tabs = {"character", "skills", "inventory", "equipment", "magic", "notes"}
+                    self.show_main_section(start_tab if start_tab in valid_start_tabs else "character")
             log_debug("cache", "settings cache reload clicked")
             return
         log_debug("cache", "settings cache reload clicked")
@@ -834,10 +839,7 @@ class MainWindow(QMainWindow):
         self.settings_button.raise_()
 
     def has_real_character_loaded(self):
-        return (
-            bool(getattr(self.loader, "cell_cache", None))
-            and str(getattr(self.loader, "current_character_name", "") or "") != "unknown_character"
-        )
+        return bool(getattr(self.loader, "cell_cache", None))
 
     def create_asset_text_button(self, parent, cfg, default_text, callback):
         x = int(cfg.get("x", 0))
@@ -2332,32 +2334,52 @@ class MainWindow(QMainWindow):
 
     def open_character_initiative_roll(self):
         initiative_info = self.get_character_initiative_data()
-        if not initiative_info or initiative_info.get("roll_value") is None:
+        initiative_skill = self._get_initiative_skill_source_info()
+        if not isinstance(initiative_skill, tuple):
+            initiative_skill = (None, None)
+        source_key, source_info = initiative_skill
+        if not isinstance(source_info, dict) or source_info.get("row") is None:
             log_warning("character", "initiative value not found")
             QMessageBox.information(
                 self,
                 "Initiative",
-                "Initiative-Wert nicht gefunden. Prüfe Charakterbogen-Initiative-Feld.",
+                "Ini-Wurf nicht gefunden. Prüfe die Fertigkeit 'Klettern, Athletik, Ini-Wurf'.",
             )
             return
-        log_debug("roll20", f'CHARACTER INITIATIVE ROLL source={initiative_info.get("source", "-")} roll={initiative_info.get("roll_value", "-")} dialog=roll_dialog_layout')
+        try:
+            skill_value = int(source_info.get("display_value", "0") or 0)
+        except Exception:
+            skill_value = 0
+        initiative_bonus = int(initiative_info.get("bonus", 0) or 0) if isinstance(initiative_info, dict) else 0
+        slot_values = source_info.get("display_attribute_slots", [])
+        if not isinstance(slot_values, list):
+            slot_values = []
+        slot_values = (slot_values + ["", "", "", ""])[:4]
+        display_name = str(source_info.get("display_name", "Klettern, Athletik, Ini-Wurf") or "Klettern, Athletik, Ini-Wurf")
+        specialization_text = str(source_info.get("display_specialization", "") or "")
+        log_debug(
+            "roll20",
+            f'CHARACTER INITIATIVE ROLL source={source_key or "-"} skill={skill_value} ini_bonus={initiative_bonus} dialog=roll_dialog_layout',
+        )
         roll_info = {
             "source": "character_initiative",
-            "display_name": "Initiative",
-            "display_value": int(initiative_info.get("roll_value", 0) or 0),
-            "raw_value": str(initiative_info.get("raw_value", "")),
-            "bonus_value": int(initiative_info.get("bonus", 0) or 0),
-            "slot_values": ["R", "I"],
-            "specialization_text": "",
-            "specializations_enabled": False,
-            "perk_suggestions_enabled": False,
+            "display_name": display_name,
+            "display_value": skill_value,
+            "roll_label": "Initiative",
+            "raw_value": str(source_info.get("display_value", skill_value)),
+            "bonus_value": initiative_bonus,
+            "slot_values": slot_values,
+            "specialization_text": specialization_text,
+            "source_key": str(source_key or ""),
+            "fixed_bonus_lines": [f"Ini-Bonus: {initiative_bonus:+d}"] if initiative_bonus else [],
+            "fixed_extra_bonuses": [initiative_bonus] if initiative_bonus else [],
             "paradigm_enabled": False,
             "skill_value_allowed": True,
             "roll_context": "character_initiative",
             "wellbeing_context": {
-                "display_name": "Initiative",
-                "display_specialization": "",
-                "display_attribute_slots": ["R", "I"],
+                "display_name": display_name,
+                "display_specialization": specialization_text,
+                "display_attribute_slots": slot_values,
             },
         }
         log_debug("roll20", "ROLL DIALOG source=character_initiative layout=roll_dialog_layout")
@@ -2411,7 +2433,7 @@ class MainWindow(QMainWindow):
             return None
         return number
 
-    def _initiative_data_from_skill_sources(self):
+    def _get_initiative_skill_source_info(self):
         self.ensure_skill_source_infos_ready()
         if not isinstance(self.skill_source_infos, dict):
             return None
@@ -2424,25 +2446,33 @@ class MainWindow(QMainWindow):
                 info.get("ui_name", ""),
                 info.get("cache_name", ""),
             ]
-            if not any(self._is_initiative_text(item) for item in candidates):
-                continue
-            raw_number = self._extract_numeric_value(info.get("calculated_value", None))
-            raw_text = info.get("calculated_value", None)
-            if raw_number is None:
-                raw_text = str(info.get("display_value", "") or "").strip()
-                raw_number = self._extract_numeric_value(raw_text)
-            if raw_number is None:
-                continue
-            roll_value = self._round_half_up(raw_number)
-            return {
-                "source": f"skills:{source_key}",
-                "raw_value": str(raw_text if raw_text is not None else raw_number),
-                "value": raw_number,
-                "bonus": 0,
-                "roll_value": roll_value,
-                "debug": f"skill_source_key={source_key}",
-            }
+            if any(self._is_initiative_text(item) for item in candidates):
+                return source_key, info
         return None
+
+    def _initiative_data_from_skill_sources(self):
+        source_match = self._get_initiative_skill_source_info()
+        if not isinstance(source_match, tuple):
+            return None
+        source_key, info = source_match
+        if not isinstance(info, dict):
+            return None
+        raw_number = self._extract_numeric_value(info.get("calculated_value", None))
+        raw_text = info.get("calculated_value", None)
+        if raw_number is None:
+            raw_text = str(info.get("display_value", "") or "").strip()
+            raw_number = self._extract_numeric_value(raw_text)
+        if raw_number is None:
+            return None
+        roll_value = self._round_half_up(raw_number)
+        return {
+            "source": f"skills:{source_key}",
+            "raw_value": str(raw_text if raw_text is not None else raw_number),
+            "value": raw_number,
+            "bonus": 0,
+            "roll_value": roll_value,
+            "debug": f"skill_source_key={source_key}",
+        }
 
     def _initiative_data_from_fertigkeiten_cache(self):
         mapping = self.get_skill_sheet_mapping_config()
@@ -3399,6 +3429,7 @@ class MainWindow(QMainWindow):
         if isinstance(roll_info, dict):
             display_name = str(roll_info.get("display_name", ""))
             specialization_text = str(roll_info.get("specialization_text", "") or "")
+            source_key = str(roll_info.get("source_key", source_key or "") or "")
             slot_values = roll_info.get("slot_values", [])
             if not isinstance(slot_values, list):
                 slot_values = []
@@ -3507,7 +3538,10 @@ class MainWindow(QMainWindow):
         )
 
         specialization_items = self.split_specialization_text(specialization_text)
-        if is_initiative_context:
+        specializations_enabled = True
+        if isinstance(roll_info, dict):
+            specializations_enabled = bool(roll_info.get("specializations_enabled", True))
+        if not specializations_enabled:
             specialization_items = []
         skill_info_for_perks = {
             "display_name": display_name,
@@ -3541,6 +3575,15 @@ class MainWindow(QMainWindow):
         fixed_extra_bonuses = fixed_bonus_data.get("extra_bonuses", [])
         fixed_advantages = self._safe_int(fixed_bonus_data.get("advantages", 0), 0)
         fixed_disadvantages = self._safe_int(fixed_bonus_data.get("disadvantages", 0), 0)
+        if isinstance(roll_info, dict):
+            roll_info_fixed_lines = roll_info.get("fixed_bonus_lines", [])
+            if isinstance(roll_info_fixed_lines, list):
+                fixed_bonus_lines = list(roll_info_fixed_lines) + list(fixed_bonus_lines or [])
+            roll_info_fixed_bonuses = roll_info.get("fixed_extra_bonuses", [])
+            if isinstance(roll_info_fixed_bonuses, list):
+                fixed_extra_bonuses = list(roll_info_fixed_bonuses) + list(fixed_extra_bonuses or [])
+            fixed_advantages += self._safe_int(roll_info.get("fixed_advantages", 0), 0)
+            fixed_disadvantages += self._safe_int(roll_info.get("fixed_disadvantages", 0), 0)
         if not isinstance(fixed_bonus_lines, list):
             fixed_bonus_lines = []
         if not isinstance(fixed_extra_bonuses, list):
@@ -3632,6 +3675,7 @@ class MainWindow(QMainWindow):
             self,
             {
                 "display_name": display_name,
+                "roll_label": str(roll_info.get("roll_label", "") or "") if isinstance(roll_info, dict) else "",
                 "specialization_text": specialization_text,
                 "attrs_text": attrs_text,
                 "skill_value": skill_value,
@@ -4416,6 +4460,7 @@ class MainWindow(QMainWindow):
         for attr in (
             "_browser_url_edit",
             "_browser_web_view",
+            "_browser_reload_button",
             "_browser_fallback_label",
             "_browser_container",
         ):
@@ -4449,6 +4494,7 @@ class MainWindow(QMainWindow):
         self._browser_container = None
         self._browser_web_view = None
         self._browser_url_edit = None
+        self._browser_reload_button = None
         self._browser_fallback_label = None
         self._browser_popup_pages = []
         self._browser_initialized = False
@@ -6013,6 +6059,9 @@ class MainWindow(QMainWindow):
 
     def on_settings_load_character_clicked(self):
         return settings_section.on_settings_load_character_clicked(self)
+
+    def on_settings_load_selected_character_clicked(self):
+        return settings_section.on_settings_load_selected_character_clicked(self)
 
     def on_settings_character_selection_changed(self, index):
         return settings_section.on_settings_character_selection_changed(self, index)

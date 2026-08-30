@@ -4,10 +4,11 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import zipfile
+from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
-from app_paths import data_path, ensure_runtime_defaults
+from app_paths import data_path, ensure_runtime_defaults, resource_path
 from app_logger import log_debug, log_warning
 
 try:
@@ -319,40 +320,234 @@ class DataLoader:
         except Exception:
             return False
 
+    def finalize_creator_state(self, creator_state: dict, path: str | None = None) -> bool:
+        if not isinstance(creator_state, dict):
+            return False
+        cell_cache, app_meta = self.build_cache_from_creator_state(creator_state)
+        if not isinstance(cell_cache, dict) or not cell_cache:
+            return False
+        if not isinstance(app_meta, dict):
+            app_meta = {}
+
+        previous_state = {
+            "cell_cache": self.cell_cache,
+            "app_meta": self.app_meta,
+            "active_cache_path": self.active_cache_path,
+            "current_character_name": self.current_character_name,
+            "source_file_path": self.source_file_path,
+            "last_loaded_snapshot_hash": self.last_loaded_snapshot_hash,
+            "last_saved_hash": self.last_saved_hash,
+            "is_dirty": self.is_dirty,
+            "dirty_reason": self.dirty_reason,
+        }
+        try:
+            self.cell_cache = cell_cache
+            self.app_meta = app_meta
+            self.source_file_path = ""
+            return self.save_active_character_json(path)
+        except Exception:
+            self.cell_cache = previous_state["cell_cache"]
+            self.app_meta = previous_state["app_meta"]
+            self.active_cache_path = previous_state["active_cache_path"]
+            self.current_character_name = previous_state["current_character_name"]
+            self.source_file_path = previous_state["source_file_path"]
+            self.last_loaded_snapshot_hash = previous_state["last_loaded_snapshot_hash"]
+            self.last_saved_hash = previous_state["last_saved_hash"]
+            self.is_dirty = previous_state["is_dirty"]
+            self.dirty_reason = previous_state["dirty_reason"]
+            raise
+
+    def _load_json_config(self, relative_path: str) -> dict:
+        try:
+            path = resource_path(relative_path)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _new_character_sheet_skeleton(self) -> tuple[dict, dict]:
+        skeleton = self._load_json_config("assets/config/character_sheet_skeleton.json")
+        cell_cache = skeleton.get("cell_cache", {}) if isinstance(skeleton.get("cell_cache"), dict) else {}
+        app_meta = skeleton.get("app_meta", {}) if isinstance(skeleton.get("app_meta"), dict) else {}
+        if not cell_cache:
+            cell_cache = {
+                "Charakterbogen": {},
+                "Fertigkeiten": {},
+                "Inventar": {},
+                "Ausrüstung": {},
+                "Magie": {},
+                "Notizen": {},
+            }
+        return deepcopy(cell_cache), deepcopy(app_meta)
+
+    def _set_creator_cell(self, cell_cache: dict, sheet_name: str, cell_ref: str, value):
+        cell_cache.setdefault(sheet_name, {})[str(cell_ref).upper()] = self._creator_cell(value)
+
+    def _creator_skill_mapping_config(self) -> dict:
+        mapping = self._load_json_config("assets/config/skill_sheet_mapping.json")
+        if isinstance(mapping, dict) and mapping.get("blocks"):
+            return mapping
+        return {
+            "sheet": "Fertigkeiten",
+            "name_col": "D",
+            "attribute_cols": ["V", "X", "Z", "AB"],
+            "specialization_col": "AG",
+            "note_col": "BE",
+            "blocks": [
+                {"category_id": "allgemein", "row_min": 15, "row_max": 35},
+                {"category_id": "kampf", "row_min": 49, "row_max": 61},
+                {"category_id": "wissen", "row_min": 75, "row_max": 87},
+                {"category_id": "handwerk", "row_min": 101, "row_max": 125},
+            ],
+        }
+
+    def _creator_skill_row_map(self) -> dict[str, dict]:
+        definitions = self._load_json_config("assets/config/skill_definitions.json")
+        categories = definitions.get("categories", []) if isinstance(definitions.get("categories"), list) else []
+        mapping = self._creator_skill_mapping_config()
+        name_col = str(mapping.get("name_col", "D"))
+        spec_col = str(mapping.get("specialization_col", "AG"))
+        attribute_cols = mapping.get("attribute_cols", ["V", "X", "Z", "AB"])
+        if not isinstance(attribute_cols, list):
+            attribute_cols = ["V", "X", "Z", "AB"]
+        result = {}
+        for block in mapping.get("blocks", []):
+            if not isinstance(block, dict):
+                continue
+            category_id = str(block.get("category_id", "") or "")
+            row = self._creator_int(block.get("row_min"))
+            category = next((item for item in categories if isinstance(item, dict) and str(item.get("id", "")) == category_id), None)
+            skills = category.get("skills", []) if isinstance(category, dict) and isinstance(category.get("skills"), list) else []
+            for skill in skills:
+                if not isinstance(skill, dict):
+                    continue
+                skill_id = str(skill.get("id", "") or "").strip()
+                skill_name = str(skill.get("name", "") or "").strip()
+                if skill_id:
+                    result[skill_id] = {
+                        "row": row,
+                        "name": skill_name,
+                        "name_cell": f"{name_col}{row}",
+                        "attribute_cells": [f"{str(col)}{row}" for col in attribute_cols[:4]],
+                        "specialization_cell": f"{spec_col}{row}",
+                    }
+                row += 2
+        return result
+
+    def _creator_attribute_letter(self, value) -> str:
+        text = str(value or "").strip()
+        if not text:
+            return ""
+        normalized = text.lower()
+        direct = {"k", "g", "z", "r", "i", "w", "c", "s"}
+        if normalized in direct:
+            return normalized.upper()
+        aliases = {
+            "kraft": "K",
+            "geschick": "G",
+            "zaehigkeit": "Z",
+            "zähigkeit": "Z",
+            "reflex": "R",
+            "intelligenz": "I",
+            "willenskraft": "W",
+            "charisma": "C",
+            "sinne": "S",
+            "sinn": "S",
+        }
+        return aliases.get(normalized, text[:1].upper())
+
+    def _apply_creator_skills_to_skeleton(self, cell_cache: dict, skills: list):
+        row_map = self._creator_skill_row_map()
+        for skill in skills:
+            if not isinstance(skill, dict):
+                continue
+            skill_id = str(skill.get("id", "") or "").strip()
+            info = row_map.get(skill_id)
+            if not info:
+                continue
+            name = self._clean_creator_text(skill.get("name") or info.get("name") or skill_id)
+            if name:
+                self._set_creator_cell(cell_cache, "Fertigkeiten", info["name_cell"], name)
+            attribute = self._creator_attribute_letter(skill.get("attribute"))
+            attribute_cells = info.get("attribute_cells", [])
+            if attribute and attribute_cells:
+                self._set_creator_cell(cell_cache, "Fertigkeiten", attribute_cells[0], attribute)
+            specialization = self._clean_creator_text(skill.get("specialization"))
+            if specialization:
+                self._set_creator_cell(cell_cache, "Fertigkeiten", info["specialization_cell"], specialization)
+
+    def _apply_creator_paradigms_to_skeleton(self, cell_cache: dict, paradigms: list):
+        name_cells = ["Y21", "AM21", "BA21"]
+        grad_cells = [["Y24", "Z24", "AA24"], ["AM24", "AN24", "AO24"], ["BA24", "BB24", "BC24"]]
+        brand_cells = [["Y25", "Z25", "AA25"], ["AM25", "AN25", "AO25"], ["BA25", "BB25", "BC25"]]
+        daily_cells = [
+            ["Y26", "Z26", "AA26", "Y27", "Z27", "AA27"],
+            ["AM26", "AN26", "AO26", "AM27", "AN27", "AO27"],
+            ["BA26", "BB26", "BC26", "BA27", "BB27", "BC27"],
+        ]
+        rows = paradigms if isinstance(paradigms, list) else []
+        for index in range(3):
+            entry = rows[index] if index < len(rows) and isinstance(rows[index], dict) else {}
+            name = self._clean_creator_text(entry.get("name"))
+            grad = 2 if self._creator_int(entry.get("grad")) == 2 else 1
+            self._set_creator_cell(cell_cache, "Charakterbogen", name_cells[index], name)
+            for marker_index, cell_ref in enumerate(grad_cells[index], start=1):
+                self._set_creator_cell(cell_cache, "Charakterbogen", cell_ref, "X" if marker_index <= grad else "")
+            for cell_ref in brand_cells[index] + daily_cells[index]:
+                self._set_creator_cell(cell_cache, "Charakterbogen", cell_ref, "")
+
+    def _apply_creator_start_values_to_skeleton(self, cell_cache: dict, start_values: dict):
+        start_values = start_values if isinstance(start_values, dict) else {}
+        start_xp = self._creator_int(start_values.get("xp"))
+        self._set_creator_cell(cell_cache, "Charakterbogen", "B16", start_xp)
+        self._set_creator_cell(cell_cache, "Charakterbogen", "F16", start_xp)
+
+    def _initialize_creator_fresh_resources(self, cell_cache: dict):
+        resources = [
+            ("B10", "F10"),
+            ("B13", "F13"),
+            ("AM23", "AO23"),
+            ("AM27", "AO27"),
+            ("AM31", "AO31"),
+        ]
+        sheet_cache = cell_cache.get("Charakterbogen", {}) if isinstance(cell_cache, dict) else {}
+        if not isinstance(sheet_cache, dict):
+            return
+        for current_cell, max_cell in resources:
+            max_info = sheet_cache.get(max_cell)
+            max_value = max_info.get("value") if isinstance(max_info, dict) else max_info
+            if max_value is None or max_value == "":
+                continue
+            self._set_creator_cell(cell_cache, "Charakterbogen", current_cell, max_value)
+
     def build_cache_from_creator_state(self, creator_state: dict) -> tuple[dict, dict]:
         creator_state = creator_state if isinstance(creator_state, dict) else {}
         species = creator_state.get("species", {}) if isinstance(creator_state.get("species"), dict) else {}
         concept = creator_state.get("concept", {}) if isinstance(creator_state.get("concept"), dict) else {}
+        start_values = creator_state.get("start_values", {}) if isinstance(creator_state.get("start_values"), dict) else {}
         attributes = creator_state.get("attributes", {}) if isinstance(creator_state.get("attributes"), dict) else {}
         body = attributes.get("body", {}) if isinstance(attributes.get("body"), dict) else {}
         mind = attributes.get("mind", {}) if isinstance(attributes.get("mind"), dict) else {}
+        paradigms = creator_state.get("paradigms", []) if isinstance(creator_state.get("paradigms"), list) else []
         skills = creator_state.get("skills", []) if isinstance(creator_state.get("skills"), list) else []
         perks = creator_state.get("perks", []) if isinstance(creator_state.get("perks"), list) else []
+        disadvantages = creator_state.get("disadvantages", []) if isinstance(creator_state.get("disadvantages"), list) else []
         equipment = creator_state.get("equipment", {}) if isinstance(creator_state.get("equipment"), dict) else {}
         money = equipment.get("money", {}) if isinstance(equipment.get("money"), dict) else {}
         items = equipment.get("items", []) if isinstance(equipment.get("items"), list) else []
         weapons = equipment.get("weapons", []) if isinstance(equipment.get("weapons"), list) else []
         armor = equipment.get("armor", []) if isinstance(equipment.get("armor"), list) else []
 
-        cell_cache = {
-            "Charakterbogen": {},
-            "Fertigkeiten": {},
-            "Inventar": {},
-            "Ausrüstung": {},
-            "Magie": {},
-            "Notizen": {},
-        }
+        cell_cache, app_meta = self._new_character_sheet_skeleton()
 
         def set_cell(sheet_name, cell_ref, value):
-            cell_cache.setdefault(sheet_name, {})[cell_ref] = self._creator_cell(value)
+            self._set_creator_cell(cell_cache, sheet_name, cell_ref, value)
 
         character_name = self._clean_creator_text(concept.get("character_name"))
         set_cell("Charakterbogen", "G1", character_name)
         set_cell("Charakterbogen", "C1", character_name)
         set_cell("Charakterbogen", "G3", self._clean_creator_text(species.get("name")))
-        set_cell("Charakterbogen", "G5", self._clean_creator_text(concept.get("short_concept")))
-        set_cell("Charakterbogen", "G7", self._clean_creator_text(concept.get("origin")))
-        set_cell("Charakterbogen", "G9", self._clean_creator_text(concept.get("role")))
         set_cell("Charakterbogen", "AG7", self._creator_int(body.get("kraft")))
         set_cell("Charakterbogen", "AG9", self._creator_int(body.get("geschick")))
         set_cell("Charakterbogen", "AG11", self._creator_int(body.get("zaehigkeit")))
@@ -362,84 +557,106 @@ class DataLoader:
         set_cell("Charakterbogen", "AR11", self._creator_int(mind.get("charisma")))
         set_cell("Charakterbogen", "AR13", self._creator_int(mind.get("sinne")))
 
-        set_cell("Fertigkeiten", "A1", "Fertigkeiten")
-        set_cell("Fertigkeiten", "A2", "Name")
-        set_cell("Fertigkeiten", "B2", "Attribut")
-        set_cell("Fertigkeiten", "C2", "Spezialisierung")
-        set_cell("Fertigkeiten", "D2", "BP")
-        for index, skill in enumerate(skills, start=3):
-            if not isinstance(skill, dict):
-                continue
-            set_cell("Fertigkeiten", f"A{index}", self._clean_creator_text(skill.get("name") or skill.get("id")))
-            set_cell("Fertigkeiten", f"B{index}", self._clean_creator_text(skill.get("attribute")))
-            set_cell("Fertigkeiten", f"C{index}", self._clean_creator_text(skill.get("specialization")))
-            set_cell("Fertigkeiten", f"D{index}", self._creator_int(skill.get("bp")))
-
-        set_cell("Charakterbogen", "A30", "Perks")
-        for index, perk in enumerate(perks, start=31):
+        self._apply_creator_skills_to_skeleton(cell_cache, skills)
+        self._apply_creator_paradigms_to_skeleton(cell_cache, paradigms)
+        self._apply_creator_start_values_to_skeleton(cell_cache, start_values)
+        for row, perk in enumerate(perks, start=4):
             if not isinstance(perk, dict):
                 continue
-            set_cell("Charakterbogen", f"A{index}", self._clean_creator_text(perk.get("name")))
-            set_cell("Charakterbogen", f"B{index}", self._creator_int(perk.get("bp")))
-            set_cell("Charakterbogen", f"C{index}", self._clean_creator_text(perk.get("effect")))
+            if row > 23:
+                break
+            set_cell("Charakterbogen", f"AV{row}", self._clean_creator_text(perk.get("name")))
+            set_cell("Charakterbogen", f"BB{row}", self._creator_int(perk.get("bp")))
+            set_cell("Charakterbogen", f"BD{row}", self._clean_creator_text(perk.get("effect")))
+        for row, disadvantage in enumerate(disadvantages, start=4):
+            if not isinstance(disadvantage, dict):
+                continue
+            if row > 23:
+                break
+            set_cell("Charakterbogen", f"BS{row}", self._clean_creator_text(disadvantage.get("name")))
+            set_cell("Charakterbogen", f"BY{row}", self._creator_int(disadvantage.get("bp")))
+            set_cell("Charakterbogen", f"CA{row}", self._clean_creator_text(disadvantage.get("effect")))
 
         set_cell("Inventar", "B9", self._creator_int(money.get("gulden")))
         set_cell("Inventar", "E9", self._creator_int(money.get("schilling")))
         set_cell("Inventar", "H9", self._creator_int(money.get("heller")))
-        set_cell("Inventar", "A12", "Inventar")
-        set_cell("Inventar", "B12", "PL")
-        set_cell("Inventar", "C12", "Anzahl")
         for index, item in enumerate(items, start=13):
             if not isinstance(item, dict):
                 continue
-            set_cell("Inventar", f"A{index}", self._clean_creator_text(item.get("name")))
-            set_cell("Inventar", f"B{index}", self._clean_creator_text(item.get("pl")))
-            set_cell("Inventar", f"C{index}", self._clean_creator_text(item.get("count")))
+            set_cell("Inventar", f"B{index}", self._clean_creator_text(item.get("name")))
+            set_cell("Inventar", f"P{index}", self._clean_creator_text(item.get("pl")))
+            set_cell("Inventar", f"Q{index}", self._clean_creator_text(item.get("count")))
 
-        set_cell("Ausrüstung", "A1", "Waffen")
-        set_cell("Ausrüstung", "A2", "Name")
-        set_cell("Ausrüstung", "B2", "Schaden / Effekt")
-        set_cell("Ausrüstung", "C2", "Attribut / Fertigkeit")
-        set_cell("Ausrüstung", "D2", "Notiz")
-        for index, weapon in enumerate(weapons, start=3):
+        for row, weapon in zip(range(35, 51, 2), weapons):
             if not isinstance(weapon, dict):
                 continue
-            set_cell("Ausrüstung", f"A{index}", self._clean_creator_text(weapon.get("name")))
-            set_cell("Ausrüstung", f"B{index}", self._clean_creator_text(weapon.get("damage")))
-            set_cell("Ausrüstung", f"C{index}", self._clean_creator_text(weapon.get("attribute")))
-            set_cell("Ausrüstung", f"D{index}", self._clean_creator_text(weapon.get("note")))
-        set_cell("Ausrüstung", "A20", "Rüstung")
-        set_cell("Ausrüstung", "A21", "Name")
-        set_cell("Ausrüstung", "B21", "Schutz / Werte")
-        set_cell("Ausrüstung", "C21", "Notiz")
-        for index, armor_row in enumerate(armor, start=22):
+            set_cell("Ausrüstung", f"C{row}", self._clean_creator_text(weapon.get("name")))
+            set_cell("Ausrüstung", f"T{row}", self._clean_creator_text(weapon.get("damage")))
+            set_cell(
+                "Ausrüstung",
+                f"AQ{row}",
+                self._clean_creator_text(" | ".join(
+                    value for value in (
+                        self._clean_creator_text(weapon.get("attribute")),
+                        self._clean_creator_text(weapon.get("note")),
+                    )
+                    if value
+                )),
+            )
+        for row, armor_row in zip(range(9, 27, 2), armor):
             if not isinstance(armor_row, dict):
                 continue
-            set_cell("Ausrüstung", f"A{index}", self._clean_creator_text(armor_row.get("name")))
-            set_cell("Ausrüstung", f"B{index}", self._clean_creator_text(armor_row.get("protection")))
-            set_cell("Ausrüstung", f"C{index}", self._clean_creator_text(armor_row.get("note")))
+            set_cell("Ausrüstung", f"G{row}", self._clean_creator_text(armor_row.get("name")))
+            set_cell(
+                "Ausrüstung",
+                f"AR{row}",
+                self._clean_creator_text(" | ".join(
+                    value for value in (
+                        self._clean_creator_text(armor_row.get("protection")),
+                        self._clean_creator_text(armor_row.get("note")),
+                    )
+                    if value
+                )),
+            )
 
-        set_cell("Notizen", "A1", "Notizen")
-        set_cell("Notizen", "A2", self._clean_creator_text(concept.get("description")))
-        set_cell("Notizen", "A4", self._clean_creator_text(concept.get("motivation")))
-        set_cell("Notizen", "A6", self._clean_creator_text(equipment.get("notes")))
+        notes_text = "\n\n".join(
+            value for value in (
+                self._clean_creator_text(concept.get("description")),
+                self._clean_creator_text(concept.get("motivation")),
+                self._clean_creator_text(equipment.get("notes")),
+            )
+            if value
+        )
+        set_cell("Notizen", "B4", notes_text)
 
-        app_meta = {
+        app_meta.update({
             "creator_state": creator_state,
-            "source_format": "creator_state",
             "created_by": "character_creator",
             "concept": concept,
             "species": species,
+            "start_values": start_values,
+            "creator_paradigms": paradigms,
             "bp": creator_state.get("bp", {}) if isinstance(creator_state.get("bp"), dict) else {},
             "creator_skills": skills,
             "creator_perks": perks,
+            "creator_disadvantages": disadvantages,
             "creator_equipment": equipment,
             "creator_notes": {
                 "description": self._clean_creator_text(concept.get("description")),
                 "motivation": self._clean_creator_text(concept.get("motivation")),
                 "equipment": self._clean_creator_text(equipment.get("notes")),
             },
-        }
+        })
+        custom_sections = app_meta.setdefault("custom_sections", {})
+        if not isinstance(custom_sections, dict):
+            custom_sections = {}
+            app_meta["custom_sections"] = custom_sections
+        custom_sections["notes"] = {"text": notes_text}
+        try:
+            FormulaParser().recalculate_cache(cell_cache)
+            self._initialize_creator_fresh_resources(cell_cache)
+        except Exception:
+            log_warning("cache", "creator skeleton formula recalculation failed")
         return cell_cache, app_meta
 
     def mark_dirty(self, reason=""):

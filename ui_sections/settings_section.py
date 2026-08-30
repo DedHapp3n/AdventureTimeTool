@@ -354,9 +354,11 @@ def _build_character_page(window, parent, style):
     refresh_character_cache_list(window)
     y += 64
 
-    _button(window, page, 34, y, 205, 44, "Charakter laden", window.on_settings_load_character_clicked, style)
-    _button(window, page, 258, y, 205, 44, "Liste aktualisieren", window.on_settings_refresh_character_list_clicked, style)
-    _button(window, page, 482, y, 220, 44, "Charakterordner öffnen", lambda: _open_character_folder(window), style)
+    _button(window, page, 34, y, 205, 44, "Auswahl laden", lambda: on_settings_load_selected_character_clicked(window), style)
+    _button(window, page, 258, y, 205, 44, "Datei laden", window.on_settings_load_character_clicked, style)
+    _button(window, page, 482, y, 205, 44, "Liste aktualisieren", window.on_settings_refresh_character_list_clicked, style)
+    y += 58
+    _button(window, page, 34, y, 220, 44, "Charakterordner öffnen", lambda: _open_character_folder(window), style)
     y += 92
 
     _section_title(page, y, "SPEICHERORT", style)
@@ -617,6 +619,50 @@ def on_settings_load_character_clicked(window):
     window.show_main_section("character")
 
 
+def on_settings_load_selected_character_clicked(window):
+    if window.settings_character_combo is None:
+        return
+    cache_path = window.settings_character_combo.currentData()
+    if not isinstance(cache_path, str) or not cache_path:
+        QMessageBox.warning(window, "Charakter laden", "Kein Charakter in der Liste ausgewählt.")
+        return
+    _load_character_cache_path(window, cache_path)
+
+
+def _show_after_character_cache_load(window):
+    current_section = str(getattr(window, "current_main_section", "") or "")
+    if current_section in ("character", "skills", "fertigkeiten", "inventory", "equipment", "ausruestung", "ausrüstung", "magic", "notes"):
+        if current_section in ("skills", "fertigkeiten"):
+            window.show_main_section("skills")
+        elif current_section in ("equipment", "ausruestung", "ausrüstung"):
+            window.show_main_section("equipment")
+        else:
+            window.show_main_section(current_section)
+        return
+
+    startup = _settings_dict(window).get("startup", {})
+    start_tab = str(startup.get("start_tab", "character") if isinstance(startup, dict) else "character")
+    if start_tab not in START_TAB_LABELS:
+        start_tab = "character"
+    window.show_main_section(start_tab)
+
+
+def _load_character_cache_path(window, cache_path):
+    if hasattr(window.loader, "has_unsaved_changes") and window.loader.has_unsaved_changes():
+        log_warning("character", "unsaved changes before switching character")
+    ok = window.loader.load_character_cache(cache_path)
+    if not ok:
+        QMessageBox.warning(window, "Charakter laden", "Charakter-Cache konnte nicht geladen werden.")
+        return False
+    window.reset_character_runtime_state()
+    if window.settings_character_active_label is not None:
+        window.settings_character_active_label.setText(window.loader.current_character_name)
+    window.create_tabs_from_cache()
+    _show_after_character_cache_load(window)
+    log_debug("cache", f"character cache loaded: {cache_path}")
+    return True
+
+
 def on_settings_character_selection_changed(window, index):
     if window.settings_character_combo is None:
         return
@@ -628,29 +674,7 @@ def on_settings_character_selection_changed(window, index):
     active_cache_path = window.loader.active_cache_path
     if active_cache_path and Path(cache_path) == Path(active_cache_path):
         return
-    if hasattr(window.loader, "has_unsaved_changes") and window.loader.has_unsaved_changes():
-        log_warning("character", "unsaved changes before switching character")
-    ok = window.loader.load_character_cache(cache_path)
-    if not ok:
-        QMessageBox.warning(window, "Charakter laden", "Charakter-Cache konnte nicht geladen werden.")
-        return
-    window.reset_character_runtime_state()
-    if window.settings_character_active_label is not None:
-        window.settings_character_active_label.setText(window.loader.current_character_name)
-    window.create_tabs_from_cache()
-    if window.current_main_section == "character":
-        window.show_main_section("character")
-    elif window.current_main_section in ("skills", "fertigkeiten"):
-        window.show_main_section("skills")
-    elif window.current_main_section == "inventory":
-        window.show_main_section("inventory")
-    elif window.current_main_section in ("equipment", "ausruestung", "ausrüstung"):
-        window.show_main_section("equipment")
-    elif window.current_main_section == "magic":
-        window.show_main_section("magic")
-    elif window.current_main_section == "notes":
-        window.show_main_section("notes")
-    log_debug("cache", f"character cache loaded: {cache_path}")
+    _load_character_cache_path(window, cache_path)
 
 
 def on_settings_refresh_character_list_clicked(window):

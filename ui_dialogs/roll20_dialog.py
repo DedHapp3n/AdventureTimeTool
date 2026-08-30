@@ -116,6 +116,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     debug_paradigm_enabled = bool(debug_cfg.get("paradigm", False))
 
     display_name = str(model.get("display_name", ""))
+    roll_label = str(model.get("roll_label", "") or display_name)
     specialization_text = str(model.get("specialization_text", "") or "")
     attrs_text = str(model.get("attrs_text", "-"))
     skill_value = safe_int(model.get("skill_value", 0), 0)
@@ -217,7 +218,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
 
     header_text = f"Fertigkeit: {display_name}"
     if is_character_initiative:
-        header_text = "Initiative"
+        header_text = f"Initiative - {display_name}"
     elif is_initiative_context:
         header_text = f"Initiative - {display_name}"
     header = QLabel(header_text)
@@ -234,7 +235,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
 
     if is_character_initiative:
         value_label = QLabel(
-            f'Wert: {model.get("raw_value", skill_value)}   Bonus: {model.get("bonus_value", 0)}   Rollwert: {skill_value}'
+            f'Skillwert: {model.get("raw_value", skill_value)}   Ini-Bonus: {model.get("bonus_value", 0)}'
         )
     else:
         value_label = QLabel(f"Wert: {skill_value}")
@@ -251,22 +252,21 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     )
     left_layout.addWidget(value_label)
 
-    if not is_character_initiative:
-        attrs_label = QLabel(f"Attribute: {attrs_text}")
-        attrs_label.setStyleSheet(
-            _framed_box_style(
-                info_background,
-                info_border_color,
-                normal_text_color,
-                normal_text_font_size,
-                info_frame_cfg,
-                resolve_roll_asset_path,
-                padding=safe_int(info_frame_cfg.get("padding", 6), 6),
-            )
+    attrs_label = QLabel(f"Attribute: {attrs_text}")
+    attrs_label.setStyleSheet(
+        _framed_box_style(
+            info_background,
+            info_border_color,
+            normal_text_color,
+            normal_text_font_size,
+            info_frame_cfg,
+            resolve_roll_asset_path,
+            padding=safe_int(info_frame_cfg.get("padding", 6), 6),
         )
-        left_layout.addWidget(attrs_label)
+    )
+    left_layout.addWidget(attrs_label)
 
-    show_specialization = not is_initiative_context
+    show_specialization = not (is_initiative_context and not specialization_items)
     spec_options_max_rows_per_column = safe_int(spec_options_cfg.get("max_rows_per_column", 6), 6)
     if spec_options_max_rows_per_column <= 0:
         spec_options_max_rows_per_column = 6
@@ -688,7 +688,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         dialog.accept()
 
     def copy_roll_command_and_open_browser():
-        command = _roll_command_with_label(roll_command_edit.text().strip(), display_name)
+        command = _roll_command_with_label(roll_command_edit.text().strip(), roll_label)
         QApplication.clipboard().setText(command)
         if callable(log_debug):
             log_debug("roll20", f"ROLL COPY OPEN_BROWSER {command}")
