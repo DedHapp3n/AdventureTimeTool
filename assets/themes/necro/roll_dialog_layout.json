@@ -1,4 +1,43 @@
 {
+  "resource_dialog": {
+    "w": 430,
+    "h": 350,
+    "margins": [26, 10, 26, 24],
+    "spacing": 8,
+    "background_asset": "panels/main_Frame.png",
+    "fallback_background": "#140f0c",
+    "text_color": "#eadfca",
+    "value_color": "#7fd0ff",
+    "font_size": 13,
+    "title_font_size": 20,
+    "close_button": {
+      "asset": "ui_elements/icons/x.jpg",
+      "w": 28,
+      "h": 28
+    },
+    "value": {
+      "w": 64,
+      "h": 34,
+      "frame": "frames/256x122_box.png",
+      "font_size": 16,
+      "align": "center",
+      "padding": 0
+    },
+    "command": {
+      "h": 40,
+      "frame": "frames/1024x122_box.png",
+      "font_size": 20,
+      "align": "center",
+      "padding": 6
+    },
+    "buttons": {
+      "asset": "buttons/menu_button_medium.png",
+      "w": 110,
+      "h": 34,
+      "roll_copy_w": 150,
+      "font_size": 13
+    }
+  },
   "dialog": {
     "title": "Roll20 Wurf-Assistent",
     "w": 922,
@@ -40,15 +79,16 @@
     }
   },
   "sections": {
-    "spacing": 12,
+    "spacing": 8,
     "label_height": 24,
     "box_height": 56
   },
   "layout": {
     "padding": 32,
-    "left": { "x": 49, "y": 145, "w": 450, "h": 325 },
-    "right": { "x": 531, "y": 145, "w": 324, "h": 325 },
-    "preview": { "x": 49, "y": 464, "w": 806, "h": 96 }
+    "left": { "x": 49, "y": 104, "w": 450, "h": 386 },
+    "right": { "x": 531, "y": 104, "w": 342, "h": 386 },
+    "preview": { "left": 49, "right": 49, "y": 500, "h": 92 },
+    "info_row": { "h": 40, "gap": 10, "value_stretch": 2, "attrs_stretch": 3 }
   },
   "title": {
     "x": 210,
@@ -73,17 +113,12 @@
     "border_color": "#433147",
     "text_color": "#ffffff",
     "font_size": 13,
-    "height": 64
+    "height": 52
   },
   "counter": {
-    "button_w": 30,
-    "button_h": 28,
     "value_w": 48,
     "value_h": 36,
     "manual_value_w": 64,
-    "button_background": "#45364a",
-    "button_text_color": "#ffffff",
-    "button_border_color": "#6a5670",
     "value_background": "#120f14",
     "value_text_color": "#d79cf2",
     "value_border_color": "#7a4f8f",
@@ -99,10 +134,7 @@
         "right": 16,
         "bottom": 16
       }
-    },
-    "use_assets": false,
-    "minus_asset": "buttons/minus.png",
-    "plus_asset": "buttons/plus.png"
+    }
   },
   "keep_options": {
     "kh_text": "Höchsten behalten (kh1)",
@@ -119,7 +151,7 @@
     "border_color": "#7a4f8f",
     "text_color": "#d79cf2",
     "font_size": 22,
-    "height": 82
+    "height": 70
   },
   "boxes": {
     "info_background": "rgba(0, 0, 0, 70)",
@@ -182,7 +214,12 @@
     "preview_max_chars": 48,
     "text_color": "#f2f2f2",
     "hint_color": "#d0c1d4",
-    "font_size": 13
+    "font_size": 13,
+    "roll20_label": {
+      "text": "Spezialisierung im Roll20-Label",
+      "default_checked": true,
+      "tooltip": "Ausgewählte Spezialisierungen werden nur dem kopierten oder gesendeten Roll20-Label hinzugefügt."
+    }
   },
   "perk_suggestions": {
     "title": "Perk-/Nachteil-Vorschläge:",
@@ -198,9 +235,9 @@
     "visual_mode": "menu_asset",
     "asset": "buttons/menu_button_medium.png",
     "area": {
-      "x": 220,
-      "y": 60,
-      "w": 500,
+      "center_x": true,
+      "y": 42,
+      "w": 514,
       "h": 38,
       "gap": 12
     },

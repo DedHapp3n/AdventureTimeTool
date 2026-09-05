@@ -1,6 +1,8 @@
 import html
 import math
 
+from ui_controls import create_step_button, stepper_config
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTextDocument, QFont, QFontMetrics
 from PySide6.QtWidgets import (
@@ -922,10 +924,8 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
         align=str(delta_row_cfg.get("label_align", "left")),
     )
 
-    button_w = window._safe_int(delta_row_cfg.get("buttons_w", delta_buttons_cfg.get("w", 32)), 32)
-    button_h = window._safe_int(delta_row_cfg.get("buttons_h", delta_buttons_cfg.get("h", 28)), 28)
+    button_w = int(stepper_config()["w"])
     button_gap = window._safe_int(delta_row_cfg.get("buttons_gap", delta_buttons_cfg.get("gap", 6)), 6)
-    button_font_size = window._safe_int(delta_row_cfg.get("font_size", delta_buttons_cfg.get("font_size", 16)), 16)
     buttons_y = window._safe_int(delta_row_cfg.get("buttons_y", delta_buttons_cfg.get("y", field_y)), field_y)
     buttons_right_margin = window._safe_int(delta_row_cfg.get("buttons_right_margin", 12), 12)
 
@@ -974,56 +974,10 @@ def render_inventory_money_panel(window, parent, money_cfg, money):
         plus_x = window._safe_int(delta_buttons_cfg.get("plus_x"), minus_x + button_w + button_gap)
     else:
         plus_x = minus_x + button_w + button_gap
-    minus_button = QPushButton("-", panel)
-    plus_button = QPushButton("+", panel)
-    minus_button.setGeometry(max(0, minus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
-    plus_button.setGeometry(max(0, plus_x), max(0, buttons_y), max(1, button_w), max(1, button_h))
-    button_shadow_cfg = delta_buttons_cfg.get("shadow", {}) if isinstance(delta_buttons_cfg.get("shadow", {}), dict) else {}
-    for button, asset_key, icon_key in (
-        (minus_button, "minus_asset", "minus_icon"),
-        (plus_button, "plus_asset", "plus_icon"),
-    ):
-        button.setCursor(Qt.PointingHandCursor)
-        asset_style = _inventory_asset_button_stylesheet(
-            window,
-            delta_buttons_cfg,
-            asset_key,
-            title_color,
-            "#ffffff",
-            button_font_size,
-        )
-        asset_pixmap = _optional_inventory_ui_pixmap(window, delta_buttons_cfg.get(asset_key, ""))
-        if asset_pixmap is not None:
-            _create_inventory_alpha_pixmap_shadow(
-                window,
-                panel,
-                asset_pixmap,
-                button.x(),
-                button.y(),
-                button.width(),
-                button.height(),
-                button_shadow_cfg,
-            )
-        if asset_style:
-            button.setStyleSheet(asset_style)
-        else:
-            button.setStyleSheet(
-                "QPushButton {"
-                "background: rgba(35, 24, 12, 185);"
-                f"color: {title_color};"
-                "border: 1px solid rgba(242, 210, 139, 90);"
-                "border-radius: 4px;"
-                f"font-size: {button_font_size}px;"
-                "font-weight: 700;"
-                "padding: 0px;"
-                "}"
-                "QPushButton:hover { border: 1px solid #f2d28b; color: #ffffff; }"
-            )
-        icon_pixmap = _optional_inventory_ui_pixmap(window, delta_buttons_cfg.get(icon_key, ""))
-        if icon_pixmap is not None:
-            button.setText("")
-            button.setIcon(QIcon(icon_pixmap))
-            button.setIconSize(button.size())
+    minus_button = create_step_button(panel, "-", "Geld abziehen")
+    plus_button = create_step_button(panel, "+", "Geld hinzufügen")
+    minus_button.move(max(0, minus_x), max(0, buttons_y))
+    plus_button.move(max(0, plus_x), max(0, buttons_y))
     minus_button.clicked.connect(lambda: window.on_inventory_money_delta_apply("-"))
     plus_button.clicked.connect(lambda: window.on_inventory_money_delta_apply("+"))
     minus_button.raise_()

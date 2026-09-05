@@ -144,137 +144,114 @@
   },
   "settings_page": {
     "title": {
-      "text": "Settings",
-      "x": 90,
-      "y": 70,
-      "w": 400,
-      "h": 50,
-      "font_size": 32
+      "text": "Einstellungen",
+      "x": 58,
+      "y": 30,
+      "w": 500,
+      "h": 46,
+      "font_size": 30
     },
-    "theme_section_title": {
-      "text": "Theme",
-      "x": 100,
-      "y": 145,
-      "w": 300,
-      "h": 35,
-      "font_size": 24
+    "layout": {
+      "x": 58,
+      "y": 96,
+      "right": 58,
+      "bottom": 44,
+      "panel_gap": 20,
+      "navigation_w": 242
     },
-    "theme_label": {
-      "text": "Aktuelles Theme:",
-      "x": 110,
-      "y": 190,
-      "w": 220,
-      "h": 32,
-      "font_size": 18
+    "panel": {
+      "asset": "panels/shared_skils_panel_frame.png",
+      "slice": {
+        "left": 16,
+        "top": 16,
+        "right": 16,
+        "bottom": 16
+      },
+      "draw_center": true,
+      "smooth_scaling": true,
+      "opacity": 1.0,
+      "inset": 16
     },
-    "theme_value": {
-      "x": 320,
-      "y": 190,
-      "w": 260,
-      "h": 32,
-      "font_size": 18
+    "navigation": {
+      "button_asset": "buttons/menu_button_wide.png",
+      "button_h": 44,
+      "spacing": 12,
+      "margins": [
+        4,
+        8,
+        4,
+        8
+      ],
+      "font_size": 16,
+      "active_font_size": 17,
+      "indicator_w": 3,
+      "indicator_inset": 10
     },
-    "theme_switch_button": {
+    "content": {
+      "margins": [
+        18,
+        12,
+        18,
+        20
+      ],
+      "row_spacing": 14,
+      "section_gap": 16,
+      "label_w": 290,
+      "column_gap": 20
+    },
+    "fonts": {
+      "page": 24,
+      "section": 18,
+      "label": 16,
+      "value": 17,
+      "note": 14
+    },
+    "colors": {
+      "muted": "#c8c0aa",
+      "value": "#7fd0ff",
+      "separator": "rgba(242, 210, 139, 75)",
+      "fallback_panel": "rgba(10, 9, 8, 135)",
+      "field_background": "#14100d",
+      "selection": "#5f451e"
+    },
+    "separator": {
+      "h": 1,
+      "spacing": 8
+    },
+    "fields": {
+      "frame": "frames/512x122_box.png",
+      "wide_frame": "frames/1024x122_box.png",
+      "h": 40,
+      "selector_w": 240,
+      "scale_w": 150,
+      "value_w": 260,
+      "character_w": 400,
+      "path_w": 440,
+      "padding": 12,
+      "dropdown_w": 26,
+      "dropdown_text": "▾",
+      "align": "left"
+    },
+    "checkbox": {
+      "asset_true": "ui_elements/icons/checkmark_true.png",
+      "asset_false": "ui_elements/icons/checkmark_false.png",
+      "size": 32,
+      "w": 120,
+      "spacing": 10
+    },
+    "buttons": {
       "asset": "buttons/menu_button_medium.png",
-      "x": 110,
-      "y": 235,
-      "w": 300,
-      "h": 58,
-      "text": "Theme wechseln"
+      "w": 200,
+      "wide_w": 240,
+      "h": 44,
+      "font_size": 16,
+      "spacing": 12
     },
-    "character_section_title": {
-      "text": "Charakter",
-      "x": 100,
-      "y": 330,
-      "w": 300,
-      "h": 35,
-      "font_size": 24
-    },
-    "active_character_label": {
-      "text": "Aktiver Charakter:",
-      "x": 110,
-      "y": 375,
-      "w": 220,
-      "h": 32,
-      "font_size": 18
-    },
-    "active_character_value": {
-      "x": 320,
-      "y": 375,
-      "w": 420,
-      "h": 32,
-      "font_size": 18
-    },
-    "character_select": {
-      "x": 110,
-      "y": 420,
-      "w": 620,
-      "h": 38
-    },
-    "character_load_button": {
-      "asset": "buttons/menu_button_medium.png",
-      "x": 110,
-      "y": 475,
-      "w": 260,
-      "h": 54,
-      "text": "Charakter laden"
-    },
-    "character_refresh_button": {
-      "asset": "buttons/menu_button_medium.png",
-      "x": 400,
-      "y": 475,
-      "w": 260,
-      "h": 54,
-      "text": "Liste aktualisieren"
-    },
-    "debug_section_title": {
-      "text": "Debug",
-      "x": 100,
-      "y": 570,
-      "w": 300,
-      "h": 35,
-      "font_size": 24
-    },
-    "debug_button": {
-      "asset": "buttons/menu_button_medium.png",
-      "x": 110,
-      "y": 615,
-      "w": 300,
-      "h": 58,
-      "text": "Debug öffnen"
-    },
-    "calculation_center_button": {
-      "asset": "buttons/menu_button_medium.png",
-      "x": 450,
-      "y": 615,
-      "w": 300,
-      "h": 58,
-      "text": "Berechnungen"
-    },
-    "checkbox_debug_start": {
-      "asset_true": "icons/checkmark_true.png",
-      "asset_false": "icons/checkmark_false.png",
-      "x": 110,
-      "y": 695,
-      "w": 50,
-      "h": 50,
-      "text": "Debug beim Start anzeigen"
-    },
-    "data_section_title": {
-      "text": "Daten",
-      "x": 100,
-      "y": 785,
-      "w": 300,
-      "h": 35,
-      "font_size": 24
-    },
-    "reload_cache_button": {
-      "asset": "buttons/menu_button_medium.png",
-      "x": 110,
-      "y": 830,
-      "w": 300,
-      "h": 58,
-      "text": "Cache neu laden"
+    "scrollbar": {
+      "w": 12,
+      "minimum_handle": 24,
+      "background": "#17110f",
+      "handle": "#6c4a22"
     }
   },
   "character_screen": {

@@ -23,6 +23,7 @@ from ui_dialogs.attack_roll_logic import (
 )
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
 from app_paths import ui_icon_path
+from ui_controls import create_step_button
 
 
 def open_attack_roll_dialog(window, weapon_data: dict):
@@ -369,7 +370,7 @@ def _make_component_row(window, parent, label_text, component, activate_callback
     select_button.clicked.connect(activate_callback)
     layout.addWidget(select_button, 0)
 
-    minus_button = _make_tiny_button(window, "-", "ui_elements/icons/minus.jpg", panel)
+    minus_button = create_step_button(panel, "-")
     minus_button.clicked.connect(minus_callback)
     layout.addWidget(minus_button, 0)
 
@@ -379,7 +380,7 @@ def _make_component_row(window, parent, label_text, component, activate_callback
     count_label.setFixedSize(54, 32)
     layout.addWidget(count_label, 0)
 
-    plus_button = _make_tiny_button(window, "+", "ui_elements/icons/plus.jpg", panel)
+    plus_button = create_step_button(panel, "+")
     plus_button.clicked.connect(plus_callback)
     layout.addWidget(plus_button, 0)
 
@@ -417,19 +418,6 @@ def _set_component_row_active(panel, active):
     panel.setProperty("active", bool(active))
     panel.style().unpolish(panel)
     panel.style().polish(panel)
-
-
-def _make_tiny_button(window, text, asset_name, parent):
-    button = QPushButton(text, parent)
-    button.setObjectName("TinyButton")
-    button.setFixedSize(32, 32)
-    button.setIconSize(QSize(32, 32))
-    button.setCursor(Qt.PointingHandCursor)
-    asset_path = _asset_path(window, asset_name)
-    if asset_path is not None:
-        button.setText("")
-        button.setIcon(QIcon(str(asset_path)))
-    return button
 
 
 def _field_with_label(label_text, field):

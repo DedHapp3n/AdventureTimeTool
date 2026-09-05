@@ -83,8 +83,6 @@
         "field_y": 124,
         "field_h": 26,
         "field_gap": 10,
-        "buttons_w": 32,
-        "buttons_h": 28,
         "buttons_gap": 6,
         "buttons_y": 124,
         "buttons_right_margin": 12,
@@ -106,22 +104,7 @@
           "opacity": 1.0
         }
       },
-      "delta_buttons": {
-        "use_assets": true,
-        "minus_icon": "icons/icon_minus.png",
-        "plus_icon": "icons/icon_plus.png",
-        "minus_asset": "buttons/menu_button_small.png",
-        "plus_asset": "buttons/menu_button_small.png",
-        "fallback_asset": "buttons/menu_button_small.png",
-        "shadow": {
-          "enabled": true,
-          "mode": "alpha_pixmap",
-          "x": 2,
-          "y": 3,
-          "blur_radius": 10,
-          "color": "rgba(0, 0, 0, 120)"
-        }
-      }
+      "delta_buttons": {}
     },
     "category_tabs": {
       "x": 560,

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QLabel, QComboBox, QLineEdit, QPushButton, QScroll
 
 from app_logger import log_error, log_debug
 from app_paths import data_path, resource_path
+from ui_controls import create_step_button
 from ui_dialogs.perk_picker_dialog import open_perk_picker
 
 
@@ -807,6 +808,12 @@ def _render_attribute_row(window, parent, x, y, w, h, group_key, attr_key, attr_
 
 
 def _create_attribute_button(window, parent, x, y, w, h, text, callback):
+    if text in {"-", "+"}:
+        button = create_step_button(parent, text)
+        button.move(x + (w - button.width()) // 2, y + (h - button.height()) // 2)
+        button.clicked.connect(callback)
+        button.show()
+        return button
     button = QPushButton(parent)
     button.setGeometry(x, y, w, h)
     button.setText(text)

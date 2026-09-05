@@ -1,5 +1,6 @@
 import json
 
+from ui_controls import create_step_button
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFontMetrics, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -192,12 +193,12 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     root_background = "transparent" if use_main_theme_background or main_frame_enabled else dialog_bg
     root.setStyleSheet(f"QWidget#roll20Root {{ background: {root_background}; }}")
 
-    title_rect = _rect_from_cfg(title_cfg, 260, 18, 500, 42, safe_int)
-    left_rect = _rect_from_cfg(_dict(layout_cfg.get("left")), 54, 132, 500, 260, safe_int)
-    right_rect = _rect_from_cfg(_dict(layout_cfg.get("right")), 590, 132, 360, 260, safe_int)
-    preview_rect = _rect_from_cfg(_dict(layout_cfg.get("preview")), 54, 420, 896, 76, safe_int)
+    title_rect = _layout_rect_from_cfg(title_cfg, dialog_w, dialog_h, 260, 18, 500, 42, safe_int)
+    left_rect = _layout_rect_from_cfg(_dict(layout_cfg.get("left")), dialog_w, dialog_h, 54, 132, 500, 260, safe_int)
+    right_rect = _layout_rect_from_cfg(_dict(layout_cfg.get("right")), dialog_w, dialog_h, 590, 132, 360, 260, safe_int)
+    preview_rect = _layout_rect_from_cfg(_dict(layout_cfg.get("preview")), dialog_w, dialog_h, 54, 420, 896, 76, safe_int)
     buttons_area_cfg = _dict(buttons_cfg.get("area"))
-    buttons_rect = _rect_from_cfg(buttons_area_cfg, 230, 68, 560, 46, safe_int)
+    buttons_rect = _layout_rect_from_cfg(buttons_area_cfg, dialog_w, dialog_h, 230, 68, 560, 46, safe_int)
     buttons_gap = safe_int(buttons_area_cfg.get("gap", 16), 16)
     title_panel, title_layout = _make_panel_layout(root, title_rect, 0, spacing=0)
     left_scroll, left_content, left_layout = _make_scroll_zone(root, left_rect, 4, spacing)
@@ -239,6 +240,13 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         )
     else:
         value_label = QLabel(f"Wert: {skill_value}")
+    info_row_cfg = _dict(layout_cfg.get("info_row"))
+    info_row = QWidget(left_content)
+    info_row_layout = QHBoxLayout(info_row)
+    info_row_layout.setContentsMargins(0, 0, 0, 0)
+    info_row_layout.setSpacing(safe_int(info_row_cfg.get("gap", 10), 10))
+    info_h = safe_int(info_row_cfg.get("h", 40), 40)
+    value_label.setMinimumHeight(info_h)
     value_label.setStyleSheet(
         _framed_box_style(
             info_background,
@@ -250,9 +258,9 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             padding=safe_int(info_frame_cfg.get("padding", 6), 6),
         )
     )
-    left_layout.addWidget(value_label)
 
     attrs_label = QLabel(f"Attribute: {attrs_text}")
+    attrs_label.setMinimumHeight(info_h)
     attrs_label.setStyleSheet(
         _framed_box_style(
             info_background,
@@ -264,7 +272,9 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             padding=safe_int(info_frame_cfg.get("padding", 6), 6),
         )
     )
-    left_layout.addWidget(attrs_label)
+    info_row_layout.addWidget(value_label, max(1, safe_int(info_row_cfg.get("value_stretch", 2), 2)))
+    info_row_layout.addWidget(attrs_label, max(1, safe_int(info_row_cfg.get("attrs_stretch", 3), 3)))
+    left_layout.addWidget(info_row)
 
     show_specialization = not (is_initiative_context and not specialization_items)
     spec_options_max_rows_per_column = safe_int(spec_options_cfg.get("max_rows_per_column", 6), 6)
@@ -323,13 +333,22 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
                 specialization_checkboxes.append(checkbox)
             checkboxes_grid_layout.setColumnStretch(99, 1)
             left_layout.addWidget(checkboxes_grid_widget)
-            spec_hint_label = QLabel(str(spec_options_cfg.get("hint", "Spezialisierungen: +1 Vorteil je Auswahl")))
-            spec_hint_label.setStyleSheet(f"color: {hint_text_color}; font-size: {hint_text_font_size}px;")
-            left_layout.addWidget(spec_hint_label)
         else:
             spec_empty_label = QLabel(str(spec_options_cfg.get("empty_text", "Keine Spezialisierung vorhanden")))
             spec_empty_label.setStyleSheet(f"color: {hint_text_color}; font-size: {hint_text_font_size}px;")
             left_layout.addWidget(spec_empty_label)
+
+        spec_label_cfg = _dict(spec_options_cfg.get("roll20_label"))
+        include_specialization_label_checkbox = QCheckBox(
+            str(spec_label_cfg.get("text", "Spezialisierung im Roll20-Label")),
+            left_content,
+        )
+        include_specialization_label_checkbox.setChecked(bool(spec_label_cfg.get("default_checked", True)))
+        include_specialization_label_checkbox.setStyleSheet(checkbox_style)
+        include_specialization_label_checkbox.setToolTip(str(spec_label_cfg.get("tooltip", "")))
+        left_layout.addWidget(include_specialization_label_checkbox)
+    else:
+        include_specialization_label_checkbox = None
 
     if fixed_bonus_lines:
         fixed_title = QLabel("Feste Boni:")
@@ -394,16 +413,6 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             right_layout.addWidget(source_row)
             wellbeing_suggestion_checkboxes.append(checkbox)
 
-    if not is_initiative_context:
-        skill_usage_text = (
-            f"Skillwert wird verwendet: Ja (+{skill_value})"
-            if skill_value_allowed
-            else "Skillwert wird verwendet: Nein (keine Attribute/Spezialisierung)"
-        )
-        skill_usage_label = QLabel(skill_usage_text)
-        skill_usage_label.setStyleSheet(f"color: {muted_text_cfg_color}; font-size: {muted_text_font_size}px;")
-        left_layout.addWidget(skill_usage_label)
-
     inventory_modifier_checkboxes = []
     if inventory_modifiers:
         inventory_title_label = QLabel("Inventar:")
@@ -453,34 +462,12 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     for spinbox in (advantages_spin, disadvantages_spin, manual_bonus_spin):
         spinbox.lineEdit().setAlignment(Qt.AlignCenter)
 
-    adv_minus = QPushButton("-", dialog)
-    adv_plus = QPushButton("+", dialog)
-    dis_minus = QPushButton("-", dialog)
-    dis_plus = QPushButton("+", dialog)
-    manual_minus = QPushButton("-", dialog)
-    manual_plus = QPushButton("+", dialog)
-    for button in (adv_minus, adv_plus, dis_minus, dis_plus, manual_minus, manual_plus):
-        button.setFixedSize(safe_int(counter_cfg.get("button_w", 30), 30), safe_int(counter_cfg.get("button_h", 26), 26))
-        button.setStyleSheet(
-            _small_button_style(
-                str(counter_cfg.get("button_background", "#34383c")),
-                str(counter_cfg.get("button_text_color", "#ffffff")),
-                str(counter_cfg.get("button_border_color", "#5c6268")),
-            )
-        )
-
-    if bool(counter_cfg.get("use_assets", False)) and callable(resolve_roll_asset_path):
-        minus_icon_path = resolve_roll_asset_path(str(counter_cfg.get("minus_asset", "") or ""))
-        plus_icon_path = resolve_roll_asset_path(str(counter_cfg.get("plus_asset", "") or ""))
-        if minus_icon_path is not None and plus_icon_path is not None:
-            minus_icon = QIcon(str(minus_icon_path))
-            plus_icon = QIcon(str(plus_icon_path))
-            for button in (adv_minus, dis_minus, manual_minus):
-                button.setIcon(minus_icon)
-                button.setText("")
-            for button in (adv_plus, dis_plus, manual_plus):
-                button.setIcon(plus_icon)
-                button.setText("")
+    adv_minus = create_step_button(dialog, "-")
+    adv_plus = create_step_button(dialog, "+")
+    dis_minus = create_step_button(dialog, "-")
+    dis_plus = create_step_button(dialog, "+")
+    manual_minus = create_step_button(dialog, "-")
+    manual_plus = create_step_button(dialog, "+")
 
     advantages_label = QLabel("Vorteile:")
     advantages_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
@@ -680,15 +667,42 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         if debug_preview_enabled and callable(log_debug):
             log_debug("roll20", f'ROLL PREVIEW dice={dice_count} skill={skill_bonus} manual={manual_bonus} extras={extra_bonuses} command="{command}"')
 
+    def selected_specialization_names():
+        names = []
+        for checkbox in specialization_checkboxes:
+            if checkbox is not None and checkbox.isChecked():
+                text = " ".join(str(checkbox.text() or "").split())
+                if text:
+                    names.append(text)
+        return names
+
+    def final_roll_label():
+        include_specs = (
+            include_specialization_label_checkbox is not None
+            and include_specialization_label_checkbox.isChecked()
+        )
+        if not include_specs:
+            return roll_label
+        spec_names = selected_specialization_names()
+        if not spec_names:
+            return roll_label
+        clean_label = " ".join(str(roll_label or "").split())
+        if not clean_label:
+            return ", ".join(spec_names)
+        return f"{clean_label} | {', '.join(spec_names)}"
+
+    def final_roll_command():
+        return _roll_command_with_label(roll_command_edit.text().strip(), final_roll_label())
+
     def copy_roll_command():
-        command = roll_command_edit.text().strip()
+        command = final_roll_command()
         QApplication.clipboard().setText(command)
         if callable(log_debug):
             log_debug("roll20", f"ROLL COPY {command}")
         dialog.accept()
 
     def copy_roll_command_and_open_browser():
-        command = _roll_command_with_label(roll_command_edit.text().strip(), roll_label)
+        command = final_roll_command()
         QApplication.clipboard().setText(command)
         if callable(log_debug):
             log_debug("roll20", f"ROLL COPY OPEN_BROWSER {command}")
@@ -759,6 +773,27 @@ def _rect_from_cfg(rect_cfg, default_x, default_y, default_w, default_h, safe_in
     )
 
 
+def _layout_rect_from_cfg(rect_cfg, parent_w, parent_h, default_x, default_y, default_w, default_h, safe_int):
+    rect_cfg = _dict(rect_cfg)
+    x = safe_int(rect_cfg.get("x", default_x), default_x)
+    y = safe_int(rect_cfg.get("y", default_y), default_y)
+    w = safe_int(rect_cfg.get("w", default_w), default_w)
+    h = safe_int(rect_cfg.get("h", default_h), default_h)
+    if "left" in rect_cfg and "right" in rect_cfg:
+        left = safe_int(rect_cfg.get("left", default_x), default_x)
+        right = safe_int(rect_cfg.get("right", max(0, int(parent_w) - default_x - default_w)), max(0, int(parent_w) - default_x - default_w))
+        x = left
+        w = max(1, int(parent_w) - left - right)
+    if "top" in rect_cfg and "bottom" in rect_cfg:
+        top = safe_int(rect_cfg.get("top", default_y), default_y)
+        bottom = safe_int(rect_cfg.get("bottom", max(0, int(parent_h) - default_y - default_h)), max(0, int(parent_h) - default_y - default_h))
+        y = top
+        h = max(1, int(parent_h) - top - bottom)
+    if bool(rect_cfg.get("center_x", False)):
+        x = max(0, int((int(parent_w) - w) / 2))
+    return (x, y, w, h)
+
+
 def _roll_command_with_label(command, label):
     clean_command = str(command or "").strip()
     clean_label = " ".join(str(label or "").split())
@@ -811,6 +846,7 @@ def _make_scroll_zone(parent, rect, margin, spacing):
     scroll.setGeometry(*rect)
     scroll.setWidgetResizable(True)
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     scroll.setFrameShape(QScrollArea.NoFrame)
     scroll.setStyleSheet("QScrollArea { background: transparent; border: none; } QScrollArea > QWidget > QWidget { background: transparent; }")
     content = QWidget(scroll)
