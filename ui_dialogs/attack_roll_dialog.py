@@ -1,7 +1,7 @@
 import json
 import re
 
-from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QLinearGradient, QPainter, QPen, QPixmap, QPolygon
 from PySide6.QtWidgets import (
     QApplication,
@@ -14,7 +14,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ui_dialogs.attack_roll_logic import build_attack_roll_command, parse_weapon_row, safe_int, weapon_roll_components
+from ui_dialogs.attack_roll_logic import (
+    build_attack_emote_command,
+    build_attack_roll_command,
+    parse_weapon_row,
+    safe_int,
+    weapon_roll_components,
+)
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
 from app_paths import ui_icon_path
 
@@ -27,17 +33,19 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     install_frameless_dialog_chrome(dialog)
     dialog.setAttribute(Qt.WA_TranslucentBackground, True)
     dialog.setAutoFillBackground(False)
-    dialog.resize(760, 620)
+    dialog.resize(760, 660)
     dialog.setModal(False)
     dialog.setStyleSheet(_dialog_stylesheet(window))
-    _add_dialog_background(dialog, window, 760, 620)
+    _add_dialog_background(dialog, window, 760, 660)
 
     state = {
         "components": weapon_roll_components(weapon),
         "active_component": "physical",
         "component_widgets": {},
         "dice_buttons": {},
+        "output_mode": "normal",
     }
+    element_text = _element_display_text(weapon)
 
     title = QLabel(weapon.get("name") or "Unbenannte Waffe", dialog)
     title.setObjectName("Title")
@@ -68,7 +76,7 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     main_panel.setObjectName("Panel")
     main_layout = QVBoxLayout(main_panel)
     main_layout.setContentsMargins(14, 12, 14, 12)
-    main_layout.setSpacing(10)
+    main_layout.setSpacing(6)
     root.addWidget(main_panel, 1)
 
     weapon_type = QLabel(_weapon_subtitle(weapon), main_panel)
@@ -82,7 +90,7 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     main_layout.addWidget(info)
 
     component_area = QVBoxLayout()
-    component_area.setSpacing(8)
+    component_area.setSpacing(6)
     main_layout.addLayout(component_area)
 
     def set_active_component(component_key):
@@ -140,6 +148,7 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     ]
     for component_key, label_text in component_labels:
         widgets = _make_component_row(
+            window,
             main_panel,
             label_text,
             state["components"].get(component_key, {}),
@@ -151,7 +160,7 @@ def open_attack_roll_dialog(window, weapon_data: dict):
         state["component_widgets"][component_key] = widgets
         component_area.addWidget(widgets["panel"])
 
-    main_layout.addWidget(_make_element_row(main_panel, _element_display_text(weapon)))
+    main_layout.addWidget(_make_element_row(main_panel, element_text))
 
     manual_bonus = QLineEdit(main_panel)
     manual_bonus.setPlaceholderText("Globaler Bonus/Malus")
@@ -159,7 +168,9 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     manual_bonus.setObjectName("ValueInput")
     manual_bonus.setFixedWidth(74)
     manual_bonus.textChanged.connect(lambda text: _set_manual_bonus(state, text, refresh_preview))
-    main_layout.addWidget(_compact_field_with_label("Globaler Bonus/Malus", manual_bonus))
+    normal_mode_button = _make_mode_button("Normal", main_panel, window)
+    emote_mode_button = _make_mode_button("Emote", main_panel, window)
+    main_layout.addWidget(_compact_field_with_label("Globaler Bonus/Malus", manual_bonus, [normal_mode_button, emote_mode_button]))
 
     preview_label = QLabel("Roll20-Befehl", main_panel)
     preview_label.setObjectName("SectionTitle")
@@ -168,11 +179,32 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     preview = QLineEdit(main_panel)
     preview.setReadOnly(True)
     preview.setObjectName("Preview")
+    preview.setMinimumHeight(36)
     main_layout.addWidget(preview)
 
     no_dice = QLabel("", main_panel)
     no_dice.setObjectName("Muted")
     main_layout.addWidget(no_dice)
+
+    flavor_label = QLabel("Flavor Text", main_panel)
+    flavor_label.setObjectName("SectionTitle")
+    main_layout.addWidget(flavor_label)
+
+    flavor_text = QLineEdit(main_panel)
+    flavor_text.setObjectName("FlavorInput")
+    flavor_text.setMinimumHeight(36)
+    flavor_text.setText("greift mit {weapon} an und verursacht {physical} physischen Schaden und {elemental} {element}-Schaden.")
+    main_layout.addWidget(flavor_text)
+
+    emote_label = QLabel("Roll20-Emote", main_panel)
+    emote_label.setObjectName("SectionTitle")
+    main_layout.addWidget(emote_label)
+
+    emote_preview = QLineEdit(main_panel)
+    emote_preview.setReadOnly(True)
+    emote_preview.setObjectName("Preview")
+    emote_preview.setMinimumHeight(36)
+    main_layout.addWidget(emote_preview)
 
     button_row = QHBoxLayout()
     copy_button = _make_button("Kopieren", main_panel, window)
@@ -185,6 +217,14 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     button_row.addStretch(1)
     main_layout.addLayout(button_row)
 
+    def refresh_mode_buttons():
+        _set_mode_selector_checked(normal_mode_button, state["output_mode"] == "normal")
+        _set_mode_selector_checked(emote_mode_button, state["output_mode"] == "emote")
+
+    def set_output_mode(mode):
+        state["output_mode"] = "emote" if mode == "emote" else "normal"
+        refresh_mode_buttons()
+
     def refresh_preview():
         command = build_attack_roll_command(
             weapon,
@@ -195,6 +235,14 @@ def open_attack_roll_dialog(window, weapon_data: dict):
             },
         )
         preview.setText(command)
+        emote_preview.setText(
+            build_attack_emote_command(
+                weapon,
+                state["components"],
+                flavor_text.text(),
+                element_text,
+            )
+        )
         if not any(safe_int(state["components"].get(key, {}).get("count", 0), 0) > 0 for key in ("physical", "elemental", "extra")):
             no_dice.setText("Kein Schadenswürfel erkannt. Vorschau nutzt 1d20.")
         else:
@@ -219,17 +267,22 @@ def open_attack_roll_dialog(window, weapon_data: dict):
         dice_buttons.addWidget(button)
 
     def copy_command():
-        QApplication.clipboard().setText(preview.text())
+        source = emote_preview if state["output_mode"] == "emote" else preview
+        QApplication.clipboard().setText(source.text())
 
     def copy_and_open_browser():
         copy_command()
         open_browser = getattr(window, "open_roll20_browser_section", None)
         if callable(open_browser):
             open_browser()
+        dialog.accept()
 
     copy_button.clicked.connect(copy_command)
     copy_open_button.clicked.connect(copy_and_open_browser)
     close_button.clicked.connect(dialog.close)
+    normal_mode_button.clicked.connect(lambda checked=False: set_output_mode("normal"))
+    emote_mode_button.clicked.connect(lambda checked=False: set_output_mode("emote"))
+    flavor_text.textChanged.connect(lambda text: refresh_preview())
     close_x = _make_close_button(dialog, window)
     if close_x is not None:
         close_x.clicked.connect(dialog.close)
@@ -237,6 +290,7 @@ def open_attack_roll_dialog(window, weapon_data: dict):
     for component_key, _ in component_labels:
         _refresh_component_widgets(component_key)
     set_active_component("physical")
+    refresh_mode_buttons()
     refresh_preview()
     dialog.show()
     return dialog
@@ -302,7 +356,7 @@ def _set_manual_bonus(state, text, refresh_callback):
     refresh_callback()
 
 
-def _make_component_row(parent, label_text, component, activate_callback, minus_callback, plus_callback, bonus_callback):
+def _make_component_row(window, parent, label_text, component, activate_callback, minus_callback, plus_callback, bonus_callback):
     panel = QWidget(parent)
     panel.setObjectName("ComponentRow")
     layout = QHBoxLayout(panel)
@@ -315,22 +369,24 @@ def _make_component_row(parent, label_text, component, activate_callback, minus_
     select_button.clicked.connect(activate_callback)
     layout.addWidget(select_button, 0)
 
-    minus_button = _make_tiny_button("-", panel)
+    minus_button = _make_tiny_button(window, "-", "ui_elements/icons/minus.jpg", panel)
     minus_button.clicked.connect(minus_callback)
     layout.addWidget(minus_button, 0)
 
     count_label = QLabel(str(max(0, safe_int(component.get("count", 0), 0))), panel)
     count_label.setObjectName("CountValue")
     count_label.setAlignment(Qt.AlignCenter)
+    count_label.setFixedSize(54, 32)
     layout.addWidget(count_label, 0)
 
-    plus_button = _make_tiny_button("+", panel)
+    plus_button = _make_tiny_button(window, "+", "ui_elements/icons/plus.jpg", panel)
     plus_button.clicked.connect(plus_callback)
     layout.addWidget(plus_button, 0)
 
     die_label = QLabel(f"d{safe_int(component.get('sides', 6), 6)}", panel)
     die_label.setObjectName("DieValue")
     die_label.setAlignment(Qt.AlignCenter)
+    die_label.setFixedSize(54, 32)
     layout.addWidget(die_label, 0)
 
     bonus_label = QLabel("Bonus", panel)
@@ -339,7 +395,8 @@ def _make_component_row(parent, label_text, component, activate_callback, minus_
 
     bonus_edit = QLineEdit(panel)
     bonus_edit.setObjectName("ValueInput")
-    bonus_edit.setFixedWidth(54)
+    bonus_edit.setFixedSize(54, 32)
+    bonus_edit.setAlignment(Qt.AlignCenter)
     bonus_edit.setText(str(safe_int(component.get("bonus", 0), 0)))
     bonus_edit.textChanged.connect(bonus_callback)
     layout.addWidget(bonus_edit, 0)
@@ -362,11 +419,16 @@ def _set_component_row_active(panel, active):
     panel.style().polish(panel)
 
 
-def _make_tiny_button(text, parent):
+def _make_tiny_button(window, text, asset_name, parent):
     button = QPushButton(text, parent)
     button.setObjectName("TinyButton")
-    button.setFixedSize(28, 26)
+    button.setFixedSize(32, 32)
+    button.setIconSize(QSize(32, 32))
     button.setCursor(Qt.PointingHandCursor)
+    asset_path = _asset_path(window, asset_name)
+    if asset_path is not None:
+        button.setText("")
+        button.setIcon(QIcon(str(asset_path)))
     return button
 
 
@@ -382,7 +444,7 @@ def _field_with_label(label_text, field):
     return wrapper
 
 
-def _compact_field_with_label(label_text, field):
+def _compact_field_with_label(label_text, field, trailing_widgets=None):
     wrapper = QWidget(field.parent())
     layout = QHBoxLayout(wrapper)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -392,6 +454,10 @@ def _compact_field_with_label(label_text, field):
     layout.addWidget(label, 0)
     layout.addWidget(field, 0)
     layout.addStretch(1)
+    if isinstance(trailing_widgets, list):
+        for widget in trailing_widgets:
+            if widget is not None:
+                layout.addWidget(widget, 0)
     return wrapper
 
 
@@ -583,6 +649,35 @@ def _make_button(text, parent, window, compact=False):
     return button
 
 
+def _make_mode_button(text, parent, window):
+    button = QPushButton(text, parent)
+    button.setCursor(Qt.PointingHandCursor)
+    button.setMinimumHeight(26)
+    button.setMinimumWidth(86)
+    button.setIconSize(QSize(18, 18))
+    button.setProperty("checked_icon", str(_asset_path(window, "ui_elements/icons/checkmark_true.png") or ""))
+    button.setProperty("unchecked_icon", str(_asset_path(window, "ui_elements/icons/checkmark_false.png") or ""))
+    button.setStyleSheet(
+        "QPushButton { background: transparent; border: none; color: #c8bda5; "
+        "font-weight: 700; padding: 2px 8px; text-align: left; }"
+        "QPushButton:hover { color: #fff1be; }"
+    )
+    return button
+
+
+def _set_mode_selector_checked(button, checked):
+    button.setProperty("mode_checked", bool(checked))
+    icon_path = button.property("checked_icon") if checked else button.property("unchecked_icon")
+    if icon_path:
+        button.setIcon(QIcon(str(icon_path)))
+    button.setStyleSheet(
+        "QPushButton { background: transparent; border: none; "
+        f"color: {'#7fd0ff' if checked else '#c8bda5'}; "
+        "font-weight: 700; padding: 2px 8px; text-align: left; }"
+        "QPushButton:hover { color: #fff1be; }"
+    )
+
+
 def _dialog_stylesheet(window):
     value_frame = _asset_path(window, "frames/256x122_box.png")
     preview_frame = _asset_path(window, "frames/1024x122_box.png")
@@ -652,21 +747,21 @@ QPushButton#ComponentSelect {
     min-width: 86px;
 }
 QPushButton#TinyButton {
-    background: rgba(30, 22, 14, 210);
-    border: 1px solid rgba(216, 170, 76, 120);
+    background: transparent;
+    border: none;
     color: #f2d28b;
     font-weight: 700;
+    padding: 0px;
 }
 QPushButton#TinyButton:hover {
-    color: #fff1be;
-    background: rgba(58, 40, 22, 220);
+    background: transparent;
 }
 QLabel#CountValue, QLabel#DieValue {
-    background: rgba(0, 0, 0, 145);
+    __VALUE_BACKGROUND__
     color: #f7ead0;
-    min-width: 42px;
-    padding: 5px;
+    padding: 0px;
     font-weight: 700;
+    qproperty-alignment: AlignCenter;
 }
 QLineEdit {
     __VALUE_BACKGROUND__
@@ -678,6 +773,12 @@ QLineEdit#ValueInput {
     __VALUE_BACKGROUND__
     border: none;
     color: #f7ead0;
+}
+QLineEdit#FlavorInput {
+    __PREVIEW_BACKGROUND__
+    border: none;
+    color: #f7ead0;
+    padding: 6px;
 }
 QLineEdit#Preview {
     __PREVIEW_BACKGROUND__

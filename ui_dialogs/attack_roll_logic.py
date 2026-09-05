@@ -114,11 +114,49 @@ def _append_component(parts, component):
     _append_bonus(parts, component.get("bonus", 0))
 
 
+def _component_inline_roll(component):
+    if not isinstance(component, dict):
+        return ""
+    count = max(0, safe_int(component.get("count", 0), 0))
+    sides = safe_int(component.get("sides", 0), 0)
+    if count <= 0 or sides <= 0:
+        return ""
+    parts = [f"{count}d{sides}"]
+    _append_bonus(parts, component.get("bonus", 0))
+    return f"[[{''.join(parts)}]]"
+
+
 def _sanitize_weapon_name(value):
     text = str(value or "")
     text = re.sub(r"[\r\n\t]+", " ", text)
     text = re.sub(r"[\x00-\x1f\x7f]+", "", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _sanitize_flavor_text(value):
+    text = str(value or "")
+    text = re.sub(r"[\r\n\t]+", " ", text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]+", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def build_attack_emote_command(weapon: dict, components: dict, flavor_text: str, element_text: str = "") -> str:
+    data = weapon if isinstance(weapon, dict) else {}
+    component_data = components if isinstance(components, dict) else {}
+    template = _sanitize_flavor_text(flavor_text)
+    replacements = {
+        "{weapon}": _sanitize_weapon_name(data.get("name", "")),
+        "{physical}": _component_inline_roll(component_data.get("physical", {})),
+        "{elemental}": _component_inline_roll(component_data.get("elemental", {})),
+        "{extra}": _component_inline_roll(component_data.get("extra", {})),
+        "{element}": _sanitize_flavor_text(element_text if str(element_text or "").strip() != "-" else ""),
+        "{bonus}": str(safe_int(component_data.get("manual_bonus", 0), 0)),
+    }
+    result = template
+    for placeholder, value in replacements.items():
+        result = result.replace(placeholder, value)
+    text = _sanitize_flavor_text(result)
+    return f"/em {text}" if text else "/em"
 
 
 def build_attack_roll_command(weapon: dict, options: dict | None = None) -> str:
