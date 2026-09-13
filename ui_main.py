@@ -4737,10 +4737,13 @@ class MainWindow(QMainWindow):
             return
         if table is None:
             return
+        delete_col = self._safe_int(table.property("skills_se_delete_column"), -1)
+        text_col = self._safe_int(table.property("skills_se_text_column"), 0)
+        value_col = self._safe_int(table.property("skills_se_value_column"), 1)
         rows = []
         for row_index in range(table.rowCount()):
-            text_item = table.item(row_index, 0)
-            value_item = table.item(row_index, 1)
+            text_item = table.item(row_index, text_col)
+            value_item = table.item(row_index, value_col)
             text_value = str(text_item.text() if text_item is not None else "")
             skill_key = ""
             skill_name = text_value
@@ -4767,14 +4770,19 @@ class MainWindow(QMainWindow):
                     for _ in range(max(0, int(add_rows_when_last_filled))):
                         new_row = table.rowCount()
                         table.insertRow(new_row)
+                        if delete_col >= 0:
+                            delete_item = QTableWidgetItem("")
+                            delete_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                            delete_item.setTextAlignment(Qt.AlignCenter)
+                            table.setItem(new_row, delete_col, delete_item)
                         skill_item = QTableWidgetItem("")
                         skill_item.setFlags(
                             (skill_item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled) & ~Qt.ItemIsEditable
                         )
                         value_item = QTableWidgetItem("")
                         value_item.setFlags(value_item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                        table.setItem(new_row, 0, skill_item)
-                        table.setItem(new_row, 1, value_item)
+                        table.setItem(new_row, text_col, skill_item)
+                        table.setItem(new_row, value_col, value_item)
                         rows.append({"text": "", "skill_key": "", "skill_name": "", "value": ""})
                 finally:
                     self._skills_se_loading = False
@@ -4785,16 +4793,25 @@ class MainWindow(QMainWindow):
         table.blockSignals(True)
         try:
             for r in range(table.rowCount()):
-                for c in (0, 1):
+                for c in range(table.columnCount()):
                     item = table.item(r, c)
                     if item is None:
                         item = QTableWidgetItem("")
-                        if c == 0:
+                        if c == text_col:
                             item.setFlags((item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled) & ~Qt.ItemIsEditable)
-                        else:
+                        elif c == value_col:
                             item.setFlags(item.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                        else:
+                            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                            item.setTextAlignment(Qt.AlignCenter)
                         table.setItem(r, c, item)
-                    value = rows[r]["text"] if c == 0 else rows[r]["value"]
+                    if c == delete_col:
+                        row_has_content = bool(str(rows[r].get("text", "")).strip() or str(rows[r].get("value", "")).strip())
+                        item.setText("")
+                        item.setData(Qt.DecorationRole, None)
+                        item.setToolTip("Double-click to delete row" if row_has_content else "")
+                        continue
+                    value = rows[r]["text"] if c == text_col else rows[r]["value"] if c == value_col else ""
                     item.setToolTip(value if value else "")
         finally:
             table.blockSignals(False)
@@ -4802,6 +4819,25 @@ class MainWindow(QMainWindow):
         self._save_skills_se_rows_to_meta(rows)
         if str(self.current_skill_category).strip().lower() == "se" and str(self.current_main_section) in ("skills", "fertigkeiten"):
             self.show_main_section("skills")
+
+    def delete_skills_se_table_row(self, table, row_index, min_rows, add_rows_when_last_filled):
+        if table is None or row_index < 0 or row_index >= table.rowCount():
+            return
+        text_col = self._safe_int(table.property("skills_se_text_column"), 0)
+        value_col = self._safe_int(table.property("skills_se_value_column"), 1)
+        text_item = table.item(row_index, text_col)
+        value_item = table.item(row_index, value_col)
+        if not str(text_item.text() if text_item is not None else "").strip() and not str(value_item.text() if value_item is not None else "").strip():
+            return
+
+        self._skills_se_loading = True
+        table.blockSignals(True)
+        try:
+            table.removeRow(row_index)
+        finally:
+            table.blockSignals(False)
+            self._skills_se_loading = False
+        self.on_skills_se_table_cell_changed(table, min_rows, add_rows_when_last_filled)
 
     def get_se_skill_choices(self):
         choices = []
@@ -4850,7 +4886,8 @@ class MainWindow(QMainWindow):
         if not skill_choices:
             return
         display_items = [str(it.get("display", "")) for it in skill_choices]
-        current_item = table.item(row, 0)
+        text_col = self._safe_int(table.property("skills_se_text_column"), 0)
+        current_item = table.item(row, text_col)
         current_key = str(current_item.data(Qt.UserRole) or "").strip() if current_item is not None else ""
         current_index = 0
         for idx, it in enumerate(skill_choices):
@@ -4878,10 +4915,10 @@ class MainWindow(QMainWindow):
         self._skills_se_loading = True
         table.blockSignals(True)
         try:
-            item = table.item(row, 0)
+            item = table.item(row, text_col)
             if item is None:
                 item = QTableWidgetItem("")
-                table.setItem(row, 0, item)
+                table.setItem(row, text_col, item)
             skill_name = str(selected.get("skill_name", "") or "")
             skill_key = str(selected.get("skill_key", "") or "")
             item.setText(skill_name)
@@ -4945,9 +4982,35 @@ class MainWindow(QMainWindow):
             name.append(chr(65 + rem))
         return "".join(reversed(name))
 
-    def _get_category_upgrade_costs(self, category_id, sheet_name):
+    def _get_configured_se_upgrade_costs(self):
         default_se = [1, 5, 25, 125]
         default_xp = [4, 20, 100, 375]
+        try:
+            layout_config = self.load_skills_layout_config()
+            screen_cfg = layout_config.get("skills_screen", {}) if isinstance(layout_config, dict) else {}
+            cost_cfg = screen_cfg.get("se_cost_info", {}) if isinstance(screen_cfg, dict) else {}
+            values = cost_cfg.get("values", []) if isinstance(cost_cfg, dict) else []
+        except Exception:
+            return default_se, default_xp
+        if not isinstance(values, list):
+            return default_se, default_xp
+
+        pairs = []
+        for item in values:
+            if not isinstance(item, dict):
+                continue
+            se_value = self._parse_int_for_se_upgrade(item.get("se", 0))
+            xp_value = self._parse_int_for_se_upgrade(item.get("exp", 0))
+            if se_value <= 0:
+                continue
+            pairs.append((se_value, max(0, xp_value)))
+        if not pairs:
+            return default_se, default_xp
+        pairs.sort(key=lambda it: it[0])
+        return [se for se, _xp in pairs], [xp for _se, xp in pairs]
+
+    def _get_category_upgrade_costs(self, category_id, sheet_name):
+        default_se, default_xp = self._get_configured_se_upgrade_costs()
         block = self.get_skill_block_config_for_category(category_id)
         if not isinstance(block, dict):
             return default_se, default_xp, True
@@ -5090,12 +5153,12 @@ class MainWindow(QMainWindow):
                 continue
 
             available_se = int(entry.get("value", 0))
-            next_index = None
-            for idx, required_se in enumerate(se_costs):
-                if available_se < int(required_se):
-                    next_index = idx
-                    break
-            if next_index is None or next_index >= len(xp_costs):
+            slot_values = info.get("resolved_attribute_slots", [])
+            if not isinstance(slot_values, list) or not slot_values:
+                slot_values = info.get("display_attribute_slots", [])
+            current_level = sum(1 for slot in slot_values if str(slot or "").strip())
+            next_index = min(current_level, min(len(se_costs), len(xp_costs)) - 1)
+            if next_index < 0 or next_index >= len(xp_costs):
                 suggestions.append(
                     {
                         "skill_name": skill_name,
@@ -5116,7 +5179,7 @@ class MainWindow(QMainWindow):
                 log_debug(
                     "skills",
                     f'SKILLS UPGRADE SE LINK rows={entry.get("row_indices")} '
-                    f'skill_key="{source_key}" skill="{skill_name}" se={available_se}',
+                    f'skill_key="{source_key}" skill="{skill_name}" level={current_level} se={available_se}',
                 )
 
             xp_ok = int(available_xp) >= needed_xp
@@ -5147,6 +5210,7 @@ class MainWindow(QMainWindow):
                     "available_xp": int(available_xp),
                     "status": status,
                     "skill_key": source_key,
+                    "current_level": current_level,
                 }
             )
 

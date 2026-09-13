@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
-from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit
+from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit, QPushButton, QWidget
 
 from app_paths import ui_icon_path
 
@@ -117,6 +117,122 @@ def _apply_character_subpanel_shadow_effect(window, panel, shadow_cfg):
     )
     effect.setColor(_character_shadow_color(window, shadow_cfg))
     panel.setGraphicsEffect(effect)
+
+
+def _character_has_exact_perk(window, perk_name):
+    target = str(perk_name or "").strip().lower()
+    if not target:
+        return False
+    try:
+        if hasattr(window, "collect_character_perk_entries"):
+            for entry in window.collect_character_perk_entries():
+                if not isinstance(entry, dict):
+                    continue
+                if str(entry.get("type", "")).strip().lower() != "perk":
+                    continue
+                if str(entry.get("name", "")).strip().lower() == target:
+                    return True
+    except Exception:
+        pass
+    for name in getattr(window, "current_perks", []) or []:
+        if str(name).strip().lower() == target:
+            return True
+    return False
+
+
+def _set_character_view_mode(window, mode):
+    normalized = str(mode or "normal").strip().lower()
+    if normalized not in ("normal", "tierform"):
+        normalized = "normal"
+    window._character_view_mode = normalized
+    window.show_main_section("character")
+
+
+def _render_tierform_toggle(window, character_panel, active_mode, default_color):
+    button_asset = "buttons/menu_button_small.png"
+    y = 92
+    button_w = 244
+    button_h = 28
+    start_x = max(10, (character_panel.width() - button_w) // 2)
+    active_color = "#f2d28b"
+    inactive_color = "#7f7058"
+    separator_color = "#5e5140"
+
+    container = QWidget(character_panel)
+    container.setGeometry(start_x, y, button_w, button_h)
+    container.setStyleSheet("background: transparent;")
+
+    bg_label = QLabel(container)
+    bg_label.setGeometry(0, 0, button_w, button_h)
+    bg_label.setStyleSheet("background: transparent;")
+    bg = _optional_theme_ui_pixmap(window, button_asset)
+    if bg is not None:
+        bg_label.setPixmap(bg.scaled(button_w, button_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+    bg_label.lower()
+
+    normal_active = active_mode == "normal"
+    parts = (
+        ("Charakter", 0, 100, active_color if normal_active else inactive_color),
+        ("|", 100, 44, separator_color),
+        ("Tierform", 144, 100, active_color if not normal_active else inactive_color),
+    )
+    for text, x, w, color in parts:
+        label = QLabel(container)
+        label.setGeometry(x, 0, w, button_h)
+        label.setText(text)
+        label.setAlignment(Qt.AlignCenter)
+        label.setStyleSheet(
+            "QLabel {"
+            "background: transparent;"
+            f"color: {color};"
+            "font-size: 13px;"
+            "font-weight: 700;"
+            "}"
+        )
+        label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+
+    next_mode = "normal" if active_mode == "tierform" else "tierform"
+    click_button = QPushButton(container)
+    click_button.setGeometry(0, 0, button_w, button_h)
+    click_button.setText("")
+    click_button.setCursor(Qt.PointingHandCursor)
+    click_button.setStyleSheet("QPushButton { border: none; background: transparent; padding: 0px; }")
+    click_button.clicked.connect(lambda checked=False, selected_mode=next_mode: _set_character_view_mode(window, selected_mode))
+    click_button.raise_()
+    container.show()
+
+
+def _render_tierform_placeholder(window, character_panel, default_color):
+    y = 122
+    placeholder = QFrame(character_panel)
+    placeholder.setGeometry(22, y, max(1, character_panel.width() - 44), max(1, character_panel.height() - y - 24))
+    placeholder.setStyleSheet(
+        "QFrame {"
+        "background: rgba(8, 8, 8, 210);"
+        "border: 1px solid rgba(242, 210, 139, 120);"
+        "border-radius: 6px;"
+        "}"
+    )
+    placeholder.raise_()
+    placeholder.show()
+    window.create_panel_text(
+        placeholder,
+        {"x": 14, "y": 140, "w": max(1, placeholder.width() - 28), "h": 42},
+        "TIERFORM AKTIV",
+        24,
+        "#f2d28b",
+        bold=True,
+        align="center",
+    )
+    window.create_panel_text(
+        placeholder,
+        {"x": 14, "y": 184, "w": max(1, placeholder.width() - 28), "h": 28},
+        "Prototyp / Platzhalter",
+        13,
+        str(default_color),
+        bold=False,
+        align="center",
+    )
 
 
 def _create_alpha_pixmap_shadow(window, parent, panel_cfg, shadow_cfg):
@@ -1080,6 +1196,15 @@ def render_character_section(window):
         align=window.get_text_align(title_cfg, "left"),
         section_key="basic_fields",
     )
+    has_tierform_perk = _character_has_exact_perk(window, "Tierform")
+    if not has_tierform_perk:
+        window._character_view_mode = "normal"
+    character_view_mode = str(getattr(window, "_character_view_mode", "normal") or "normal").strip().lower()
+    if character_view_mode not in ("normal", "tierform"):
+        character_view_mode = "normal"
+        window._character_view_mode = "normal"
+    if has_tierform_perk:
+        _render_tierform_toggle(window, character_panel, character_view_mode, default_color)
 
     fields_cfg = info_layout.get("fields", {})
     field_rows = fields_cfg.get("rows", []) if isinstance(fields_cfg, dict) else []
@@ -1439,6 +1564,9 @@ def render_character_section(window):
                 bar_fill.setGeometry(0, 0, bar_w, bar_h)
                 bar_fill.setStyleSheet(f"background: {str(bar_cfg.get('color', bar_color))};")
                 bar_bg.show()
+
+    if has_tierform_perk and character_view_mode == "tierform":
+        _render_tierform_placeholder(window, character_panel, default_color)
 
     attr_layout = text_layout.get("attribute_panel", text_layout.get("attributes", {}))
     attr_map = data_map.get("attributes", {})

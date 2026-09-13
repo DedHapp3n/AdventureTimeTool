@@ -4,7 +4,7 @@ import shutil
 import html
 
 from PySide6.QtCore import QDateTime, QUrl, Qt
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QKeySequence, QShortcut
 from PySide6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QPushButton, QWidget
 
 from app_logger import log_debug, log_warning_once
@@ -365,6 +365,183 @@ def _load_persistence_test_page(window, web_view):
     window._browser_persistence_test_pending = True
     web_view.setHtml(_persistence_test_html(window), QUrl("https://adventure.local/persistence-test"))
     return True
+
+
+def reload_existing_browser(window):
+    web_view = getattr(window, "_browser_web_view", None)
+    if not _is_qt_widget_alive(web_view):
+        return False
+    web_view.reload()
+    return True
+
+
+def _roll20_chat_insert_script(command):
+    command_json = json.dumps(str(command or ""))
+    return f"""
+(function() {{
+  const command = {command_json};
+  function visible(el) {{
+    if (!el || !el.isConnected) return false;
+    const rect = el.getBoundingClientRect();
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    return rect.width >= 20 && rect.height >= 10;
+  }}
+
+  function textHint(el) {{
+    const pieces = [];
+    let node = el;
+    for (let i = 0; node && i < 4; i += 1, node = node.parentElement) {{
+      pieces.push(
+        node.id || '',
+        node.name || '',
+        String(node.className || ''),
+        node.getAttribute('aria-label') || '',
+        node.getAttribute('placeholder') || '',
+        node.getAttribute('data-testid') || '',
+        node.getAttribute('title') || ''
+      );
+    }}
+    return pieces.join(' ').toLowerCase();
+  }}
+
+  function score(el) {{
+    if (!visible(el)) return -1;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'input') {{
+      const type = (el.getAttribute('type') || 'text').toLowerCase();
+      if (!['text', 'search', ''].includes(type)) return -1;
+      if (el.readOnly || el.disabled) return -1;
+    }}
+    if (tag === 'textarea' && (el.readOnly || el.disabled)) return -1;
+    if (!el.isContentEditable && tag !== 'textarea' && tag !== 'input') return -1;
+
+    const hint = textHint(el);
+    let value = 0;
+    if (tag === 'textarea') value += 50;
+    if (el.isContentEditable) value += 35;
+    if (hint.includes('chat')) value += 80;
+    if (hint.includes('message')) value += 45;
+    if (hint.includes('textchat')) value += 70;
+    if (hint.includes('speaking')) value += 35;
+    if (hint.includes('textarea')) value += 25;
+    if (hint.includes('search')) value -= 90;
+    if (hint.includes('filter')) value -= 60;
+    if (hint.includes('campaign') || hint.includes('journal')) value -= 20;
+    return value;
+  }}
+
+  const candidates = Array.from(document.querySelectorAll([
+    '#textchat-input textarea',
+    '#textchat textarea',
+    '.textchatcontainer textarea',
+    'textarea',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+    'input[type="text"]'
+  ].join(',')));
+  const ranked = candidates
+    .map(function(el) {{ return {{ el: el, score: score(el) }}; }})
+    .filter(function(item) {{ return item.score >= 0; }})
+    .sort(function(a, b) {{ return b.score - a.score; }});
+  const target = ranked.length ? ranked[0].el : null;
+  if (!target) return false;
+
+  function appendText(existing, added) {{
+    existing = existing || '';
+    if (!existing.trim()) return added;
+    return existing.replace(/\\s*$/, '') + '\\n' + added;
+  }}
+
+  function setNativeValue(el, value) {{
+    const tag = el.tagName.toLowerCase();
+    const proto = tag === 'textarea' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (descriptor && descriptor.set) {{
+      descriptor.set.call(el, value);
+    }} else {{
+      el.value = value;
+    }}
+  }}
+
+  target.focus();
+  if (target.isContentEditable && target.tagName.toLowerCase() !== 'textarea' && target.tagName.toLowerCase() !== 'input') {{
+    const existing = target.innerText || target.textContent || '';
+    target.textContent = appendText(existing, command);
+  }} else {{
+    const existing = target.value || '';
+    setNativeValue(target, appendText(existing, command));
+    try {{
+      target.setSelectionRange(target.value.length, target.value.length);
+    }} catch (_err) {{}}
+  }}
+  target.dispatchEvent(new InputEvent('input', {{ bubbles: true, inputType: 'insertText', data: command }}));
+  target.dispatchEvent(new Event('change', {{ bubbles: true }}));
+  return (
+    (target.isContentEditable && ((target.innerText || target.textContent || '').includes(command))) ||
+    (!target.isContentEditable && String(target.value || '').includes(command))
+  );
+}})();
+"""
+
+
+def insert_roll20_chat_command(window, command, done_callback=None):
+    web_view = getattr(window, "_browser_web_view", None)
+    if not _is_qt_widget_alive(web_view):
+        if callable(done_callback):
+            done_callback(False)
+        return False
+    try:
+        host = str(web_view.url().host() or "").lower()
+    except Exception:
+        host = ""
+    if host != "roll20.net" and not host.endswith(".roll20.net"):
+        if callable(done_callback):
+            done_callback(False)
+        return False
+    page = web_view.page()
+    if page is None:
+        if callable(done_callback):
+            done_callback(False)
+        return False
+    try:
+        page.runJavaScript(_roll20_chat_insert_script(command), lambda result: done_callback(bool(result)) if callable(done_callback) else None)
+        return True
+    except Exception as exc:
+        log_warning_once("browser", "roll20-chat-insert", f"roll20 chat insert failed: {exc}")
+        if callable(done_callback):
+            done_callback(False)
+        return False
+
+
+def open_roll20_command_center(window):
+    try:
+        from ui_dialogs.roll20_command_center_dialog import Roll20CommandCenterDialog
+    except Exception as exc:
+        log_warning_once("browser", "command-center-import", f"roll20 command center import failed: {exc}")
+        return False
+
+    dialog = getattr(window, "_roll20_command_center_dialog", None)
+    if not _is_qt_widget_alive(dialog):
+        dialog = Roll20CommandCenterDialog(
+            window,
+            insert_callback=lambda command, done: insert_roll20_chat_command(window, command, done),
+            show_browser_callback=lambda: window.show_main_section("browser") if hasattr(window, "show_main_section") else show_browser_section(window),
+        )
+        window._roll20_command_center_dialog = dialog
+    dialog.show()
+    dialog.raise_()
+    return True
+
+
+def _connect_browser_reload_shortcut(window, parent):
+    existing = getattr(window, "_browser_f5_reload_shortcut", None)
+    if _is_qt_widget_alive(existing):
+        return
+    shortcut = QShortcut(QKeySequence(Qt.Key_F5), parent)
+    shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    shortcut.activated.connect(lambda: reload_existing_browser(window))
+    window._browser_f5_reload_shortcut = shortcut
 
 
 def _initial_url(window, cfg):
@@ -1061,11 +1238,12 @@ def ensure_browser_created(window, preload=False):
             url_edit.returnPressed.connect(load_url)
 
             reload_button = QPushButton("R", container)
-            reload_button.setToolTip("Reload Roll20")
+            reload_button.setToolTip("Roll20 Command Center")
             reload_button.setCursor(Qt.PointingHandCursor)
             reload_button.setStyleSheet(_reload_button_stylesheet(window, cfg))
-            reload_button.clicked.connect(web_view.reload)
+            reload_button.clicked.connect(lambda: open_roll20_command_center(window))
             window._browser_reload_button = reload_button
+            _connect_browser_reload_shortcut(window, container)
         else:
             log_warning_once("browser", "webengine-unavailable", "QtWebEngine is unavailable; browser fallback will open URLs externally.")
             fallback = QLabel(container)
@@ -1088,10 +1266,10 @@ def ensure_browser_created(window, preload=False):
             url_edit.returnPressed.connect(open_external_url)
 
             reload_button = QPushButton("R", container)
-            reload_button.setToolTip("Reload Roll20")
+            reload_button.setToolTip("Roll20 Command Center")
             reload_button.setCursor(Qt.PointingHandCursor)
             reload_button.setStyleSheet(_reload_button_stylesheet(window, cfg))
-            reload_button.clicked.connect(open_external_url)
+            reload_button.clicked.connect(lambda: open_roll20_command_center(window))
             window._browser_reload_button = reload_button
 
         window._browser_initialized = True

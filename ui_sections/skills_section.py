@@ -481,6 +481,74 @@ def _create_alpha_button_shadow(window, parent, src, w, h, shadow_cfg):
     return shadow
 
 
+def _skills_se_delete_icon_pixmap(window, column_w):
+    icon_w = max(18, min(28, int(column_w) - 8))
+    icon_h = icon_w
+    rendered = QPixmap(icon_w, icon_h)
+    rendered.fill(Qt.transparent)
+    painter = QPainter(rendered)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+
+    icon_path = window.assets_dir / "ui_elements" / "icons" / "x.jpg"
+    icon = QPixmap(str(icon_path))
+    if not icon.isNull():
+        icon_size = max(12, min(18, icon_w - 6))
+        x = int((icon_w - icon_size) / 2)
+        y = int((icon_h - icon_size) / 2)
+        painter.drawPixmap(x, y, icon_size, icon_size, icon)
+    else:
+        painter.setPen(QColor("#c84f4f"))
+        font = painter.font()
+        font.setPixelSize(14)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(rendered.rect(), Qt.AlignCenter, "X")
+    painter.end()
+    return rendered
+
+
+def update_skills_se_delete_column(window, table):
+    if table is None:
+        return
+    delete_col = window._safe_int(table.property("skills_se_delete_column"), -1)
+    text_col = window._safe_int(table.property("skills_se_text_column"), 0)
+    value_col = window._safe_int(table.property("skills_se_value_column"), 1)
+    if delete_col < 0:
+        return
+    selected_rows = {index.row() for index in table.selectedIndexes()}
+    column_w = max(1, table.columnWidth(delete_col))
+    icon = table.property("skills_se_delete_icon")
+    if not isinstance(icon, QPixmap) or icon.isNull():
+        icon = _skills_se_delete_icon_pixmap(window, column_w)
+        table.setProperty("skills_se_delete_icon", icon)
+    signals_were_blocked = table.blockSignals(True)
+    try:
+        for row_index in range(table.rowCount()):
+            item = table.item(row_index, delete_col)
+            if item is None:
+                item = QTableWidgetItem("")
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row_index, delete_col, item)
+            text_item = table.item(row_index, text_col)
+            value_item = table.item(row_index, value_col)
+            row_has_content = bool(
+                str(text_item.text() if text_item is not None else "").strip()
+                or str(value_item.text() if value_item is not None else "").strip()
+            )
+            show_icon = row_has_content and row_index in selected_rows
+            next_icon = icon if show_icon else None
+            next_tooltip = "Double-click to delete row" if show_icon else ""
+            if item.text():
+                item.setText("")
+            if item.data(Qt.DecorationRole) != next_icon:
+                item.setData(Qt.DecorationRole, next_icon)
+            if item.toolTip() != next_tooltip:
+                item.setToolTip(next_tooltip)
+    finally:
+        table.blockSignals(signals_were_blocked)
+
+
 def _normalize_skill_search_text(value):
     text = str(value or "").strip().lower()
     text = (
@@ -864,9 +932,16 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
 
     se_table = QTableWidget(frame)
     se_table.setGeometry(8, 8, max(1, w - 16), max(1, h - 16))
-    se_table.setColumnCount(2)
+    delete_col = 0
+    text_col = 1
+    value_col = 2
+    se_table.setProperty("skills_se_delete_column", delete_col)
+    se_table.setProperty("skills_se_text_column", text_col)
+    se_table.setProperty("skills_se_value_column", value_col)
+    se_table.setColumnCount(3)
     se_table.setHorizontalHeaderLabels(
         [
+            "",
             str(text_col_cfg.get("title", "Fertigkeit")),
             str(value_col_cfg.get("title", "SE")),
         ]
@@ -912,8 +987,13 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
             bound_skill_name = str(row.get("skill_name", "") or "").strip()
             text_value = bound_skill_name or str(row.get("text", "") or "")
             value_value = str(row.get("value", "") or "")
+            delete_item = QTableWidgetItem("")
             text_item = QTableWidgetItem(text_value)
             value_item = QTableWidgetItem(value_value)
+            delete_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            delete_item.setTextAlignment(Qt.AlignCenter)
+            if text_value or value_value:
+                delete_item.setToolTip("Double-click to delete row")
             text_item.setFlags((text_item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled) & ~Qt.ItemIsEditable)
             skill_key = str(row.get("skill_key", "") or "").strip()
             if skill_key:
@@ -921,16 +1001,19 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
                 text_item.setData(Qt.UserRole + 1, text_value)
             text_item.setToolTip(text_value if text_value else "")
             value_item.setToolTip(value_value if value_value else "")
-            se_table.setItem(row_index, 0, text_item)
-            se_table.setItem(row_index, 1, value_item)
+            se_table.setItem(row_index, delete_col, delete_item)
+            se_table.setItem(row_index, text_col, text_item)
+            se_table.setItem(row_index, value_col, value_item)
+        delete_w = max(24, window._safe_int(se_table_cfg.get("delete_w", 28), 28))
         text_w = window._safe_int(text_col_cfg.get("w", 240), 240)
         value_w = window._safe_int(value_col_cfg.get("w", 80), 80)
         available = max(1, se_table.width() - 4)
-        configured = text_w + value_w
+        configured = delete_w + text_w + value_w
         if configured > available:
             text_w = max(120, text_w - (configured - available))
-        se_table.setColumnWidth(0, max(1, text_w))
-        se_table.setColumnWidth(1, max(1, value_w))
+        se_table.setColumnWidth(delete_col, max(1, delete_w))
+        se_table.setColumnWidth(text_col, max(1, text_w))
+        se_table.setColumnWidth(value_col, max(1, value_w))
         for r in range(se_table.rowCount()):
             se_table.setRowHeight(r, 28)
     finally:
@@ -941,10 +1024,10 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
     text_header_frame_cfg = text_col_cfg.get("header_frame", header_frame_cfg) if isinstance(text_col_cfg.get("header_frame", header_frame_cfg), dict) else header_frame_cfg
     value_header_frame_cfg = value_col_cfg.get("header_frame", header_frame_cfg) if isinstance(value_col_cfg.get("header_frame", header_frame_cfg), dict) else header_frame_cfg
     header_h = max(1, se_table.horizontalHeader().height())
-    text_header_x = se_table.columnViewportPosition(0)
-    value_header_x = se_table.columnViewportPosition(1)
-    text_header_w = max(1, se_table.columnWidth(0))
-    value_header_w = max(1, se_table.columnWidth(1))
+    text_header_x = se_table.columnViewportPosition(text_col)
+    value_header_x = se_table.columnViewportPosition(value_col)
+    text_header_w = max(1, se_table.columnWidth(text_col))
+    value_header_w = max(1, se_table.columnWidth(value_col))
     create_framed_label(
         window,
         se_table,
@@ -974,8 +1057,18 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
         )
     )
     se_table.cellDoubleClicked.connect(
-        lambda row, col, widget=se_table: window.open_skills_se_skill_picker(widget, row) if col == 0 else None
+        lambda row, col, widget=se_table, mr=min_rows, ar=add_rows: (
+            window.delete_skills_se_table_row(widget, row, mr, ar)
+            if col == delete_col
+            else window.open_skills_se_skill_picker(widget, row)
+            if col == text_col
+            else None
+        )
     )
+    se_table.itemSelectionChanged.connect(
+        lambda widget=se_table: update_skills_se_delete_column(window, widget)
+    )
+    update_skills_se_delete_column(window, se_table)
     se_table.show()
 
     xp_cfg = se_cfg.get("xp_info", {}) if isinstance(se_cfg, dict) else {}
@@ -1154,6 +1247,7 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
         up_font_size = window._safe_int(upgrade_cfg.get("font_size", max(12, xp_font_size - 1)), max(12, xp_font_size - 1))
         up_label_color = str(upgrade_cfg.get("label_color", xp_label_color))
         up_text_color = str(upgrade_cfg.get("text_color", xp_text_color))
+        possible_text_color = str(upgrade_cfg.get("possible_text_color", "#73d68a"))
         up_border_color = str(upgrade_cfg.get("border_color", xp_border_color))
         up_bg = str(upgrade_cfg.get("background", xp_bg))
         content_bg = str(upgrade_cfg.get("content_background", "rgba(5, 5, 5, 135)"))
@@ -1227,15 +1321,31 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
         elif status == "no_upgrade_data":
             lines.append(("Keine Upgrade-Daten gefunden", up_text_color, True))
         else:
-            def add_group(title, items):
+            def format_upgrade_item(item):
+                item_status = str(item.get("status", "") or "")
+                skill_name = str(item.get("skill_name", "") or "")
+                available_se = item.get("available_se", 0)
+                available_xp = item.get("available_xp", 0)
+                if item_status == "unknown":
+                    return f"- {skill_name} - SE {available_se}/Max · XP {available_xp}/-"
+                if item_status == "broken_link":
+                    return f"- {skill_name} - Skill-Link prüfen"
+                return (
+                    f'- {skill_name} - SE {item["available_se"]}/{item["needed_se"]} '
+                    f'· XP {item["available_xp"]}/{item["needed_xp"]}'
+                )
+
+            def add_group(title, items, item_color=None, title_color=None):
                 if not items:
                     return
-                lines.append((f"{title}:", up_label_color, True))
+                group_title_color = title_color or up_label_color
+                group_item_color = item_color or up_text_color
+                lines.append((f"{title}:", group_title_color, True))
                 for item in items:
                     lines.append(
                         (
-                            f'- {item["skill_name"]} — SE {item["available_se"]}/{item["needed_se"]} · XP {item["available_xp"]}/{item["needed_xp"]}',
-                            up_text_color,
+                            format_upgrade_item(item),
+                            group_item_color,
                             False,
                         )
                     )
@@ -1246,7 +1356,7 @@ def render_skills_se_table(window, parent, screen_cfg, se_cfg):
             missing_both_items = list(groups.get("missing_both", []))
             unknown_items = list(groups.get("unknown", []))
             broken_link_items = list(groups.get("broken_link", []))
-            add_group("Möglich", possible_items)
+            add_group("Möglich", possible_items, possible_text_color, possible_text_color)
             add_group("Fehlt XP", missing_xp_items)
             add_group("Fehlt SE", missing_se_items)
             add_group("Fehlt beides", missing_both_items)
