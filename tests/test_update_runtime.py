@@ -22,7 +22,7 @@ from build import (
 
 class RuntimeTests(unittest.TestCase):
     def test_versions(self):
-        self.assertEqual(version.APP_VERSION, "1.3.2")
+        self.assertEqual(version.APP_VERSION, "1.3.3")
         self.assertEqual(version.compare_versions("v1.3", "1.3.0"), 0)
         self.assertLess(version.compare_versions("1.3.0-rc.1", "1.3.0"), 0)
         self.assertGreater(version.compare_versions("1.10.0", "1.9.9"), 0)
