@@ -194,6 +194,17 @@
         }
       }
     },
+    "attribute_menu": {
+      "background": "#17120e",
+      "text_color": "#eadfca",
+      "border_color": "#8a6a32",
+      "selection_background": "#5f451e",
+      "selection_text_color": "#ffffff",
+      "disabled_text_color": "#f2d28b",
+      "font_size": 14,
+      "item_height": 30,
+      "min_width": 120
+    },
     "se_tab": {
       "enabled": true,
       "button_text": "SE",

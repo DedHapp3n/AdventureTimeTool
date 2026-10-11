@@ -3,9 +3,9 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QSplitter,
     QLabel, QTextEdit, QStyledItemDelegate, QFrame, QDialog, QMessageBox, QComboBox, QMenu, QInputDialog, QGroupBox,
-    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView
+    QSpinBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout, QLineEdit, QAbstractItemView, QToolTip
 )
-from PySide6.QtCore import Qt, QEvent, QRect, QPoint
+from PySide6.QtCore import Qt, QEvent, QRect, QPoint, QTimer
 from PySide6.QtGui import QColor, QPen, QPixmap, QIcon, QTextDocument, QFont, QFontMetrics, QBrush, QPainter, QPolygon, QLinearGradient, QGuiApplication
 import re
 import os
@@ -1068,6 +1068,17 @@ class MainWindow(QMainWindow):
                         "note": {"title": "Notiz", "x": 1170, "w": 210},
                     },
                 },
+                "attribute_menu": {
+                    "background": "#17120e",
+                    "text_color": "#eadfca",
+                    "border_color": "#8a6a32",
+                    "selection_background": "#5f451e",
+                    "selection_text_color": "#ffffff",
+                    "disabled_text_color": "#f2d28b",
+                    "font_size": 14,
+                    "item_height": 30,
+                    "min_width": 120,
+                },
             }
         }
 
@@ -1930,8 +1941,8 @@ class MainWindow(QMainWindow):
         if "arrayformula object" not in lowered and "openpyxl.worksheet.formula" not in lowered:
             return None, False
 
-        profile_name = self.normalize_skill_name(self.get_cache_cell_value(sheet_name, "D15", ""))
-        if profile_name != "klettern athletik":
+        profile_name = self.get_cache_cell_value(sheet_name, "D15", "")
+        if not self._is_initiative_text(profile_name):
             return None, False
 
         # Old imported sheets store only ArrayFormula objects in AD. This mirrors the
@@ -2423,11 +2434,7 @@ class MainWindow(QMainWindow):
         source_key, source_info = initiative_skill
         if not isinstance(source_info, dict) or source_info.get("row") is None:
             log_warning("character", "initiative value not found")
-            QMessageBox.information(
-                self,
-                "Initiative",
-                "Ini-Wurf nicht gefunden. Prüfe die Fertigkeit 'Klettern, Athletik, Ini-Wurf'.",
-            )
+            self._show_initiative_missing_message()
             return
         try:
             skill_value = int(source_info.get("display_value", "0") or 0)
@@ -2456,7 +2463,7 @@ class MainWindow(QMainWindow):
             "source_key": str(source_key or ""),
             "fixed_bonus_lines": [f"Ini-Bonus: {initiative_bonus:+d}"] if initiative_bonus else [],
             "fixed_extra_bonuses": [initiative_bonus] if initiative_bonus else [],
-            "paradigm_enabled": False,
+            "paradigm_enabled": True,
             "skill_value_allowed": True,
             "roll_context": "character_initiative",
             "wellbeing_context": {
@@ -2467,6 +2474,25 @@ class MainWindow(QMainWindow):
         }
         log_debug("roll20", "ROLL DIALOG source=character_initiative layout=roll_dialog_layout")
         self.open_skill_roll_dialog(roll_info=roll_info)
+
+    def _show_initiative_missing_message(self):
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Information)
+        message_box.setWindowTitle("Initiative")
+        message_box.setText(
+            "Ini-Wurf nicht gefunden. Prüfe die Fertigkeit "
+            "'Klettern, Athletik, Ini-Wurf'."
+        )
+        message_box.setStandardButtons(QMessageBox.Ok)
+        message_box.setStyleSheet(
+            "QMessageBox { background-color: #17120e; color: #eadfca; }"
+            "QMessageBox QLabel { background: transparent; color: #eadfca; "
+            "min-width: 420px; padding: 8px; }"
+            "QMessageBox QPushButton { background-color: #2a2118; color: #eadfca; "
+            "border: 1px solid #8a6a32; min-width: 90px; min-height: 28px; padding: 3px 12px; }"
+            "QMessageBox QPushButton:hover { background-color: #5f451e; color: #ffffff; }"
+        )
+        message_box.exec()
 
     def _parse_cell_ref(self, cell_ref):
         match = re.fullmatch(r"([A-Z]+)([0-9]+)", str(cell_ref or "").strip().upper())
@@ -2504,11 +2530,17 @@ class MainWindow(QMainWindow):
         return int(math.ceil(numeric - 0.5))
 
     def _is_initiative_text(self, value):
-        normalized = self._norm_match_text(value)
+        normalized = self.normalize_skill_name(value)
         if not normalized:
             return False
-        compact = normalized.replace("-", " ").replace("_", " ")
-        return ("ini wurf" in compact) or ("initiative" in compact)
+        compact = normalized.replace(" ", "")
+        tokens = set(normalized.split())
+        return (
+            "ini wurf" in normalized
+            or "iniwurf" in compact
+            or "initiative" in tokens
+            or {"klettern", "athletik"}.issubset(tokens)
+        )
 
     def _extract_numeric_value(self, raw_value):
         number = self._to_float_or_none(raw_value)
@@ -2518,20 +2550,138 @@ class MainWindow(QMainWindow):
 
     def _get_initiative_skill_source_info(self):
         self.ensure_skill_source_infos_ready()
-        if not isinstance(self.skill_source_infos, dict):
+        if isinstance(self.skill_source_infos, dict):
+            for source_key, info in self.skill_source_infos.items():
+                if not isinstance(info, dict):
+                    continue
+                candidates = [
+                    source_key,
+                    info.get("skill_id", ""),
+                    info.get("display_name", ""),
+                    info.get("skill_name", ""),
+                    info.get("ui_name", ""),
+                    info.get("cache_name", ""),
+                ]
+                if info.get("row") is not None and any(
+                    self._is_initiative_text(item) for item in candidates
+                ):
+                    return source_key, info
+        return self._initiative_skill_source_from_fertigkeiten_cache()
+
+    def _find_initiative_skill_cache_row(self):
+        mapping = self.get_skill_sheet_mapping_config()
+        sheet_name = str(mapping.get("sheet", "Fertigkeiten"))
+        name_col = str(mapping.get("name_col", "D")).strip().upper() or "D"
+        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
+        if not isinstance(sheet_cache, dict) or not sheet_cache:
             return None
-        for source_key, info in self.skill_source_infos.items():
-            if not isinstance(info, dict):
+        matches = []
+        for cell_ref in sheet_cache.keys():
+            match = re.fullmatch(
+                rf"{re.escape(name_col)}([0-9]+)", str(cell_ref), flags=re.IGNORECASE
+            )
+            if not match:
                 continue
-            candidates = [
-                info.get("display_name", ""),
-                info.get("skill_name", ""),
-                info.get("ui_name", ""),
-                info.get("cache_name", ""),
-            ]
-            if any(self._is_initiative_text(item) for item in candidates):
-                return source_key, info
-        return None
+            current_name = str(
+                self.get_cache_cell_value(sheet_name, cell_ref, "") or ""
+            ).strip()
+            if self._is_initiative_text(current_name):
+                matches.append((int(match.group(1)), current_name))
+        if not matches:
+            return None
+        matches.sort(key=lambda item: item[0])
+        row, matched_name = matches[0]
+        return sheet_name, name_col, row, matched_name
+
+    def _initiative_skill_source_from_fertigkeiten_cache(self):
+        match = self._find_initiative_skill_cache_row()
+        if not isinstance(match, tuple):
+            return None
+        sheet_name, name_col, row, matched_name = match
+        mapping = self.get_skill_sheet_mapping_config()
+        value_col = str(mapping.get("value_formula_col", "AD")).strip().upper() or "AD"
+        spec_col = str(mapping.get("specialization_col", "AG")).strip().upper() or "AG"
+        note_col = str(mapping.get("note_col", "BE")).strip().upper() or "BE"
+        raw_value = self.get_cache_cell_value(sheet_name, f"{value_col}{row}", None)
+        value_number = self._extract_numeric_value(raw_value)
+        block = self.get_skill_block_config_for_row(row)
+        slot_values = self.get_skill_attribute_slot_values_from_row(row, block)
+        if value_number is None:
+            value_number = self._calculate_initiative_skill_value_from_cache_row(
+                sheet_name,
+                row,
+                value_col,
+                block,
+                slot_values,
+            )
+        if value_number is None:
+            return None
+        display_value = self.format_character_display_value(value_number, "int")
+        info = {
+            "category_id": str((block or {}).get("category_id", "")),
+            "skill_id": "initiative_cache",
+            "ui_name": matched_name,
+            "cache_name": matched_name,
+            "display_name": matched_name,
+            "sheet_name": sheet_name,
+            "row": row,
+            "name_cell": f"{name_col}{row}",
+            "attribute_cells": self.get_skill_attribute_cells_for_row(row, block),
+            "value_formula_cell": f"{value_col}{row}",
+            "specialization_cell": f"{spec_col}{row}",
+            "note_cell": f"{note_col}{row}",
+            "calculated_value": value_number,
+            "display_value": display_value,
+            "display_attribute_slots": slot_values,
+            "resolved_attribute_slots": slot_values,
+            "display_specialization": self.get_clean_skill_cache_text(
+                sheet_name, f"{spec_col}{row}"
+            ),
+            "display_note": self.get_clean_skill_cache_text(sheet_name, f"{note_col}{row}"),
+            "source_status": "cache_fallback",
+            "match_type": "initiative_cache",
+            "visible_source": "cache",
+        }
+        source_key = f"cache/initiative-{row}"
+        log_debug(
+            "skills",
+            f'SKILLS INITIATIVE CACHE FALLBACK {source_key} name="{matched_name}" value={display_value}',
+        )
+        return source_key, info
+
+    def _calculate_initiative_skill_value_from_cache_row(
+        self, sheet_name, row, value_col, block, slot_values
+    ):
+        if not isinstance(block, dict):
+            return None
+        total = 0
+        for letter in slot_values:
+            if not letter:
+                continue
+            lookup_value = self.get_skill_lookup_value(block, letter)
+            if lookup_value is None:
+                return None
+            total += lookup_value
+
+        formula_cell = f"{value_col}{row}"
+        formula_text = self.get_skill_formula_text(sheet_name, formula_cell)
+        if formula_text:
+            bonus_cell = self.extract_skill_bonus_cell_from_formula(
+                formula_text, f"cache/initiative-{row}"
+            )
+            bonus_known = True
+        else:
+            bonus_cell, bonus_known = self.infer_skill_bonus_cell_from_array_formula(
+                sheet_name, row, formula_cell
+            )
+        if not bonus_known:
+            return None
+        if bonus_cell:
+            bonus_value = self.get_numeric_cache_value(sheet_name, bonus_cell)
+            if bonus_value is None:
+                bonus_value = 0
+            total += bonus_value
+        return total
 
     def _initiative_data_from_skill_sources(self):
         source_match = self._get_initiative_skill_source_info()
@@ -2558,52 +2708,21 @@ class MainWindow(QMainWindow):
         }
 
     def _initiative_data_from_fertigkeiten_cache(self):
-        mapping = self.get_skill_sheet_mapping_config()
-        sheet_name = str(mapping.get("sheet", "Fertigkeiten"))
-        name_col = str(mapping.get("name_col", "D")).strip().upper() or "D"
-        value_col = str(mapping.get("value_formula_col", "AH")).strip().upper() or "AH"
-        sheet_cache = self.loader.cell_cache.get(sheet_name, {})
-        if not isinstance(sheet_cache, dict) or not sheet_cache:
+        source_match = self._initiative_skill_source_from_fertigkeiten_cache()
+        if not isinstance(source_match, tuple):
             return None
-
-        row = None
-        matched_name = ""
-        for cell_ref in sorted(sheet_cache.keys()):
-            match = re.fullmatch(rf"{name_col}([0-9]+)", str(cell_ref), flags=re.IGNORECASE)
-            if not match:
-                continue
-            current_name = str(self.get_cache_cell_value(sheet_name, cell_ref, "") or "")
-            if self._is_initiative_text(current_name):
-                row = int(match.group(1))
-                matched_name = current_name
-                break
-        if row is None:
-            return None
-
-        raw_text = self.get_cache_cell_value(sheet_name, f"{value_col}{row}", "")
-        raw_number = self._extract_numeric_value(raw_text)
-        if raw_number is None:
-            base_index = self._col_letters_to_index(name_col)
-            for offset in range(1, 12):
-                col = self._col_index_to_letters(base_index + offset)
-                candidate_cell = f"{col}{row}"
-                candidate_raw = self.get_cache_cell_value(sheet_name, candidate_cell, "")
-                candidate_number = self._extract_numeric_value(candidate_raw)
-                if candidate_number is None:
-                    continue
-                raw_text = candidate_raw
-                raw_number = candidate_number
-                break
+        source_key, info = source_match
+        raw_number = self._extract_numeric_value(info.get("calculated_value"))
         if raw_number is None:
             return None
         roll_value = self._round_half_up(raw_number)
         return {
-            "source": f"sheet:{sheet_name}:{name_col}{row}",
-            "raw_value": str(raw_text if raw_text is not None else raw_number),
+            "source": f"skills:{source_key}",
+            "raw_value": str(info.get("display_value", raw_number)),
             "value": raw_number,
             "bonus": 0,
             "roll_value": roll_value,
-            "debug": f'matched_name="{matched_name}"',
+            "debug": f'cache_fallback name="{info.get("display_name", "")}"',
         }
 
     def _build_initiative_data_result(self, source, raw_value, raw_bonus, debug_text="", sheet="", value_cell="", bonus_cell=""):
@@ -2845,6 +2964,48 @@ class MainWindow(QMainWindow):
             return False
         return str(source_info.get("sheet_name", "")) == "Fertigkeiten"
 
+    def _create_skill_attribute_slot_menu(self, slot_widget, current_value):
+        menu = QMenu(slot_widget)
+        layout_config = self.load_skills_layout_config()
+        screen_cfg = layout_config.get("skills_screen", {}) if isinstance(layout_config, dict) else {}
+        menu_cfg = screen_cfg.get("attribute_menu", {}) if isinstance(screen_cfg, dict) else {}
+        if not isinstance(menu_cfg, dict):
+            menu_cfg = {}
+        menu_background = str(menu_cfg.get("background", "#17120e"))
+        menu_text_color = str(menu_cfg.get("text_color", "#eadfca"))
+        menu_border_color = str(menu_cfg.get("border_color", "#8a6a32"))
+        menu_selection_background = str(menu_cfg.get("selection_background", "#5f451e"))
+        menu_selection_text_color = str(menu_cfg.get("selection_text_color", "#ffffff"))
+        menu_disabled_text_color = str(menu_cfg.get("disabled_text_color", "#f2d28b"))
+        menu_font_size = self._safe_int(menu_cfg.get("font_size", 14), 14)
+        menu_item_height = self._safe_int(menu_cfg.get("item_height", 30), 30)
+        menu_min_width = self._safe_int(menu_cfg.get("min_width", 120), 120)
+        menu.setMinimumWidth(max(80, menu_min_width))
+        menu.setStyleSheet(
+            "QMenu {"
+            f"background-color: {menu_background}; color: {menu_text_color};"
+            f"border: 1px solid {menu_border_color}; font-size: {menu_font_size}px;"
+            "padding: 4px;"
+            "}"
+            "QMenu::item {"
+            f"min-height: {max(22, menu_item_height)}px; padding: 2px 18px 2px 12px;"
+            "background-color: transparent;"
+            "}"
+            "QMenu::item:selected {"
+            f"background-color: {menu_selection_background}; color: {menu_selection_text_color};"
+            "}"
+            "QMenu::item:disabled {"
+            f"color: {menu_disabled_text_color}; background-color: transparent;"
+            "}"
+            "QMenu::separator { height: 1px; background: rgba(242, 210, 139, 80); margin: 3px 8px; }"
+        )
+        for label, value in self.get_skill_attribute_slot_options():
+            action = menu.addAction(label)
+            action.setData(value)
+            if value == current_value:
+                action.setEnabled(False)
+        return menu
+
     def open_skill_attribute_slot_menu(self, slot_widget):
         if slot_widget is None:
             return
@@ -2868,13 +3029,7 @@ class MainWindow(QMainWindow):
         if current_value not in valid_values:
             current_value = ""
 
-        menu = QMenu(slot_widget)
-        selected_value = None
-        for label, value in self.get_skill_attribute_slot_options():
-            action = menu.addAction(label)
-            action.setData(value)
-            if value == current_value:
-                action.setEnabled(False)
+        menu = self._create_skill_attribute_slot_menu(slot_widget, current_value)
 
         chosen_action = menu.exec(slot_widget.mapToGlobal(slot_widget.rect().bottomLeft()))
         if chosen_action is None:
@@ -3763,6 +3918,7 @@ class MainWindow(QMainWindow):
                 "attrs_text": attrs_text,
                 "skill_value": skill_value,
                 "skill_value_allowed": skill_value_allowed,
+                "paradigm_enabled": bool(roll_info.get("paradigm_enabled", True)) if isinstance(roll_info, dict) else True,
                 "is_initiative_context": is_initiative_context,
                 "is_character_initiative": isinstance(roll_info, dict) and str(roll_info.get("source", "")) == "character_initiative",
                 "dialog_title": str(roll_info.get("dialog_title", "") or "") if isinstance(roll_info, dict) else "",
@@ -6294,6 +6450,125 @@ class MainWindow(QMainWindow):
                     f"QPushButton:hover {{ border: 1px solid transparent; color: {hover_color}; }}"
                 )
 
+    def _character_perk_row_values(self, widget):
+        sheet_name = str(widget.property("character_perk_sheet_name") or "")
+        name_cell = str(widget.property("character_perk_name_cell_ref") or "")
+        bp_cell = str(widget.property("character_perk_bp_cell_ref") or "")
+        effect_cell = str(widget.property("character_perk_effect_cell_ref") or "")
+        if not sheet_name or not name_cell or not bp_cell or not effect_cell:
+            return None
+        return {
+            "name": str(self.get_cache_display_value(sheet_name, name_cell, "") or "").strip(),
+            "bp": str(self.get_cache_display_value(sheet_name, bp_cell, "") or "").strip(),
+            "effect": str(self.get_cache_display_value(sheet_name, effect_cell, "") or "").strip(),
+        }
+
+    def _show_character_perk_row_info(self, widget):
+        values = self._character_perk_row_values(widget)
+        if not isinstance(values, dict) or not any(values.values()):
+            return False
+        tooltip_html = (
+            "<div style='background-color:#17120e;color:#eadfca;padding:8px;'>"
+            f"<b>Name:</b> {html.escape(values['name'] or '-')}<br>"
+            f"<b>BP:</b> {html.escape(values['bp'] or '-')}<br>"
+            f"<b>Effekt:</b> {html.escape(values['effect'] or '-')}"
+            "</div>"
+        )
+        QToolTip.showText(
+            widget.mapToGlobal(widget.rect().bottomLeft()),
+            tooltip_html,
+            widget,
+            widget.rect(),
+            12000,
+        )
+        return True
+
+    def _schedule_character_perk_row_info(self, widget):
+        token = int(getattr(self, "_character_perk_info_click_token", 0)) + 1
+        self._character_perk_info_click_token = token
+
+        def show_if_still_single_click():
+            if int(getattr(self, "_character_perk_info_click_token", 0)) == token:
+                self._show_character_perk_row_info(widget)
+
+        QTimer.singleShot(QApplication.doubleClickInterval(), show_if_still_single_click)
+
+    def _cancel_character_perk_row_info(self):
+        self._character_perk_info_click_token = int(
+            getattr(self, "_character_perk_info_click_token", 0)
+        ) + 1
+        QToolTip.hideText()
+
+    def _open_character_perk_picker_for_widget(self, widget):
+        perk_table_type = str(widget.property("character_perk_table_type") or "")
+        row = int(widget.property("character_perk_row") or 0)
+        sheet_name = str(widget.property("character_perk_sheet_name") or "")
+        name_cell = str(widget.property("character_perk_name_cell_ref") or "")
+        bp_cell = str(widget.property("character_perk_bp_cell_ref") or "")
+        effect_cell = str(widget.property("character_perk_effect_cell_ref") or "")
+        if not sheet_name or not name_cell or not bp_cell or not effect_cell:
+            self._character_debug(
+                f"[CHARACTER PERK PICKER SKIP] table={perk_table_type} row={row} reason=no_cell_ref"
+            )
+            return True
+
+        picker_result = open_perk_picker(self, perk_table_type)
+        if not isinstance(picker_result, dict):
+            return True
+
+        action = str(picker_result.get("action") or "")
+        entry = picker_result.get("entry")
+        if action == "delete":
+            self.loader.set_cell_value(sheet_name, name_cell, "")
+            self.loader.set_cell_value(sheet_name, bp_cell, "")
+            self.loader.set_cell_value(sheet_name, effect_cell, "")
+            tag = (
+                "CHARACTER PERK DELETE"
+                if perk_table_type == "perk"
+                else "CHARACTER DISADVANTAGE DELETE"
+            )
+            self._character_debug(f"[{tag}] row={row}")
+            self._recalculate_after_user_edit(
+                reason=f"{sheet_name}!{name_cell}:{effect_cell}",
+                save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                rerender=True,
+            )
+            return True
+
+        if action == "select" and isinstance(entry, dict):
+            effect_text = str(entry.get("effect") or entry.get("description") or "")
+            self.loader.set_cell_value(sheet_name, name_cell, str(entry.get("name", "")))
+            self.loader.set_cell_value(sheet_name, bp_cell, str(entry.get("bp", 0)))
+            self.loader.set_cell_value(sheet_name, effect_cell, effect_text)
+            tag = (
+                "CHARACTER PERK PICK"
+                if perk_table_type == "perk"
+                else "CHARACTER DISADVANTAGE PICK"
+            )
+            self._character_debug(
+                f'[{tag}] row={row} name="{entry.get("name", "")}" id="{entry.get("id", "")}"'
+            )
+            self._recalculate_after_user_edit(
+                reason=f"{sheet_name}!{name_cell}:{effect_cell}",
+                save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
+                rerender=True,
+            )
+        return True
+
+    def _handle_character_perk_label_event(self, widget, event):
+        perk_table_type = str(widget.property("character_perk_table_type") or "")
+        if perk_table_type not in ("perk", "disadvantage"):
+            return None
+        if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+            self._schedule_character_perk_row_info(widget)
+            return False
+        if event.type() == QEvent.MouseButtonDblClick and event.button() == Qt.LeftButton:
+            self._cancel_character_perk_row_info()
+            if bool(widget.property("character_perk_editable")):
+                return self._open_character_perk_picker_for_widget(widget)
+            return True
+        return None
+
     def eventFilter(self, obj, event):
         if obj is self.game_canvas:
             if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
@@ -6349,59 +6624,15 @@ class MainWindow(QMainWindow):
                 if resource_id:
                     self.open_character_resource_dialog(resource_id)
                     return True
+                perk_result = self._handle_character_perk_label_event(obj, event)
+                if perk_result is not None:
+                    return perk_result
             if event.type() == QEvent.MouseButtonDblClick:
                 if bool(obj.property("character_editable")):
                     return self._handle_character_widget_double_click(obj)
-                perk_table_type = str(obj.property("character_perk_table_type") or "")
-                if perk_table_type in ("perk", "disadvantage"):
-                    row = int(obj.property("character_perk_row") or 0)
-                    sheet_name = str(obj.property("character_perk_sheet_name") or "")
-                    name_cell = str(obj.property("character_perk_name_cell_ref") or "")
-                    bp_cell = str(obj.property("character_perk_bp_cell_ref") or "")
-                    effect_cell = str(obj.property("character_perk_effect_cell_ref") or "")
-                    if not sheet_name or not name_cell or not bp_cell or not effect_cell:
-                        self._character_debug(
-                            f"[CHARACTER PERK PICKER SKIP] table={perk_table_type} row={row} reason=no_cell_ref"
-                        )
-                        return True
-
-                    picker_result = open_perk_picker(self, perk_table_type)
-                    if not isinstance(picker_result, dict):
-                        return True
-
-                    action = str(picker_result.get("action") or "")
-                    entry = picker_result.get("entry")
-                    if action == "delete":
-                        self.loader.set_cell_value(sheet_name, name_cell, "")
-                        self.loader.set_cell_value(sheet_name, bp_cell, "")
-                        self.loader.set_cell_value(sheet_name, effect_cell, "")
-                        tag = "CHARACTER PERK DELETE" if perk_table_type == "perk" else "CHARACTER DISADVANTAGE DELETE"
-                        self._character_debug(f"[{tag}] row={row}")
-                        self._recalculate_after_user_edit(
-                            reason=f"{sheet_name}!{name_cell}:{effect_cell}",
-                            save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
-                            rerender=True,
-                        )
-                        return True
-
-                    if action == "select" and isinstance(entry, dict):
-                        if not isinstance(entry, dict):
-                            return True
-                        effect_text = str(entry.get("effect") or entry.get("description") or "")
-                        self.loader.set_cell_value(sheet_name, name_cell, str(entry.get("name", "")))
-                        self.loader.set_cell_value(sheet_name, bp_cell, str(entry.get("bp", 0)))
-                        self.loader.set_cell_value(sheet_name, effect_cell, effect_text)
-                        tag = "CHARACTER PERK PICK" if perk_table_type == "perk" else "CHARACTER DISADVANTAGE PICK"
-                        self._character_debug(
-                            f'[{tag}] row={row} name="{entry.get("name", "")}" id="{entry.get("id", "")}"'
-                        )
-                        self._recalculate_after_user_edit(
-                            reason=f"{sheet_name}!{name_cell}:{effect_cell}",
-                            save=bool((self._character_edit_cfg or {}).get("save_on_change", True)),
-                            rerender=True,
-                        )
-                        return True
-                    return True
+                perk_result = self._handle_character_perk_label_event(obj, event)
+                if perk_result is not None:
+                    return perk_result
                 if bool(obj.property("character_paradigm_name_edit")):
                     cell_ref = str(obj.property("character_paradigm_cell_ref") or "")
                     sheet_name = str(obj.property("character_paradigm_sheet") or "Charakterbogen")

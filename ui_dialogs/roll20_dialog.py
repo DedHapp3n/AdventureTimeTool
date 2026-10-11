@@ -122,6 +122,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     attrs_text = str(model.get("attrs_text", "-"))
     skill_value = safe_int(model.get("skill_value", 0), 0)
     skill_value_allowed = bool(model.get("skill_value_allowed", True))
+    paradigm_enabled = bool(model.get("paradigm_enabled", True))
     is_initiative_context = bool(model.get("is_initiative_context", False))
     is_character_initiative = bool(model.get("is_character_initiative", False))
     specialization_items = model.get("specialization_items", [])
@@ -459,8 +460,12 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     advantages_spin.setFixedSize(counter_value_w, counter_value_h)
     disadvantages_spin.setFixedSize(counter_value_w, counter_value_h)
     manual_bonus_spin.setFixedSize(manual_value_w, counter_value_h)
-    for spinbox in (advantages_spin, disadvantages_spin, manual_bonus_spin):
-        spinbox.lineEdit().setAlignment(Qt.AlignCenter)
+    for object_name, spinbox in (
+        ("rollAdvantages", advantages_spin),
+        ("rollDisadvantages", disadvantages_spin),
+        ("rollManualBonus", manual_bonus_spin),
+    ):
+        spinbox.setObjectName(object_name)
 
     adv_minus = create_step_button(dialog, "-")
     adv_plus = create_step_button(dialog, "+")
@@ -479,6 +484,8 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     advantages_spin.setStyleSheet(spinbox_style)
     disadvantages_spin.setStyleSheet(spinbox_style)
     manual_bonus_spin.setStyleSheet(spinbox_style)
+    for spinbox in (advantages_spin, disadvantages_spin, manual_bonus_spin):
+        _style_spinbox_line_edit(spinbox, preview_cfg, counter_cfg, normal_text_font_size)
     controls.setContentsMargins(0, 0, 0, 0)
     controls.setSpacing(6)
     for label, minus_button, spinbox, plus_button in (
@@ -518,7 +525,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     right_layout.insertLayout(1, keep_layout)
 
     paradigm_checkbox = None
-    if not is_initiative_context:
+    if paradigm_enabled:
         paradigm_checkbox = QCheckBox(str(paradigm_cfg.get("text", "Paradigma / Brennen verwenden (+10)")), dialog)
         paradigm_checkbox.setChecked(False)
         paradigm_checkbox.setToolTip(str(paradigm_cfg.get("tooltip", "Manueller Schalter. Es wird kein Paradigma automatisch verbraucht.")))
@@ -991,6 +998,28 @@ def _spinbox_style(preview_cfg, counter_cfg, font_size, resolve_asset_path):
         "}"
         "QSpinBox::up-button { width: 0px; height: 0px; border: none; }"
         "QSpinBox::down-button { width: 0px; height: 0px; border: none; }"
+    )
+
+
+def _style_spinbox_line_edit(spinbox, preview_cfg, counter_cfg, font_size):
+    line_edit = spinbox.lineEdit()
+    if line_edit is None:
+        return
+    text_color = str(counter_cfg.get("value_text_color", preview_cfg.get("text_color", "#f2d28b")))
+    selection_background = str(counter_cfg.get("selection_background", "#5f451e"))
+    selection_text_color = str(counter_cfg.get("selection_text_color", "#ffffff"))
+    line_edit.setAlignment(Qt.AlignCenter)
+    line_edit.setFrame(False)
+    line_edit.setContentsMargins(0, 0, 0, 0)
+    line_edit.setTextMargins(0, 0, 0, 0)
+    line_edit.setStyleSheet(
+        "QLineEdit {"
+        f"color: {text_color}; background: transparent;"
+        f"font-size: {font_size}px; font-weight: 700;"
+        "border: none; margin: 0px; padding: 0px;"
+        f"selection-background-color: {selection_background};"
+        f"selection-color: {selection_text_color};"
+        "}"
     )
 
 

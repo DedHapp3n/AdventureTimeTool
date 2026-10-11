@@ -14,6 +14,11 @@ from app_logger import log_info, log_warning
 APP_NAME = "AdventureTimeTool"
 RELEASE_ZIP_NAME = "AdventureTimeTool-Windows-x64.zip"
 PROTECTED_RELEASE_ENTRIES = {"data", "texturepacks"}
+TEXTUREPACK_RELEASES = {
+    "nature": "AdventureTimeTool-TexturePack-Nature.zip",
+    "necro": "AdventureTimeTool-TexturePack-Necro.zip",
+    "shadow": "AdventureTimeTool-TexturePack-Shadow.zip",
+}
 
 
 def _add_data_args() -> list[str]:
@@ -40,6 +45,7 @@ def main() -> int:
         "PyInstaller",
         "--noconfirm",
         "--clean",
+        "--windowed",
         "--name",
         APP_NAME,
         "main.py",
@@ -53,7 +59,8 @@ def main() -> int:
         return exit_code
 
     _post_build_theme_check(root)
-    _create_release_artifacts(root)
+    _archive, _checksum = _create_release_artifacts(root)
+    _create_texturepack_artifacts(root, _archive.parent)
     return 0
 
 
@@ -121,6 +128,37 @@ def _create_release_artifacts(root: Path) -> tuple[Path, Path]:
     log_info("build", f"release archive: {archive}")
     log_info("build", f"release checksum: {checksum}")
     return archive, checksum
+
+
+def _create_texturepack_artifacts(root: Path, release_dir: Path) -> list[Path]:
+    root = root.resolve()
+    release_dir = release_dir.resolve()
+    if release_dir.parent != root:
+        raise RuntimeError("unsafe release directory")
+    artifacts: list[Path] = []
+    for pack_id, archive_name in TEXTUREPACK_RELEASES.items():
+        source_dir = (root / "assets" / "themes" / pack_id).resolve()
+        if source_dir.parent != (root / "assets" / "themes").resolve():
+            raise RuntimeError(f"unsafe texturepack source: {source_dir}")
+        if not (source_dir / "manifest.json").is_file() or not (
+            source_dir / "ui_layout.json"
+        ).is_file() or not (source_dir / "ui").is_dir():
+            raise RuntimeError(f"incomplete texturepack source: {source_dir}")
+        archive = release_dir / archive_name
+        with zipfile.ZipFile(
+            archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+        ) as zip_file:
+            for source in sorted(source_dir.rglob("*")):
+                if source.is_symlink():
+                    raise RuntimeError(
+                        f"symlink not allowed in texturepack release: {source}"
+                    )
+                if source.is_file():
+                    relative = Path(pack_id) / source.relative_to(source_dir)
+                    zip_file.write(source, relative.as_posix())
+        artifacts.append(archive)
+        log_info("build", f"texturepack archive: {archive}")
+    return artifacts
 
 
 if __name__ == "__main__":

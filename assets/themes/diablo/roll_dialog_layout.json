@@ -129,6 +129,8 @@
     "manual_value_w": 64,
     "value_background": "#101214",
     "value_text_color": "#f2d28b",
+    "selection_background": "#5f451e",
+    "selection_text_color": "#ffffff",
     "value_border_color": "#8a6a32",
     "value_frame": {
       "enabled": true,

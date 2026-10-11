@@ -1791,6 +1791,7 @@ def render_character_section(window):
         ),
         bold=True,
         align=str(body_header_layout.get("value_align", "center")),
+        editable=False,
         section_key="attributes",
     )
     window.create_panel_text(
@@ -1847,6 +1848,7 @@ def render_character_section(window):
         ),
         bold=True,
         align=str(mind_header_layout.get("value_align", "center")),
+        editable=False,
         section_key="attributes",
     )
 
@@ -2292,22 +2294,25 @@ def render_character_section(window):
                 row_font_size,
                 effect_color,
             )
-            if editable_table:
-                for widget, field, cell_ref, old_value in (
-                    (name_label, "name", f"{name_col}{row}", name),
-                    (bp_label, "bp", f"{bp_col}{row}", raw_bp),
-                    (effect_label, "effect", f"{effect_col}{row}", effect),
-                ):
-                    widget.setProperty("character_perk_table_type", table_type)
-                    widget.setProperty("character_perk_row", row)
-                    widget.setProperty("character_perk_field", field)
-                    widget.setProperty("character_perk_cell_ref", cell_ref)
-                    widget.setProperty("character_perk_name_cell_ref", f"{name_col}{row}")
-                    widget.setProperty("character_perk_bp_cell_ref", f"{bp_col}{row}")
-                    widget.setProperty("character_perk_effect_cell_ref", f"{effect_col}{row}")
-                    widget.setProperty("character_perk_sheet_name", sheet_name)
-                    widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
-                    widget.installEventFilter(window)
+            row_tooltip = f"Name: {name or '-'}\nBP: {bp or '-'}\nEffekt: {effect or '-'}"
+            for widget, field, cell_ref, old_value in (
+                (name_label, "name", f"{name_col}{row}", name),
+                (bp_label, "bp", f"{bp_col}{row}", raw_bp),
+                (effect_label, "effect", f"{effect_col}{row}", effect),
+            ):
+                widget.setProperty("character_perk_table_type", table_type)
+                widget.setProperty("character_perk_row", row)
+                widget.setProperty("character_perk_field", field)
+                widget.setProperty("character_perk_cell_ref", cell_ref)
+                widget.setProperty("character_perk_name_cell_ref", f"{name_col}{row}")
+                widget.setProperty("character_perk_bp_cell_ref", f"{bp_col}{row}")
+                widget.setProperty("character_perk_effect_cell_ref", f"{effect_col}{row}")
+                widget.setProperty("character_perk_sheet_name", sheet_name)
+                widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
+                widget.setProperty("character_perk_editable", editable_table)
+                if name or bp or effect:
+                    widget.setToolTip(row_tooltip)
+                widget.installEventFilter(window)
 
     if isinstance(perks_layout, dict) and "perk_table" in perks_layout and "disadvantage_table" in perks_layout:
         left_title = perks_layout.get("left_title", {})
@@ -2455,22 +2460,25 @@ def render_character_section(window):
                 row_color,
                 align="left",
             )
-            if editable_table:
-                for widget, field, cell_ref, old_value in (
-                    (name_label, "name", f"{name_col}{row}", n),
-                    (bp_label, "bp", f"{bp_col}{row}", raw_b),
-                    (effect_label, "effect", f"{effect_col}{row}", e),
-                ):
-                    widget.setProperty("character_perk_table_type", table_type)
-                    widget.setProperty("character_perk_row", row)
-                    widget.setProperty("character_perk_field", field)
-                    widget.setProperty("character_perk_cell_ref", cell_ref)
-                    widget.setProperty("character_perk_name_cell_ref", f"{name_col}{row}")
-                    widget.setProperty("character_perk_bp_cell_ref", f"{bp_col}{row}")
-                    widget.setProperty("character_perk_effect_cell_ref", f"{effect_col}{row}")
-                    widget.setProperty("character_perk_sheet_name", sheet_name)
-                    widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
-                    widget.installEventFilter(window)
+            row_tooltip = f"Name: {n or '-'}\nBP: {b or '-'}\nEffekt: {e or '-'}"
+            for widget, field, cell_ref, old_value in (
+                (name_label, "name", f"{name_col}{row}", n),
+                (bp_label, "bp", f"{bp_col}{row}", raw_b),
+                (effect_label, "effect", f"{effect_col}{row}", e),
+            ):
+                widget.setProperty("character_perk_table_type", table_type)
+                widget.setProperty("character_perk_row", row)
+                widget.setProperty("character_perk_field", field)
+                widget.setProperty("character_perk_cell_ref", cell_ref)
+                widget.setProperty("character_perk_name_cell_ref", f"{name_col}{row}")
+                widget.setProperty("character_perk_bp_cell_ref", f"{bp_col}{row}")
+                widget.setProperty("character_perk_effect_cell_ref", f"{effect_col}{row}")
+                widget.setProperty("character_perk_sheet_name", sheet_name)
+                widget.setProperty("character_perk_value", "" if old_value in (None, "-") else str(old_value))
+                widget.setProperty("character_perk_editable", editable_table)
+                if n or b or e:
+                    widget.setToolTip(row_tooltip)
+                widget.installEventFilter(window)
         return row_start_y + rendered * row_h
 
     perks_title_cfg = perks_layout.get("title", {"text": "Perks", "rect": {"x": 24, "y": 22, "w": 200, "h": 30}})

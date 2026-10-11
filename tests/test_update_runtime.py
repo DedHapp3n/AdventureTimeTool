@@ -12,7 +12,12 @@ from unittest.mock import patch
 import texturepacks
 import update_manager
 import version
-from build import RELEASE_ZIP_NAME, _create_release_artifacts
+from build import (
+    RELEASE_ZIP_NAME,
+    TEXTUREPACK_RELEASES,
+    _create_release_artifacts,
+    _create_texturepack_artifacts,
+)
 
 
 class RuntimeTests(unittest.TestCase):
@@ -77,6 +82,39 @@ class RuntimeTests(unittest.TestCase):
             )
             expected = hashlib.sha256(archive.read_bytes()).hexdigest()
             self.assertEqual(update_manager._expected_sha256(checksum.read_text()), expected)
+
+    def test_texturepack_release_archives_have_installable_root_folder(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            release_dir = root / "release"
+            release_dir.mkdir()
+            for pack_id in TEXTUREPACK_RELEASES:
+                source = root / "assets" / "themes" / pack_id
+                (source / "ui").mkdir(parents=True)
+                (source / "manifest.json").write_text(
+                    json.dumps(
+                        {
+                            "id": pack_id,
+                            "name": pack_id.title(),
+                            "version": "1.0.0",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (source / "ui_layout.json").write_text("{}", encoding="utf-8")
+                (source / "ui" / "background.png").write_bytes(b"png")
+
+            artifacts = _create_texturepack_artifacts(root, release_dir)
+
+            self.assertEqual(
+                {path.name for path in artifacts}, set(TEXTUREPACK_RELEASES.values())
+            )
+            for pack_id, archive_name in TEXTUREPACK_RELEASES.items():
+                with zipfile.ZipFile(release_dir / archive_name) as zip_file:
+                    names = set(zip_file.namelist())
+                self.assertIn(f"{pack_id}/manifest.json", names)
+                self.assertIn(f"{pack_id}/ui_layout.json", names)
+                self.assertIn(f"{pack_id}/ui/background.png", names)
 
     def test_zip_validation(self):
         with tempfile.TemporaryDirectory() as temp:
