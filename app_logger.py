@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import logging
+import sys
+import threading
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Any
 
 
@@ -45,6 +50,59 @@ _debug_settings: dict[str, Any] = {
     "warnings": dict(DEFAULT_DEBUG_SETTINGS["warnings"]),
 }
 _warning_once_keys: set[tuple[str, str]] = set()
+_update_log_lock = threading.Lock()
+_update_log_categories = {"startup", "update"}
+UPDATE_LOG_MAX_BYTES = 2 * 1024 * 1024
+UPDATE_LOG_BACKUP_COUNT = 2
+_update_log_handler: RotatingFileHandler | None = None
+_update_log_handler_path: Path | None = None
+
+
+def _get_update_log_handler(path: Path) -> RotatingFileHandler:
+    global _update_log_handler, _update_log_handler_path
+    if _update_log_handler is not None and _update_log_handler_path != path:
+        _update_log_handler.close()
+        _update_log_handler = None
+        _update_log_handler_path = None
+    if _update_log_handler is None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        handler = RotatingFileHandler(
+            path,
+            maxBytes=UPDATE_LOG_MAX_BYTES,
+            backupCount=UPDATE_LOG_BACKUP_COUNT,
+            encoding="utf-8",
+        )
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s [%(levelname)s][%(category)s] %(message)s",
+                datefmt="%Y-%m-%dT%H:%M:%S",
+            )
+        )
+        _update_log_handler = handler
+        _update_log_handler_path = path
+    return _update_log_handler
+
+
+def _write_update_log(level: str, category: str, message: str) -> None:
+    if not getattr(sys, "frozen", False) or category not in _update_log_categories:
+        return
+    try:
+        path = Path(sys.executable).resolve().parent / "data" / "update.log"
+        with _update_log_lock:
+            handler = _get_update_log_handler(path)
+            record = logging.LogRecord(
+                name="AdventureTimeTool.update",
+                level=getattr(logging, level, logging.INFO),
+                pathname="",
+                lineno=0,
+                msg=message,
+                args=(),
+                exc_info=None,
+            )
+            record.category = category
+            handler.emit(record)
+    except Exception:
+        pass
 
 
 def normalize_debug_settings(settings: dict[str, Any] | None) -> tuple[dict[str, Any], bool]:
@@ -144,11 +202,13 @@ def log_debug(category: str, message: str) -> None:
 
 
 def log_info(category: str, message: str) -> None:
+    _write_update_log("INFO", category, message)
     if bool(_debug_settings.get("enabled", False)) or _category_enabled(category):
         _emit("INFO", category, message)
 
 
 def log_warning(category: str, message: str) -> None:
+    _write_update_log("WARNING", category, message)
     if _warning_enabled(category):
         _emit("WARNING", category, message)
 
@@ -162,4 +222,5 @@ def log_warning_once(category: str, key: str, message: str) -> None:
 
 
 def log_error(category: str, message: str) -> None:
+    _write_update_log("ERROR", category, message)
     _emit("ERROR", category, message)

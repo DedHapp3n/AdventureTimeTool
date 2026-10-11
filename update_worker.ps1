@@ -6,12 +6,32 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$payloadRoot = (Resolve-Path -LiteralPath $Payload).Path
-$installRoot = (Resolve-Path -LiteralPath $InstallDir).Path
-$stageRoot = Split-Path -Parent $payloadRoot
-$logFile = Join-Path $stageRoot 'updater.log'
+$fallbackLogFile = Join-Path $PSScriptRoot 'updater.log'
+$logFile = $fallbackLogFile
+
+function Write-UpdaterLog {
+    param([Parameter(Mandatory=$true)][string]$Message)
+    try {
+        $Message | Set-Content -LiteralPath $script:logFile -Encoding UTF8 -ErrorAction Stop
+    } catch {
+        if ($script:logFile -ne $script:fallbackLogFile) {
+            try {
+                $Message | Set-Content -LiteralPath $script:fallbackLogFile -Encoding UTF8 -ErrorAction Stop
+            } catch {
+                # No writable log destination remains; the nonzero exit code still reports failure.
+            }
+        }
+    }
+}
 
 try {
+    $installRoot = (Resolve-Path -LiteralPath $InstallDir -ErrorAction Stop).Path
+    $logDirectory = Join-Path (Join-Path $installRoot 'data') 'logs'
+    New-Item -ItemType Directory -Path $logDirectory -Force -ErrorAction Stop | Out-Null
+    $logFile = Join-Path $logDirectory 'updater.log'
+    $payloadRoot = (Resolve-Path -LiteralPath $Payload -ErrorAction Stop).Path
+    $stageRoot = Split-Path -Parent $payloadRoot
+
     if (-not (Test-Path -LiteralPath (Join-Path $payloadRoot 'AdventureTimeTool.exe') -PathType Leaf)) { throw 'Missing application executable' }
     if (-not (Test-Path -LiteralPath (Join-Path $payloadRoot '_internal') -PathType Container)) { throw 'Missing _internal directory' }
     if (-not $payloadRoot.StartsWith((Join-Path $installRoot 'data') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Payload must be staged under data' }
@@ -75,8 +95,8 @@ try {
     if (-not $SkipRestart) {
         Start-Process -FilePath (Join-Path $installRoot 'AdventureTimeTool.exe') -WorkingDirectory $installRoot
     }
-    @('Update installed successfully') + $cleanupWarnings | Set-Content -LiteralPath $logFile
+    Write-UpdaterLog ((@('Update installed successfully') + $cleanupWarnings) -join [Environment]::NewLine)
 } catch {
-    $_ | Out-String | Set-Content -LiteralPath $logFile
+    Write-UpdaterLog ($_ | Out-String)
     exit 1
 }

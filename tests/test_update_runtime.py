@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -22,7 +23,7 @@ from build import (
 
 class RuntimeTests(unittest.TestCase):
     def test_versions(self):
-        self.assertEqual(version.APP_VERSION, "1.3.3")
+        self.assertEqual(version.APP_VERSION, "1.3.4")
         self.assertEqual(version.compare_versions("v1.3", "1.3.0"), 0)
         self.assertLess(version.compare_versions("1.3.0-rc.1", "1.3.0"), 0)
         self.assertGreater(version.compare_versions("1.10.0", "1.9.9"), 0)
@@ -232,7 +233,8 @@ class RuntimeTests(unittest.TestCase):
             (payload.parent / update_manager.SHA_NAME).write_text("checksum")
             script = Path(__file__).resolve().parents[1] / "update_worker.ps1"
             result = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(script), "-ParentPid", "99999999", "-Payload", str(payload), "-InstallDir", str(root), "-SkipRestart"], capture_output=True, text=True, timeout=30)
-            self.assertEqual(result.returncode, 0, result.stderr + result.stdout + (payload.parent / "updater.log").read_text(errors="replace"))
+            updater_log = root / "data" / "logs" / "updater.log"
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout + updater_log.read_text(errors="replace"))
             self.assertEqual((root / "AdventureTimeTool.exe").read_bytes(), b"new")
             self.assertEqual((root / "data" / "settings.json").read_text(), "settings")
             self.assertEqual((root / "data" / "cache" / "character.json").read_text(), "character")
@@ -241,6 +243,52 @@ class RuntimeTests(unittest.TestCase):
             self.assertFalse((payload.parent / "backup").exists())
             self.assertFalse((payload.parent / update_manager.ZIP_NAME).exists())
             self.assertFalse((payload.parent / update_manager.SHA_NAME).exists())
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows updater")
+    def test_worker_logs_missing_payload_to_permanent_log(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            missing_payload = root / "data" / "updates" / "v9.9.9" / "payload"
+            script = Path(__file__).resolve().parents[1] / "update_worker.ps1"
+            result = subprocess.run(
+                [
+                    "powershell.exe", "-NoProfile", "-NonInteractive",
+                    "-ExecutionPolicy", "Bypass", "-File", str(script),
+                    "-ParentPid", "99999999", "-Payload", str(missing_payload),
+                    "-InstallDir", str(root), "-SkipRestart",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            updater_log = root / "data" / "logs" / "updater.log"
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(updater_log.is_file())
+            self.assertIn("payload", updater_log.read_text(errors="replace").lower())
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows updater")
+    def test_worker_falls_back_to_script_log_when_install_dir_is_missing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            stage = root / "stage"
+            stage.mkdir()
+            script = stage / "update_worker.ps1"
+            shutil.copy2(Path(__file__).resolve().parents[1] / "update_worker.ps1", script)
+            result = subprocess.run(
+                [
+                    "powershell.exe", "-NoProfile", "-NonInteractive",
+                    "-ExecutionPolicy", "Bypass", "-File", str(script),
+                    "-ParentPid", "99999999", "-Payload", str(stage / "missing-payload"),
+                    "-InstallDir", str(root / "missing-install"), "-SkipRestart",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            fallback_log = stage / "updater.log"
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(fallback_log.is_file())
+            self.assertIn("missing-install", fallback_log.read_text(errors="replace"))
 
 
 if __name__ == "__main__":

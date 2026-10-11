@@ -19,10 +19,18 @@ APP = QApplication.instance() or QApplication([])
 
 class FakeApp(QObject):
     aboutToQuit = Signal()
+    lastWindowClosed = Signal()
 
     def __init__(self):
         super().__init__()
         self.quit_called = False
+        self.quit_on_last_window_closed = True
+
+    def setQuitOnLastWindowClosed(self, enabled):
+        self.quit_on_last_window_closed = bool(enabled)
+
+    def quitOnLastWindowClosed(self):
+        return self.quit_on_last_window_closed
 
     def quit(self):
         self.quit_called = True

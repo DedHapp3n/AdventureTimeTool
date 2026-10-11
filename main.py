@@ -78,18 +78,27 @@ def browser_preload_enabled(window):
         return True
 
 
-def show_main_window(window, splash):
+def close_startup_splash(splash):
+    log_info("startup", "SPLASH HIDE")
+    splash.close()
+
+
+def show_main_window(window, splash, app=None):
     window.show()
     window.ensure_visible_on_screen()
-    QTimer.singleShot(0, splash.close)
+    log_info("startup", "MAIN WINDOW SHOW")
+    if app is not None:
+        app.setQuitOnLastWindowClosed(True)
+        log_info("startup", f"quitOnLastWindowClosed={app.quitOnLastWindowClosed()}")
+    QTimer.singleShot(0, lambda: close_startup_splash(splash))
 
 
-def initialize_hidden_browser_then_show(window, splash):
+def initialize_hidden_browser_then_show(window, splash, app=None):
     try:
         window.preload_browser_if_enabled()
     except Exception as exc:
         log_warning("browser", f"browser preload failed: {exc}")
-    QTimer.singleShot(750, lambda: show_main_window(window, splash))
+    QTimer.singleShot(750, lambda: show_main_window(window, splash, app))
 
 
 class StartupWorker(QThread):
@@ -120,9 +129,23 @@ class StartupController(QObject):
         self.splash = splash
         self.workers = []
         self.window = None
-        self.app.aboutToQuit.connect(self._wait_for_workers)
+        self.app.setQuitOnLastWindowClosed(False)
+        log_info("startup", f"APP START version={APP_VERSION}")
+        log_info("startup", f"quitOnLastWindowClosed={self.app.quitOnLastWindowClosed()}")
+        self.app.lastWindowClosed.connect(self._last_window_closed)
+        self.app.aboutToQuit.connect(self._about_to_quit)
+
+    @Slot()
+    def _last_window_closed(self):
+        log_info("startup", "LAST WINDOW CLOSED")
+
+    @Slot()
+    def _about_to_quit(self):
+        log_info("startup", "ABOUT TO QUIT")
+        self._wait_for_workers()
 
     def start(self):
+        log_info("startup", "SPLASH SHOW")
         try:
             ensure_runtime_defaults()
             ensure_texturepacks_dir()
@@ -178,13 +201,13 @@ class StartupController(QObject):
             log_warning("update", f"release {release['version']} available; source checkout is not self-updated")
             self._start_window()
             return
-        self.splash.hide()
+        log_info("update", "UPDATE DIALOG OPEN")
         answer = QMessageBox.question(
-            None, "Adventure Time Tool Update",
+            self.splash, "Adventure Time Tool Update",
             f"Version {release['version']} ist verfügbar (installiert: {APP_VERSION}). Jetzt herunterladen und installieren?",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
         )
-        self.splash.show()
+        log_info("update", f"UPDATE DIALOG RESULT {'YES' if answer == QMessageBox.Yes else 'NO'}")
         if answer != QMessageBox.Yes:
             self._start_window()
             return
@@ -195,9 +218,11 @@ class StartupController(QObject):
     def _prepared(self, payload, error):
         if error or payload is None:
             log_warning("update", f"update preparation failed: {error}")
-            self.splash.hide()
-            QMessageBox.warning(None, "Update fehlgeschlagen", f"Das Update konnte nicht vorbereitet werden:\n{error}")
-            self.splash.show()
+            QMessageBox.warning(
+                self.splash,
+                "Update fehlgeschlagen",
+                f"Das Update konnte nicht vorbereitet werden:\n{error}",
+            )
             self._start_window()
             return
         try:
@@ -232,11 +257,15 @@ class StartupController(QObject):
     def _start_window(self):
         self.splash.showMessage("Wird geladen...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))
         try:
+            log_info("startup", "MAIN WINDOW CREATE")
             self.window = MainWindow()
             if browser_preload_enabled(self.window):
-                QTimer.singleShot(0, lambda: initialize_hidden_browser_then_show(self.window, self.splash))
+                QTimer.singleShot(
+                    0,
+                    lambda: initialize_hidden_browser_then_show(self.window, self.splash, self.app),
+                )
             else:
-                QTimer.singleShot(0, lambda: show_main_window(self.window, self.splash))
+                QTimer.singleShot(0, lambda: show_main_window(self.window, self.splash, self.app))
         except Exception as exc:
             log_warning("startup", f"window initialization failed: {exc}")
             raise
@@ -244,6 +273,7 @@ class StartupController(QObject):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     splash = create_startup_splash()
     splash.show()
     app.processEvents()
