@@ -13,11 +13,11 @@ from qtwebengine_bootstrap import (
 configure_qtwebengine_logging()
 install_qtwebengine_js_stderr_filter()
 
-from PySide6.QtCore import QObject, QRect, Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QObject, QRect, Qt, QThread, QTimer, Slot
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
-from app_logger import log_warning
+from app_logger import log_info, log_warning
 from app_paths import app_base_dir, ensure_runtime_defaults, resource_path
 from texturepacks import available_texturepacks, ensure_texturepacks_dir, layout_candidates
 from update_manager import check_latest_release, prepare_update
@@ -93,19 +93,24 @@ def initialize_hidden_browser_then_show(window, splash):
 
 
 class StartupWorker(QThread):
-    finished_result = Signal(object, object)
-
     def __init__(self, operation, argument=None):
         super().__init__()
         self.operation = operation
         self.argument = argument
+        self.result = None
+        self.error = None
 
     def run(self):
         try:
-            result = check_latest_release() if self.operation == "check" else prepare_update(self.argument)
-            self.finished_result.emit(result, None)
+            self.result = (
+                check_latest_release()
+                if self.operation == "check"
+                else prepare_update(self.argument)
+            )
+            self.error = None
         except Exception as exc:
-            self.finished_result.emit(None, str(exc))
+            self.result = None
+            self.error = str(exc)
 
 
 class StartupController(QObject):
@@ -115,7 +120,7 @@ class StartupController(QObject):
         self.splash = splash
         self.workers = []
         self.window = None
-        self.pending_quit = False
+        self.app.aboutToQuit.connect(self._wait_for_workers)
 
     def start(self):
         try:
@@ -125,19 +130,42 @@ class StartupController(QObject):
         except Exception as exc:
             log_warning("startup", f"runtime setup failed: {exc}")
         self.splash.showMessage("Prüfe auf Updates...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))
+        log_info("update", "UPDATE CHECK START")
         self._work("check", None, self._checked)
 
     def _work(self, operation, argument, callback):
         worker = StartupWorker(operation, argument)
+        worker.callback = callback
         self.workers.append(worker)
-        worker.finished_result.connect(callback)
-        worker.finished.connect(lambda w=worker: self._worker_done(w))
+        worker.finished.connect(self._worker_finished)
         worker.start()
+        return worker
 
-    def _worker_done(self, worker):
-        self.workers.remove(worker)
-        if self.pending_quit:
-            self.app.quit()
+    @Slot()
+    def _worker_finished(self):
+        worker = self.sender()
+        if not isinstance(worker, StartupWorker):
+            log_warning("startup", "worker finished without StartupWorker sender")
+            return
+        worker.wait()
+        if worker.isRunning():
+            log_warning("startup", f"worker still running after finished: {worker.operation}")
+            return
+        if worker.operation == "check":
+            log_info("update", "UPDATE CHECK FINISHED")
+        result = worker.result
+        error = worker.error
+        try:
+            worker.callback(result, error)
+        finally:
+            if worker in self.workers:
+                self.workers.remove(worker)
+            worker.deleteLater()
+
+    def _wait_for_workers(self):
+        for worker in list(self.workers):
+            if worker.isRunning():
+                worker.wait()
 
     def _checked(self, release, error):
         if error:
@@ -145,6 +173,7 @@ class StartupController(QObject):
         if not release:
             self._start_window()
             return
+        log_info("update", f"UPDATE FOUND {release['version']}")
         if not getattr(sys, "frozen", False):
             log_warning("update", f"release {release['version']} available; source checkout is not self-updated")
             self._start_window()
@@ -160,6 +189,7 @@ class StartupController(QObject):
             self._start_window()
             return
         self.splash.showMessage("Lade Update herunter und prüfe Dateien...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))
+        log_info("update", "UPDATE PREPARE START")
         self._work("prepare", release, self._prepared)
 
     def _prepared(self, payload, error):
@@ -174,18 +204,30 @@ class StartupController(QObject):
             worker_source = resource_path("update_worker.ps1")
             worker_copy = payload.parent / "update_worker.ps1"
             shutil.copy2(worker_source, worker_copy)
+            log_info("update", "UPDATE WORKER COPY")
             creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-            subprocess.Popen(
+            process = subprocess.Popen(
                 ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(worker_copy),
                  "-ParentPid", str(os.getpid()), "-Payload", str(payload), "-InstallDir", str(app_base_dir())],
                 creationflags=creationflags, close_fds=True,
             )
-            self.pending_quit = True
-            if not self.workers:
-                self.app.quit()
+            if process is None:
+                raise RuntimeError("updater process was not created")
+            log_info("update", "UPDATE WORKER LAUNCH")
+            self.splash.showMessage(
+                "Update wird installiert. Das Programm startet gleich neu...",
+                Qt.AlignBottom | Qt.AlignHCenter,
+                QColor(220, 210, 185),
+            )
+            QTimer.singleShot(500, self._quit_for_update)
         except Exception as exc:
             log_warning("update", f"updater launch failed: {exc}")
             self._start_window()
+
+    def _quit_for_update(self):
+        self._wait_for_workers()
+        log_info("update", "UPDATE APP SHUTDOWN")
+        self.app.quit()
 
     def _start_window(self):
         self.splash.showMessage("Wird geladen...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))

@@ -9,7 +9,7 @@ import urllib.request
 import zipfile
 from pathlib import Path, PurePosixPath
 
-from app_logger import log_warning
+from app_logger import log_info, log_warning
 from app_paths import data_path
 from version import APP_VERSION, compare_versions, parse_version
 
@@ -109,8 +109,11 @@ def prepare_update(release):
     checksum = stage / SHA_NAME
     try:
         _download(release["sha_url"], checksum, 1024)
+        log_info("update", "UPDATE SHA DOWNLOADED")
         expected = _expected_sha256(checksum.read_text(encoding="utf-8-sig"))
+        log_info("update", "UPDATE ZIP DOWNLOAD START")
         _download(release["zip_url"], archive, MAX_ZIP_BYTES)
+        log_info("update", "UPDATE ZIP DOWNLOADED")
         digest = hashlib.sha256()
         with archive.open("rb") as stream:
             while chunk := stream.read(1024 * 1024):
@@ -118,6 +121,7 @@ def prepare_update(release):
         if digest.hexdigest() != expected:
             raise ValueError("SHA256 mismatch")
         files = validate_zip(archive)
+        log_info("update", "UPDATE ZIP VERIFIED")
         payload = stage / "payload"
         payload.mkdir()
         with zipfile.ZipFile(archive) as zf:
@@ -126,7 +130,9 @@ def prepare_update(release):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with zf.open(info) as source, target.open("wb") as output:
                     shutil.copyfileobj(source, output)
+        log_info("update", "UPDATE PAYLOAD READY")
         return payload
-    except Exception:
+    except Exception as exc:
+        log_warning("update", f"UPDATE PREPARE FAILED: {exc}")
         shutil.rmtree(stage, ignore_errors=True)
         raise

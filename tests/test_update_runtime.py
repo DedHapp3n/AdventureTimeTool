@@ -22,6 +22,7 @@ from build import (
 
 class RuntimeTests(unittest.TestCase):
     def test_versions(self):
+        self.assertEqual(version.APP_VERSION, "1.3.2")
         self.assertEqual(version.compare_versions("v1.3", "1.3.0"), 0)
         self.assertLess(version.compare_versions("1.3.0-rc.1", "1.3.0"), 0)
         self.assertGreater(version.compare_versions("1.10.0", "1.9.9"), 0)
@@ -158,6 +159,54 @@ class RuntimeTests(unittest.TestCase):
                 payload = update_manager.prepare_update({"version": "1.4.0", "zip_url": "zip", "sha_url": "sha"})
             self.assertEqual((payload / "AdventureTimeTool.exe").read_text(), "exe")
             self.assertEqual((payload / "_internal" / "core.txt").read_text(), "core")
+
+    def test_prepare_update_with_local_zip_and_checksum(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source"
+            source.mkdir()
+            archive = source / update_manager.ZIP_NAME
+            with zipfile.ZipFile(archive, "w") as zip_file:
+                zip_file.writestr("AdventureTimeTool.exe", "exe")
+                zip_file.writestr("_internal/core.txt", "core")
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            checksum = source / update_manager.SHA_NAME
+            checksum.write_text(
+                f"{digest}  {update_manager.ZIP_NAME}\n", encoding="ascii"
+            )
+
+            sources = {"local:zip": archive, "local:sha": checksum}
+
+            def copy_local(url, target, limit):
+                local_source = sources[url]
+                if local_source.stat().st_size > limit:
+                    raise ValueError("download exceeds size limit")
+                target.write_bytes(local_source.read_bytes())
+
+            with patch.object(update_manager, "data_path", return_value=root / "updates"), patch.object(
+                update_manager, "_download", side_effect=copy_local
+            ), patch.object(update_manager, "log_info") as log_info:
+                payload = update_manager.prepare_update(
+                    {
+                        "version": "v1.3.2",
+                        "zip_url": "local:zip",
+                        "sha_url": "local:sha",
+                    }
+                )
+
+            self.assertEqual((payload / "AdventureTimeTool.exe").read_text(), "exe")
+            self.assertEqual((payload / "_internal" / "core.txt").read_text(), "core")
+            messages = [call.args[1] for call in log_info.call_args_list]
+            self.assertEqual(
+                messages,
+                [
+                    "UPDATE SHA DOWNLOADED",
+                    "UPDATE ZIP DOWNLOAD START",
+                    "UPDATE ZIP DOWNLOADED",
+                    "UPDATE ZIP VERIFIED",
+                    "UPDATE PAYLOAD READY",
+                ],
+            )
 
     def test_offline_release_check(self):
         with patch.object(update_manager, "_open", side_effect=OSError("offline")):
