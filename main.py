@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
 from app_logger import log_warning
 from app_paths import app_base_dir, ensure_runtime_defaults, resource_path
-from texturepacks import available_texturepacks, layout_candidates
+from texturepacks import available_texturepacks, ensure_texturepacks_dir, layout_candidates
 from update_manager import check_latest_release, prepare_update
 from version import APP_VERSION
 from ui_main import MainWindow
@@ -120,6 +120,7 @@ class StartupController(QObject):
     def start(self):
         try:
             ensure_runtime_defaults()
+            ensure_texturepacks_dir()
             available_texturepacks()
         except Exception as exc:
             log_warning("startup", f"runtime setup failed: {exc}")

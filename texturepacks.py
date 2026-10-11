@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app_logger import log_warning_once
 from app_paths import app_base_dir, resource_path
-from version import APP_VERSION
+from version import APP_VERSION, compare_versions
 
 
 def diablo_dir() -> Path:
@@ -14,6 +14,12 @@ def diablo_dir() -> Path:
 
 def texturepacks_dir() -> Path:
     return app_base_dir() / "texturepacks"
+
+
+def ensure_texturepacks_dir() -> Path:
+    root = texturepacks_dir()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
 
 
 def available_texturepacks() -> dict[str, Path]:
@@ -40,7 +46,6 @@ def available_texturepacks() -> dict[str, Path]:
                 raise ValueError("missing name")
             if not isinstance(manifest.get("version"), str) or not manifest["version"].strip():
                 raise ValueError("missing version")
-            from update_manager import compare_versions
             minimum = manifest.get("min_app_version", "0.0.0")
             if compare_versions(APP_VERSION, minimum) < 0:
                 continue

@@ -11,13 +11,15 @@ from unittest.mock import patch
 
 import texturepacks
 import update_manager
+import version
+from build import RELEASE_ZIP_NAME, _create_release_artifacts
 
 
 class RuntimeTests(unittest.TestCase):
     def test_versions(self):
-        self.assertEqual(update_manager.compare_versions("v1.3", "1.3.0"), 0)
-        self.assertLess(update_manager.compare_versions("1.3.0-rc.1", "1.3.0"), 0)
-        self.assertGreater(update_manager.compare_versions("1.10.0", "1.9.9"), 0)
+        self.assertEqual(version.compare_versions("v1.3", "1.3.0"), 0)
+        self.assertLess(version.compare_versions("1.3.0-rc.1", "1.3.0"), 0)
+        self.assertGreater(version.compare_versions("1.10.0", "1.9.9"), 0)
 
     def test_texturepack_discovery_and_fallback(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -32,6 +34,49 @@ class RuntimeTests(unittest.TestCase):
                 self.assertEqual(texturepacks.theme_dir("missing"), texturepacks.diablo_dir())
                 (pack / "manifest.json").write_text("{broken", encoding="utf-8")
                 self.assertNotIn("nature", texturepacks.available_texturepacks())
+
+    def test_texturepack_directory_is_created_empty(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with patch.object(texturepacks, "app_base_dir", return_value=root):
+                created = texturepacks.ensure_texturepacks_dir()
+            self.assertEqual(created, root / "texturepacks")
+            self.assertTrue(created.is_dir())
+            self.assertEqual(list(created.iterdir()), [])
+
+    def test_release_artifacts_have_flat_root_and_exclude_user_data(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            dist = root / "dist" / "AdventureTimeTool"
+            (dist / "_internal").mkdir(parents=True)
+            (dist / "data").mkdir()
+            (dist / "texturepacks").mkdir()
+            (dist / "_internal" / "data").mkdir()
+            (dist / "AdventureTimeTool.exe").write_bytes(b"exe")
+            (dist / "_internal" / "core.bin").write_bytes(b"core")
+            (dist / "data" / "settings.json").write_text("private")
+            (dist / "texturepacks" / "pack.txt").write_text("optional")
+            (dist / "_internal" / "data" / "private.bin").write_bytes(b"private")
+            (root / "release").mkdir()
+            (root / "release" / "old.bin").write_bytes(b"old")
+
+            archive, checksum = _create_release_artifacts(root)
+
+            self.assertEqual(archive.name, RELEASE_ZIP_NAME)
+            self.assertFalse((root / "release" / "old.bin").exists())
+            with zipfile.ZipFile(archive) as zf:
+                names = set(zf.namelist())
+            self.assertIn("AdventureTimeTool.exe", names)
+            self.assertIn("_internal/core.bin", names)
+            self.assertFalse(any(name.startswith("AdventureTimeTool/") for name in names))
+            self.assertFalse(
+                any(
+                    any(part.casefold() in {"data", "texturepacks"} for part in Path(name).parts)
+                    for name in names
+                )
+            )
+            expected = hashlib.sha256(archive.read_bytes()).hexdigest()
+            self.assertEqual(update_manager._expected_sha256(checksum.read_text()), expected)
 
     def test_zip_validation(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -96,6 +141,8 @@ class RuntimeTests(unittest.TestCase):
             (root / "texturepacks" / "nature" / "manifest.json").write_text("pack")
             (payload / "AdventureTimeTool.exe").write_bytes(b"new")
             (payload / "_internal" / "new.txt").write_text("new")
+            (payload.parent / update_manager.ZIP_NAME).write_bytes(b"zip")
+            (payload.parent / update_manager.SHA_NAME).write_text("checksum")
             script = Path(__file__).resolve().parents[1] / "update_worker.ps1"
             result = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(script), "-ParentPid", "99999999", "-Payload", str(payload), "-InstallDir", str(root), "-SkipRestart"], capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout + (payload.parent / "updater.log").read_text(errors="replace"))
@@ -103,6 +150,10 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual((root / "data" / "settings.json").read_text(), "settings")
             self.assertEqual((root / "data" / "cache" / "character.json").read_text(), "character")
             self.assertEqual((root / "texturepacks" / "nature" / "manifest.json").read_text(), "pack")
+            self.assertFalse(payload.exists())
+            self.assertFalse((payload.parent / "backup").exists())
+            self.assertFalse((payload.parent / update_manager.ZIP_NAME).exists())
+            self.assertFalse((payload.parent / update_manager.SHA_NAME).exists())
 
 
 if __name__ == "__main__":

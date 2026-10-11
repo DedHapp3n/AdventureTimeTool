@@ -11,7 +11,7 @@ from pathlib import Path, PurePosixPath
 
 from app_logger import log_warning
 from app_paths import data_path
-from version import APP_VERSION
+from version import APP_VERSION, compare_versions, parse_version
 
 
 LATEST_URL = "https://api.github.com/repos/DedHapp3n/AdventureTimeTool/releases/latest"
@@ -19,38 +19,6 @@ ZIP_NAME = "AdventureTimeTool-Windows-x64.zip"
 SHA_NAME = ZIP_NAME + ".sha256"
 MAX_ZIP_BYTES = 1_500_000_000
 MAX_EXTRACTED_BYTES = 3_000_000_000
-
-
-def _version(value):
-    match = re.fullmatch(r"v?(\d+)\.(\d+)(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?", str(value).strip())
-    if not match:
-        raise ValueError(f"invalid version: {value!r}")
-    parts = tuple(int(match.group(i) or 0) for i in (1, 2, 3))
-    pre = match.group(4)
-    identifiers = [] if pre is None else pre.split(".")
-    if any(not item or (item.isdigit() and len(item) > 1 and item.startswith("0")) for item in identifiers):
-        raise ValueError("invalid prerelease")
-    return parts, identifiers
-
-
-def compare_versions(left, right):
-    a, ap = _version(left)
-    b, bp = _version(right)
-    if a != b:
-        return (a > b) - (a < b)
-    if not ap or not bp:
-        return (not ap) - (not bp)
-    for x, y in zip(ap, bp):
-        xn, yn = x.isdigit(), y.isdigit()
-        if xn and yn:
-            difference = (int(x) > int(y)) - (int(x) < int(y))
-        elif xn != yn:
-            difference = -1 if xn else 1
-        else:
-            difference = (x > y) - (x < y)
-        if difference:
-            return difference
-    return (len(ap) > len(bp)) - (len(ap) < len(bp))
 
 
 def _open(url, timeout=8):
@@ -129,7 +97,7 @@ def validate_zip(archive: Path):
 def prepare_update(release):
     """Return an extracted, verified payload path. No installed files are touched."""
     version = release["version"]
-    _version(version)
+    parse_version(version)
     updates_root = data_path("updates").resolve()
     stage = updates_root / re.sub(r"[^A-Za-z0-9._-]", "_", version)
     if stage.resolve().parent != updates_root:

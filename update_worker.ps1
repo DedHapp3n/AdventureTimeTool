@@ -56,10 +56,26 @@ try {
         }
         throw
     }
+
+    $cleanupWarnings = @()
+    foreach ($temporaryPath in @(
+        $payloadRoot,
+        $backup,
+        (Join-Path $stageRoot 'AdventureTimeTool-Windows-x64.zip'),
+        (Join-Path $stageRoot 'AdventureTimeTool-Windows-x64.zip.sha256')
+    )) {
+        try {
+            if (Test-Path -LiteralPath $temporaryPath) {
+                Remove-Item -LiteralPath $temporaryPath -Recurse -Force -ErrorAction Stop
+            }
+        } catch {
+            $cleanupWarnings += "Cleanup failed for ${temporaryPath}: $($_.Exception.Message)"
+        }
+    }
     if (-not $SkipRestart) {
         Start-Process -FilePath (Join-Path $installRoot 'AdventureTimeTool.exe') -WorkingDirectory $installRoot
     }
-    'Update installed successfully' | Set-Content -LiteralPath $logFile
+    @('Update installed successfully') + $cleanupWarnings | Set-Content -LiteralPath $logFile
 } catch {
     $_ | Out-String | Set-Content -LiteralPath $logFile
     exit 1
