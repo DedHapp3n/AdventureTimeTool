@@ -5,6 +5,8 @@ ui_tabs/__pycache__/*
 .usefullfles/*
 dist/
 build/
+release/
+texturepacks/
 *.pyc
 
 data/*
