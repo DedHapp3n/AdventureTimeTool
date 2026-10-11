@@ -11,9 +11,14 @@ from app_logger import log_info, log_warning
 APP_NAME = "AdventureTimeTool"
 
 
-def _add_data_arg() -> str:
+def _add_data_args() -> list[str]:
     sep = ";" if platform.system().lower().startswith("win") else ":"
-    return f"assets{sep}assets"
+    return [
+        f"assets/config{sep}assets/config",
+        f"assets/ui_elements{sep}assets/ui_elements",
+        f"assets/themes/diablo{sep}assets/themes/diablo",
+        f"update_worker.ps1{sep}.",
+    ]
 
 
 def main() -> int:
@@ -32,10 +37,10 @@ def main() -> int:
         "--clean",
         "--name",
         APP_NAME,
-        "--add-data",
-        _add_data_arg(),
         "main.py",
     ]
+    for entry in _add_data_args():
+        cmd[-1:-1] = ["--add-data", entry]
 
     log_info("build", " ".join(cmd))
     exit_code = subprocess.call(cmd, cwd=str(root))
@@ -65,16 +70,12 @@ def _assets_dir(base: Path) -> Path:
 
 
 def _post_build_theme_check(root: Path) -> None:
-    src_themes = _discover_themes(root)
     dist_base = root / "dist" / APP_NAME
     dist_themes = _discover_themes(dist_base)
-    if dist_themes:
-        log_info("build", f"themes copied: {', '.join(dist_themes)}")
+    if dist_themes != ["diablo"]:
+        log_warning("build", f"unexpected packaged themes: {dist_themes}")
     else:
-        log_info("build", "themes copied: <none>")
-    missing = [name for name in src_themes if name not in dist_themes]
-    if missing:
-        log_warning("build", f"missing themes in dist: {', '.join(missing)}")
+        log_info("build", "only Diablo fallback bundled")
 
 
 if __name__ == "__main__":

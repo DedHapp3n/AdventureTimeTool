@@ -202,39 +202,6 @@ def _render_tierform_toggle(window, character_panel, active_mode, default_color)
     container.show()
 
 
-def _render_tierform_placeholder(window, character_panel, default_color):
-    y = 122
-    placeholder = QFrame(character_panel)
-    placeholder.setGeometry(22, y, max(1, character_panel.width() - 44), max(1, character_panel.height() - y - 24))
-    placeholder.setStyleSheet(
-        "QFrame {"
-        "background: rgba(8, 8, 8, 210);"
-        "border: 1px solid rgba(242, 210, 139, 120);"
-        "border-radius: 6px;"
-        "}"
-    )
-    placeholder.raise_()
-    placeholder.show()
-    window.create_panel_text(
-        placeholder,
-        {"x": 14, "y": 140, "w": max(1, placeholder.width() - 28), "h": 42},
-        "TIERFORM AKTIV",
-        24,
-        "#f2d28b",
-        bold=True,
-        align="center",
-    )
-    window.create_panel_text(
-        placeholder,
-        {"x": 14, "y": 184, "w": max(1, placeholder.width() - 28), "h": 28},
-        "Prototyp / Platzhalter",
-        13,
-        str(default_color),
-        bold=False,
-        align="center",
-    )
-
-
 def _create_alpha_pixmap_shadow(window, parent, panel_cfg, shadow_cfg):
     if not isinstance(shadow_cfg, dict) or not bool(shadow_cfg.get("enabled", False)):
         return None
@@ -1086,6 +1053,114 @@ def render_character_paradigm_panel(window, character_screen, attribute_panel, d
         )
 
 
+def render_character_transformation_rules_panel(window, character_screen, attribute_panel, default_color):
+    panel_cfg = character_screen.get("paradigm_panel", {})
+    if not isinstance(panel_cfg, dict) or not bool(panel_cfg.get("enabled", False)):
+        return
+
+    panel_x = window._safe_int(panel_cfg.get("x", attribute_panel.x()), attribute_panel.x())
+    panel_y = window._safe_int(
+        panel_cfg.get("y", attribute_panel.y() + attribute_panel.height() + 8),
+        attribute_panel.y() + attribute_panel.height() + 8,
+    )
+    panel_w = window._safe_int(panel_cfg.get("w", 440), 440)
+    panel_h = window._safe_int(panel_cfg.get("h", 215), 215)
+    panel = QFrame(window.content_layer)
+    panel.setGeometry(panel_x, panel_y, panel_w, panel_h)
+
+    frame_state = _apply_character_panel_frame_if_enabled(window, panel, panel_cfg)
+    if bool(frame_state.get("active", False)) and bool(frame_state.get("remove_old_border_when_active", True)):
+        panel.setStyleSheet("QFrame { background: transparent; border: none; }")
+    else:
+        panel.setStyleSheet(
+            "QFrame {"
+            f"background: {str(panel_cfg.get('background', 'rgba(5, 5, 5, 95)'))};"
+            f"border: 1px solid {str(panel_cfg.get('border_color', 'rgba(242, 210, 139, 90)'))};"
+            "border-radius: 6px;"
+            "}"
+        )
+    _apply_character_subpanel_shadow_effect(
+        window,
+        panel,
+        _character_subpanel_shadow_config(character_screen, panel_cfg),
+    )
+    panel.show()
+
+    padding = 12
+    title_h = 28
+    header_h = 25
+    row_h = max(24, min(29, (panel_h - 2 * padding - title_h - header_h) // 5))
+    rule_w = max(120, int((panel_w - 2 * padding) * 0.34))
+    description_x = padding + rule_w + 4
+    description_w = max(120, panel_w - description_x - padding)
+    text_color = str(panel_cfg.get("text_color", "#ffffff"))
+    label_color = str(panel_cfg.get("label_color", default_color))
+
+    window.create_panel_text(
+        panel,
+        {"x": padding, "y": padding, "w": panel_w - 2 * padding, "h": title_h},
+        "Tierform-Regeln",
+        window._safe_int(panel_cfg.get("title_font_size", 18), 18),
+        label_color,
+        bold=True,
+        align="left",
+    )
+    header_y = padding + title_h
+    window.create_panel_text(
+        panel,
+        {"x": padding + 5, "y": header_y, "w": rule_w - 10, "h": header_h},
+        "Regel",
+        13,
+        label_color,
+        bold=True,
+    )
+    window.create_panel_text(
+        panel,
+        {"x": description_x + 5, "y": header_y, "w": description_w - 10, "h": header_h},
+        "Beschreibung",
+        13,
+        label_color,
+        bold=True,
+    )
+
+    if not hasattr(window, "_character_transformation_rules"):
+        window._character_transformation_rules = [
+            ["MP-Verbrauch", "-1 MP pro Kampfrunde"],
+            ["", ""],
+            ["", ""],
+            ["", ""],
+            ["", ""],
+        ]
+
+    def update_rule(row_index, column_index, editor):
+        window._character_transformation_rules[row_index][column_index] = editor.text()
+
+    editor_style = (
+        "QLineEdit {"
+        "background: rgba(8, 8, 8, 105);"
+        "border: 1px solid rgba(242, 210, 139, 55);"
+        f"color: {text_color};"
+        "padding: 2px 5px;"
+        "font-size: 13px;"
+        "}"
+        "QLineEdit:focus { border: 1px solid rgba(242, 210, 139, 150); }"
+    )
+    rows_y = header_y + header_h
+    for row_index, values in enumerate(window._character_transformation_rules[:5]):
+        y = rows_y + row_index * row_h
+        for column_index, (x, width) in enumerate(((padding, rule_w), (description_x, description_w))):
+            editor = QLineEdit(panel)
+            editor.setGeometry(x, y, width, row_h)
+            editor.setText(str(values[column_index]))
+            editor.setStyleSheet(editor_style)
+            editor.editingFinished.connect(
+                lambda row_index=row_index, column_index=column_index, editor=editor: update_rule(
+                    row_index, column_index, editor
+                )
+            )
+            editor.show()
+
+
 def render_character_section(window):
     if window.content_layer is None:
         return
@@ -1112,13 +1187,23 @@ def render_character_section(window):
     character_panel_cfg = panels_cfg.get("character_info_panel", {})
     attribute_panel_cfg = panels_cfg.get("attribute_panel", {})
     perk_panel_cfg = panels_cfg.get("perk_panel", {})
+    has_tierform_perk = _character_has_exact_perk(window, "Tierform")
+    if not has_tierform_perk:
+        window._character_view_mode = "normal"
+    character_view_mode = str(getattr(window, "_character_view_mode", "normal") or "normal").strip().lower()
+    if character_view_mode not in ("normal", "tierform"):
+        character_view_mode = "normal"
+        window._character_view_mode = "normal"
+    is_tierform_view = character_view_mode == "tierform"
     if not isinstance(character_panel_cfg, dict) or not bool(character_panel_cfg.get("enabled", True)):
         window._character_rendering = False
         return
     if not isinstance(attribute_panel_cfg, dict) or not bool(attribute_panel_cfg.get("enabled", True)):
         window._character_rendering = False
         return
-    if not isinstance(perk_panel_cfg, dict) or not bool(perk_panel_cfg.get("enabled", True)):
+    if not is_tierform_view and (
+        not isinstance(perk_panel_cfg, dict) or not bool(perk_panel_cfg.get("enabled", True))
+    ):
         window._character_rendering = False
         return
 
@@ -1136,13 +1221,15 @@ def render_character_section(window):
         _character_panel_shadow_config(character_screen, attribute_panel_cfg),
     )
     attribute_panel = _create_character_image_panel(window, window.content_layer, attribute_panel_cfg)
-    _create_alpha_pixmap_shadow(
-        window,
-        window.content_layer,
-        perk_panel_cfg,
-        _character_panel_shadow_config(character_screen, perk_panel_cfg),
-    )
-    perk_panel = _create_character_image_panel(window, window.content_layer, perk_panel_cfg)
+    perk_panel = None
+    if not is_tierform_view:
+        _create_alpha_pixmap_shadow(
+            window,
+            window.content_layer,
+            perk_panel_cfg,
+            _character_panel_shadow_config(character_screen, perk_panel_cfg),
+        )
+        perk_panel = _create_character_image_panel(window, window.content_layer, perk_panel_cfg)
 
     default_sheet = "Charakterbogen"
     basic_map = data_map.get("basic", {})
@@ -1196,13 +1283,6 @@ def render_character_section(window):
         align=window.get_text_align(title_cfg, "left"),
         section_key="basic_fields",
     )
-    has_tierform_perk = _character_has_exact_perk(window, "Tierform")
-    if not has_tierform_perk:
-        window._character_view_mode = "normal"
-    character_view_mode = str(getattr(window, "_character_view_mode", "normal") or "normal").strip().lower()
-    if character_view_mode not in ("normal", "tierform"):
-        character_view_mode = "normal"
-        window._character_view_mode = "normal"
     if has_tierform_perk:
         _render_tierform_toggle(window, character_panel, character_view_mode, default_color)
 
@@ -1261,6 +1341,8 @@ def render_character_section(window):
                 continue
             mode = str(row.get("mode", "raw" if row_id in ("race",) else "auto"))
             label_text = str(row.get("label", row_id.capitalize()))
+            if is_tierform_view and row_id == "race":
+                label_text = "Form"
             if row_id in field_pair_sources:
                 current_src, max_src = field_pair_sources[row_id]
                 split_enabled = isinstance(row.get("current_rect"), dict) and isinstance(row.get("max_rect"), dict)
@@ -1272,12 +1354,16 @@ def render_character_section(window):
                     window._read_data_map_cell(max_src, default_sheet),
                     mode,
                 )
+                if is_tierform_view and row_id == "hp":
+                    current, maximum = "20", "20"
             else:
                 source = field_single_sources.get(row_id)
                 value_text = window.format_character_display_value(
                     window._read_data_map_cell(source, default_sheet),
                     mode,
                 )
+                if is_tierform_view and row_id == "race":
+                    value_text = "Tierform"
 
             label_enabled = bool(row.get("label_enabled", True))
             if label_enabled:
@@ -1341,6 +1427,7 @@ def render_character_section(window):
                         value_color,
                         bold=value_bold,
                         align=value_align,
+                        editable=not (is_tierform_view and row_id == "hp"),
                         section_key="basic_fields",
                     )
                 if max_enabled:
@@ -1355,7 +1442,7 @@ def render_character_section(window):
                         value_color,
                         bold=value_bold,
                         align=value_align,
-                        editable=max_editable,
+                        editable=max_editable and not (is_tierform_view and row_id == "hp"),
                         section_key="basic_fields",
                     )
             else:
@@ -1372,18 +1459,25 @@ def render_character_section(window):
                         str(row.get("value_color", row.get("color", value_color_default))),
                         bold=bool(row.get("bold_value", bold_values_default)),
                         align=str(row.get("value_align", "left")),
+                        editable=not (is_tierform_view and row_id == "race"),
                         section_key="basic_fields",
                     )
     else:
         basic_rows_cfg = info_layout.get("basic_rows", {})
         basic_rows = basic_rows_cfg.get("rows", [])
-        basic_values = {"race": race_value, "size": size_value, "weight": weight_value}
+        basic_values = {
+            "race": "Tierform" if is_tierform_view else race_value,
+            "size": size_value,
+            "weight": weight_value,
+        }
         if isinstance(basic_rows, list) and basic_rows:
             for row in basic_rows:
                 if not isinstance(row, dict):
                     continue
                 row_id = str(row.get("id", "")).strip().lower()
                 label_text = str(row.get("label", row_id.capitalize() if row_id else ""))
+                if is_tierform_view and row_id == "race":
+                    label_text = "Form"
                 value_text = basic_values.get(row_id, "-")
                 window.create_panel_text(
                     character_panel,
@@ -1405,6 +1499,7 @@ def render_character_section(window):
                     str(row.get("value_color", basic_rows_cfg.get("value_color", "#ffffff"))),
                     bold=True,
                     align=str(row.get("value_align", "left")),
+                    editable=not (is_tierform_view and row_id == "race"),
                     section_key="basic_fields",
                 )
         else:
@@ -1414,7 +1509,11 @@ def render_character_section(window):
             rows_start_y = window._safe_int(rows_cfg.get("start_y", 90), 90)
             rows_gap = window._safe_int(rows_cfg.get("row_gap", 34), 34)
             rows_font = window._safe_int(rows_cfg.get("font_size", 18), 18)
-            rows_values = [("Rasse", "race", race_value), ("Größe", "size", size_value), ("Gewicht", "weight", weight_value)]
+            rows_values = [
+                ("Form" if is_tierform_view else "Rasse", "race", "Tierform" if is_tierform_view else race_value),
+                ("Größe", "size", size_value),
+                ("Gewicht", "weight", weight_value),
+            ]
             for i, (label_text, field_key, value_text) in enumerate(rows_values):
                 y = rows_start_y + i * rows_gap
                 window.create_panel_text(
@@ -1434,13 +1533,14 @@ def render_character_section(window):
                     rows_font,
                     str(rows_cfg.get("value_color", "#ffffff")),
                     bold=True,
+                    editable=not (is_tierform_view and field_key == "race"),
                     section_key="basic_fields",
                 )
 
         stats_rows_cfg = info_layout.get("stat_rows", {})
         stats_rows = stats_rows_cfg.get("rows", [])
         stats_values = {
-            "hp": f"{hp_current} / {hp_max}",
+            "hp": "20 / 20" if is_tierform_view else f"{hp_current} / {hp_max}",
             "mp": f"{mp_current} / {mp_max}",
             "exp": f"{exp_current} / {exp_max}",
         }
@@ -1464,6 +1564,14 @@ def render_character_section(window):
                 if row_id in ("hp", "mp", "exp"):
                     current_src = basic_map.get(f"{row_id}_current", "")
                     max_src = basic_map.get(f"{row_id}_max", "")
+                    current_value = window.format_character_display_value(
+                        window._read_data_map_cell(current_src, default_sheet), "int"
+                    )
+                    max_value = window.format_character_display_value(
+                        window._read_data_map_cell(max_src, default_sheet), "int"
+                    )
+                    if is_tierform_view and row_id == "hp":
+                        current_value, max_value = "20", "20"
                     current_rect = row.get("current_rect", row.get("value_rect", {}))
                     max_rect = row.get("max_rect", row.get("value_rect", {}))
                     vx = window._safe_int(current_rect.get("x", 0), 0)
@@ -1483,11 +1591,12 @@ def render_character_section(window):
                         f"{row_id}_current",
                         current_src,
                         default_sheet,
-                        window.format_character_display_value(window._read_data_map_cell(current_src, default_sheet), "int"),
+                        current_value,
                         vf,
                         vc,
                         bold=True,
                         align=va,
+                        editable=not (is_tierform_view and row_id == "hp"),
                         section_key="basic_fields",
                     )
                     window._create_character_value_editor(
@@ -1496,11 +1605,12 @@ def render_character_section(window):
                         f"{row_id}_max",
                         max_src,
                         default_sheet,
-                        window.format_character_display_value(window._read_data_map_cell(max_src, default_sheet), "int"),
+                        max_value,
                         vf,
                         vc,
                         bold=True,
                         align=va,
+                        editable=not (is_tierform_view and row_id == "hp"),
                         section_key="basic_fields",
                     )
                 else:
@@ -1526,7 +1636,7 @@ def render_character_section(window):
             exp_label_font = window._safe_int(stats_cfg.get("exp_label_font_size", 18), 18)
             exp_value_font = window._safe_int(stats_cfg.get("exp_value_font_size", 22), 22)
             stat_rows = [
-                ("HP", f"{hp_current} / {hp_max}", hp_label_font, hp_value_font),
+                ("HP", "20 / 20" if is_tierform_view else f"{hp_current} / {hp_max}", hp_label_font, hp_value_font),
                 ("MP", f"{mp_current} / {mp_max}", mp_label_font, mp_value_font),
                 ("EXP", f"{exp_current} / {exp_max}", exp_label_font, exp_value_font),
             ]
@@ -1564,9 +1674,6 @@ def render_character_section(window):
                 bar_fill.setGeometry(0, 0, bar_w, bar_h)
                 bar_fill.setStyleSheet(f"background: {str(bar_cfg.get('color', bar_color))};")
                 bar_bg.show()
-
-    if has_tierform_perk and character_view_mode == "tierform":
-        _render_tierform_placeholder(window, character_panel, default_color)
 
     attr_layout = text_layout.get("attribute_panel", text_layout.get("attributes", {}))
     attr_map = data_map.get("attributes", {})
@@ -2068,7 +2175,12 @@ def render_character_section(window):
 
     render_wellbeing_block()
     render_character_initiative_panel(window, character_screen, character_panel, attribute_panel, default_color)
-    render_character_paradigm_panel(window, character_screen, attribute_panel, default_color)
+    if is_tierform_view:
+        render_character_transformation_rules_panel(window, character_screen, attribute_panel, default_color)
+        window._character_rendering = False
+        return
+    else:
+        render_character_paradigm_panel(window, character_screen, attribute_panel, default_color)
 
     perks_layout = text_layout.get("perk_panel", text_layout.get("perks", {}))
     disadv_layout = text_layout.get("disadvantages", perks_layout.get("disadvantage_table", {}))

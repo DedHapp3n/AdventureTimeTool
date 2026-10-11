@@ -66,3 +66,9 @@ AdventureTimeTool/
 ## Assets
 
 Theme images and UI assets are manually created. The tool should not generate or modify image assets automatically.
+
+## Updates und Texturepacks
+
+Die Windows-onedir-Version prüft beim Start das neueste GitHub Release. Ein Update wird nur angeboten, wenn das Release neuer ist und beide Assets vorhanden sind: `AdventureTimeTool-Windows-x64.zip` und `AdventureTimeTool-Windows-x64.zip.sha256`. Die SHA256-Datei enthält den Hex-Digest, optional gefolgt vom ZIP-Dateinamen. Das ZIP enthält `AdventureTimeTool.exe` und `_internal/` direkt an der Archivwurzel. `data/` und `texturepacks/` dürfen nicht im ZIP stehen; beide Ordner bleiben bei Updates erhalten. Ohne Netzwerk startet das Programm normal.
+
+Optionale Themes werden als Ordner unter `texturepacks/` neben der EXE installiert. Jeder Ordner benötigt `manifest.json`, `ui_layout.json` und `ui/`. Die vorhandenen Nature-, Necro- und Shadow-Quelldateien unter `assets/themes/` sind Vorlagen für separate Texturepack-Verteilungen; der Hauptbuild bündelt nur Diablo. Ein fehlendes oder ungültiges Pack fällt auf das interne Diablo-Theme zurück.

@@ -378,11 +378,8 @@ def _load_roll_dialog_layout(window):
         return {}
     try:
         active_theme = window.get_active_theme() if hasattr(window, "get_active_theme") else "diablo"
-        assets_dir = window.assets_dir
-        for path in (
-            assets_dir / "themes" / active_theme / "roll_dialog_layout.json",
-            assets_dir / "themes" / "diablo" / "roll_dialog_layout.json",
-        ):
+        from texturepacks import layout_candidates
+        for path in layout_candidates(active_theme, "roll_dialog_layout.json"):
             if path.exists():
                 with open(path, "r", encoding="utf-8") as f:
                     data = json.load(f)

@@ -1,4 +1,7 @@
 import json
+import os
+import shutil
+import subprocess
 import sys
 
 from qtwebengine_bootstrap import (
@@ -10,12 +13,15 @@ from qtwebengine_bootstrap import (
 configure_qtwebengine_logging()
 install_qtwebengine_js_stderr_filter()
 
-from PySide6.QtCore import QRect, Qt, QTimer
+from PySide6.QtCore import QObject, QRect, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
-from PySide6.QtWidgets import QApplication, QSplashScreen
+from PySide6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
 from app_logger import log_warning
-from app_paths import resource_path
+from app_paths import app_base_dir, ensure_runtime_defaults, resource_path
+from texturepacks import available_texturepacks, layout_candidates
+from update_manager import check_latest_release, prepare_update
+from version import APP_VERSION
 from ui_main import MainWindow
 
 
@@ -56,11 +62,7 @@ def browser_preload_enabled(window):
             main_cfg = {}
         layout_file = str(main_cfg.get("layout_file", "") or "").strip() or "browser_layout.json"
         active_theme = window.get_active_theme() if hasattr(window, "get_active_theme") else "diablo"
-        assets_dir = getattr(window, "assets_dir", resource_path("assets"))
-        candidates = [
-            assets_dir / "themes" / active_theme / layout_file,
-            assets_dir / "themes" / "diablo" / "browser_layout.json",
-        ]
+        candidates = layout_candidates(active_theme, layout_file, "browser_layout.json")
         cfg = {}
         for layout_path in candidates:
             if not layout_path.exists():
@@ -90,15 +92,118 @@ def initialize_hidden_browser_then_show(window, splash):
     QTimer.singleShot(750, lambda: show_main_window(window, splash))
 
 
+class StartupWorker(QThread):
+    finished_result = Signal(object, object)
+
+    def __init__(self, operation, argument=None):
+        super().__init__()
+        self.operation = operation
+        self.argument = argument
+
+    def run(self):
+        try:
+            result = check_latest_release() if self.operation == "check" else prepare_update(self.argument)
+            self.finished_result.emit(result, None)
+        except Exception as exc:
+            self.finished_result.emit(None, str(exc))
+
+
+class StartupController(QObject):
+    def __init__(self, app, splash):
+        super().__init__()
+        self.app = app
+        self.splash = splash
+        self.workers = []
+        self.window = None
+        self.pending_quit = False
+
+    def start(self):
+        try:
+            ensure_runtime_defaults()
+            available_texturepacks()
+        except Exception as exc:
+            log_warning("startup", f"runtime setup failed: {exc}")
+        self.splash.showMessage("Prüfe auf Updates...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))
+        self._work("check", None, self._checked)
+
+    def _work(self, operation, argument, callback):
+        worker = StartupWorker(operation, argument)
+        self.workers.append(worker)
+        worker.finished_result.connect(callback)
+        worker.finished.connect(lambda w=worker: self._worker_done(w))
+        worker.start()
+
+    def _worker_done(self, worker):
+        self.workers.remove(worker)
+        if self.pending_quit:
+            self.app.quit()
+
+    def _checked(self, release, error):
+        if error:
+            log_warning("update", f"release check failed: {error}")
+        if not release:
+            self._start_window()
+            return
+        if not getattr(sys, "frozen", False):
+            log_warning("update", f"release {release['version']} available; source checkout is not self-updated")
+            self._start_window()
+            return
+        self.splash.hide()
+        answer = QMessageBox.question(
+            None, "Adventure Time Tool Update",
+            f"Version {release['version']} ist verfügbar (installiert: {APP_VERSION}). Jetzt herunterladen und installieren?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
+        )
+        self.splash.show()
+        if answer != QMessageBox.Yes:
+            self._start_window()
+            return
+        self.splash.showMessage("Lade Update herunter und prüfe Dateien...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))
+        self._work("prepare", release, self._prepared)
+
+    def _prepared(self, payload, error):
+        if error or payload is None:
+            log_warning("update", f"update preparation failed: {error}")
+            self.splash.hide()
+            QMessageBox.warning(None, "Update fehlgeschlagen", f"Das Update konnte nicht vorbereitet werden:\n{error}")
+            self.splash.show()
+            self._start_window()
+            return
+        try:
+            worker_source = resource_path("update_worker.ps1")
+            worker_copy = payload.parent / "update_worker.ps1"
+            shutil.copy2(worker_source, worker_copy)
+            creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            subprocess.Popen(
+                ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(worker_copy),
+                 "-ParentPid", str(os.getpid()), "-Payload", str(payload), "-InstallDir", str(app_base_dir())],
+                creationflags=creationflags, close_fds=True,
+            )
+            self.pending_quit = True
+            if not self.workers:
+                self.app.quit()
+        except Exception as exc:
+            log_warning("update", f"updater launch failed: {exc}")
+            self._start_window()
+
+    def _start_window(self):
+        self.splash.showMessage("Wird geladen...", Qt.AlignBottom | Qt.AlignHCenter, QColor(220, 210, 185))
+        try:
+            self.window = MainWindow()
+            if browser_preload_enabled(self.window):
+                QTimer.singleShot(0, lambda: initialize_hidden_browser_then_show(self.window, self.splash))
+            else:
+                QTimer.singleShot(0, lambda: show_main_window(self.window, self.splash))
+        except Exception as exc:
+            log_warning("startup", f"window initialization failed: {exc}")
+            raise
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     splash = create_startup_splash()
     splash.show()
     app.processEvents()
-
-    window = MainWindow()
-    if browser_preload_enabled(window):
-        QTimer.singleShot(0, lambda: initialize_hidden_browser_then_show(window, splash))
-    else:
-        QTimer.singleShot(0, lambda: show_main_window(window, splash))
+    controller = StartupController(app, splash)
+    QTimer.singleShot(0, controller.start)
     sys.exit(app.exec())

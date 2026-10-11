@@ -5,7 +5,12 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets')],
+    datas=[
+        ('assets/config', 'assets/config'),
+        ('assets/ui_elements', 'assets/ui_elements'),
+        ('assets/themes/diablo', 'assets/themes/diablo'),
+        ('update_worker.ps1', '.'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

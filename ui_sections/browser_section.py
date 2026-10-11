@@ -160,11 +160,8 @@ def load_browser_layout_config(window):
         main_cfg = {}
     layout_file = str(main_cfg.get("layout_file", "") or "").strip() or "browser_layout.json"
     active_theme = window.get_active_theme() if hasattr(window, "get_active_theme") else "diablo"
-    assets_dir = getattr(window, "assets_dir", resource_path("assets"))
-    candidates = [
-        assets_dir / "themes" / active_theme / layout_file,
-        assets_dir / "themes" / "diablo" / "browser_layout.json",
-    ]
+    from texturepacks import layout_candidates
+    candidates = layout_candidates(active_theme, layout_file, "browser_layout.json")
     for layout_path in candidates:
         try:
             if not layout_path.exists():
