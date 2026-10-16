@@ -42,6 +42,7 @@ from ui_sections import settings_section
 from ui_sections import skills_section
 from ui_sections import character_section
 from ui_sections import start_section
+from ui_sections.editable_panel_text import create_editable_panel_text
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -6061,8 +6062,14 @@ class MainWindow(QMainWindow):
 
         edit_on = str((self._character_edit_cfg or {}).get("edit_on", "double_click"))
         if edit_on == "double_click":
-            label = self.create_panel_text(
-                parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
+            def save_value(new_value):
+                tag = "CHARACTER BASIC EDIT" if section_key == "basic_fields" else "CHARACTER EDIT"
+                self._on_character_field_edited(field_key, sheet_name, cell_ref, new_value, tag=tag)
+                self.show_main_section("character")
+
+            label = create_editable_panel_text(
+                self, parent, rect_cfg, value_text, font_size, color, save_value,
+                title=f"{field_key} bearbeiten", bold=bold, align=align,
             )
             label.setProperty("character_editable", True)
             label.setProperty("character_field_key", field_key)
@@ -6072,7 +6079,6 @@ class MainWindow(QMainWindow):
             label.setProperty("character_section_key", section_key)
             label.setProperty("character_multiline", False)
             label.setProperty("character_dialog_title", f"{field_key} bearbeiten")
-            label.installEventFilter(self)
             return label
 
         editor = QLineEdit(parent)

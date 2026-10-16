@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QWidget,
 )
+from PySide6.QtTest import QTest
 
 from data_loader import DataLoader
 from ui_sections.companion_section import render_companion_screen
@@ -120,6 +121,7 @@ class CompanionRoutingTests(unittest.TestCase):
             create_panel_text=create_panel_text,
             get_inventory_roll_options=lambda: [],
             _safe_int=lambda value, default=0: int(value if value is not None else default),
+            _open_character_field_dialog=lambda _title, _value: ("Bearbeiteter Companion", True),
         )
 
         def rerender(_section):
@@ -160,21 +162,29 @@ class CompanionRoutingTests(unittest.TestCase):
         self.assertIn("background: transparent", first_card.styleSheet())
         self.assertIsNotNone(first_card.parentWidget().findChild(QLabel, "alphaPixmapShadow"))
         portrait = first_card.findChild(QLabel, "companionPortrait")
-        portrait_cfg = layout["companion_screen"]["card"]["content"]["portrait"]
+        portrait_cfg = ui_layout["character_screen"]["text_layout"]["character_info_panel"]["portrait"]
         self.assertEqual((portrait.x(), portrait.y(), portrait.width(), portrait.height()), tuple(portrait_cfg[key] for key in ("x", "y", "w", "h")))
-        placeholders = [editor.placeholderText() for editor in first_card.findChildren(QLineEdit)]
-        self.assertIn("Name", placeholders)
-        self.assertIn("Typ / Beschreibung", placeholders)
-        self.assertEqual(placeholders.count("Feldname"), 3)
-        self.assertEqual(placeholders.count("Wert"), 3)
-        spin_boxes = first_card.findChildren(QSpinBox)
-        self.assertEqual(len(spin_boxes), 4)
-        self.assertTrue(all(spin.width() >= 70 and not spin.isReadOnly() for spin in spin_boxes))
-        type_editor = next(editor for editor in first_card.findChildren(QLineEdit) if editor.placeholderText() == "Typ / Beschreibung")
-        custom_values = [editor for editor in first_card.findChildren(QLineEdit) if editor.placeholderText() == "Wert"]
-        self.assertGreater(type_editor.y(), max(editor.geometry().bottom() for editor in custom_values))
-        self.assertTrue(any(box.text() == "Kann würfeln" for box in first_card.findChildren(QCheckBox)))
-        card_buttons = {button.text() for button in first_card.findChildren(QPushButton)}
+        self.assertEqual(first_card.findChildren(QLineEdit), [])
+        self.assertEqual(first_card.findChildren(QSpinBox), [])
+        self.assertEqual(first_card.findChildren(QCheckBox), [])
+        editable_labels = [label for label in first_card.findChildren(QLabel) if label.property("panel_text_editable")]
+        self.assertEqual(len(editable_labels), 12)
+        character_info = ui_layout["character_screen"]["text_layout"]["character_info_panel"]
+        title_rect = character_info["title"]
+        title_label = next(label for label in editable_labels if label.text().startswith("Neuer Companion"))
+        self.assertEqual((title_label.x(), title_label.y(), title_label.width(), title_label.height()), tuple(title_rect[key] for key in ("x", "y", "w", "h")))
+        rows = {row["id"]: row for row in character_info["fields"]["rows"]}
+        for resource in ("hp", "mp"):
+            label = next(label for label in first_card.findChildren(QLabel) if label.text() == resource.upper())
+            expected = rows[resource]["label_rect"]
+            self.assertEqual((label.x(), label.y(), label.width(), label.height()), tuple(expected[key] for key in ("x", "y", "w", "h")))
+            for key in ("current_rect", "max_rect"):
+                expected = rows[resource][key]
+                self.assertTrue(any((item.x(), item.y(), item.width(), item.height()) == tuple(expected[name] for name in ("x", "y", "w", "h")) for item in editable_labels))
+        roll_marker = first_card.findChild(QPushButton, "companionCanRollMarker")
+        self.assertIsNotNone(roll_marker)
+        self.assertIn("checkmark_false.png", roll_marker.styleSheet())
+        card_buttons = {button.text() for button in first_card.findChildren(QPushButton) if button.objectName() != "companionCanRollMarker"}
         self.assertEqual(card_buttons, {"Würfe", "Duplizieren", "Löschen"})
         self.assertEqual(len(saves), 4)
         for child in first_card.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
@@ -191,6 +201,10 @@ class CompanionRoutingTests(unittest.TestCase):
                 positions[card] = (row, column)
         self.assertEqual(set(positions.values()), {(0, 0), (0, 1), (0, 2), (1, 0)})
         self.assertGreater(scroll_area.verticalScrollBar().maximum(), 0)
+
+        QTest.mouseDClick(title_label, Qt.LeftButton)
+        APP.processEvents()
+        self.assertEqual(loader.get_companions()[0]["name"], "Bearbeiteter Companion")
 
     def test_inventory_view_selector_is_vertical_and_right_aligned(self):
         layout = json.loads(
