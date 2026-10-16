@@ -381,10 +381,14 @@ def render_inventory_screen(window):
 
 def _render_inventory_view_selector(window, parent, screen_cfg):
     cfg = screen_cfg.get("view_selector", {}) if isinstance(screen_cfg.get("view_selector"), dict) else {}
-    x = window._safe_int(cfg.get("x", 1100), 1100)
-    y = window._safe_int(cfg.get("y", 8), 8)
     button_w = window._safe_int(cfg.get("button_w", 140), 140)
     button_h = window._safe_int(cfg.get("button_h", 36), 36)
+    if str(cfg.get("anchor", "")).strip().lower() == "top_right":
+        x = parent.width() - button_w - window._safe_int(cfg.get("right_margin", 0), 0)
+        y = window._safe_int(cfg.get("top", 8), 8)
+    else:
+        x = window._safe_int(cfg.get("x", 1100), 1100)
+        y = window._safe_int(cfg.get("y", 8), 8)
     gap = window._safe_int(cfg.get("gap", 8), 8)
     font_size = window._safe_int(cfg.get("font_size", 15), 15)
     orientation = str(cfg.get("orientation", "horizontal") or "horizontal").strip().lower()

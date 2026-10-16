@@ -15,8 +15,9 @@
       "align": "center"
     },
     "view_selector": {
-      "x": 1260,
-      "y": 55,
+      "anchor": "top_right",
+      "right_margin": 0,
+      "top": 8,
       "button_w": 140,
       "button_h": 36,
       "gap": 8,

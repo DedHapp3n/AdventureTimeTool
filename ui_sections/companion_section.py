@@ -1,10 +1,12 @@
 from copy import deepcopy
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QKeySequence, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QDialog,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QLabel,
@@ -17,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui_dialogs.companion_roll_dialog import CompanionRollDialog
+from ui_sections.pixmap_shadow import alpha_shadow_padding, create_alpha_pixmap_shadow
 
 
 def _safe_int(value, default=0):
@@ -72,6 +75,68 @@ def _rect(cfg, key, fallback):
         _safe_int(value.get("w", width), width),
         _safe_int(value.get("h", height), height),
     )
+
+
+def _control_cfg(content_cfg, key, fallback):
+    cfg = content_cfg.get(key, {}) if isinstance(content_cfg, dict) else {}
+    return cfg if isinstance(cfg, dict) else {"x": fallback[0], "y": fallback[1], "w": fallback[2], "h": fallback[3]}
+
+
+def _apply_control(widget, cfg, fallback, *, bold=False):
+    widget.setGeometry(*_rect({"control": cfg}, "control", fallback))
+    color = str(cfg.get("color", "#ffffff"))
+    size = _safe_int(cfg.get("font_size", 14), 14)
+    declarations = f"font-size: {size}px; color: {color};" + ("font-weight: 700;" if bold else "")
+    current_style = widget.styleSheet()
+    if "{" in current_style:
+        declarations = f"{widget.metaObject().className()} {{ {declarations} }}"
+    widget.setStyleSheet(current_style + declarations)
+    align = str(cfg.get("align", "")).lower()
+    if align and hasattr(widget, "setAlignment"):
+        widget.setAlignment(Qt.AlignCenter if align == "center" else Qt.AlignRight if align == "right" else Qt.AlignLeft)
+
+
+class CompanionPortraitLabel(QLabel):
+    def __init__(self, parent, choose_callback, paste_callback):
+        super().__init__(parent)
+        self._choose_callback = choose_callback
+        self._paste_callback = paste_callback
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setFocus()
+            self._choose_callback()
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.StandardKey.Paste):
+            self._paste_callback()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+def _set_portrait_pixmap(label, path):
+    pixmap = QPixmap(str(path)) if path else QPixmap()
+    if pixmap.isNull():
+        label.setText("Bild")
+        return
+    scaled = pixmap.scaled(label.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+    x = max(0, (scaled.width() - label.width()) // 2)
+    y = max(0, (scaled.height() - label.height()) // 2)
+    label.setPixmap(scaled.copy(x, y, label.width(), label.height()))
+
+
+def _portrait_cfg(window, content_cfg):
+    cfg = content_cfg.get("portrait", {}) if isinstance(content_cfg.get("portrait"), dict) else {}
+    if cfg:
+        return cfg
+    try:
+        return window.main_ui_layout_config["character_screen"]["text_layout"]["character_info_panel"]["portrait"]
+    except (AttributeError, KeyError, TypeError):
+        return {"x": 34, "y": 94, "w": 92, "h": 135}
 
 
 def render_companion_screen(window, parent, layout_config):
@@ -136,18 +201,35 @@ def _create_companion_card(window, parent, companion, cfg):
     card_cfg = cfg.get("card", {}) if isinstance(cfg.get("card"), dict) else {}
     content_cfg = card_cfg.get("content", {}) if isinstance(card_cfg.get("content"), dict) else {}
     card_w, card_h = _character_panel_size(window)
-    card = QFrame(parent)
-    card.setObjectName("companionCard")
-    card.setFixedSize(card_w, card_h)
-    card.setStyleSheet("QFrame#companionCard { background: rgba(6,5,4,120); border: none; }")
-
     panel_path = _asset_path(window, str(card_cfg.get("asset", "panels/character_info_panel.png")))
-    if panel_path is not None:
+    panel_pixmap = QPixmap(str(panel_path)) if panel_path is not None else QPixmap()
+    try:
+        shadow_cfg = dict(window.main_ui_layout_config["character_screen"]["panel_shadow"])
+    except (AttributeError, KeyError, TypeError):
+        shadow_cfg = {"enabled": True, "offset_x": 3, "offset_y": 4, "blur_radius": 18, "color": "rgba(0, 0, 0, 160)"}
+    if isinstance(card_cfg.get("shadow"), dict):
+        shadow_cfg.update(card_cfg["shadow"])
+    safe_int = getattr(window, "_safe_int", _safe_int)
+    left, top, right, bottom = alpha_shadow_padding(safe_int, shadow_cfg)
+    wrapper = QWidget(parent)
+    wrapper.setObjectName("companionCardContainer")
+    wrapper.setFixedSize(card_w + left + right, card_h + top + bottom)
+    wrapper.setAttribute(Qt.WA_TranslucentBackground, True)
+    wrapper.setStyleSheet("background: transparent; border: none;")
+    create_alpha_pixmap_shadow(window, wrapper, panel_pixmap, {"x": left, "y": top, "w": card_w, "h": card_h}, shadow_cfg)
+    card = QFrame(wrapper)
+    card.setObjectName("companionCard")
+    card.move(left, top)
+    card.setFixedSize(card_w, card_h)
+    card.setAttribute(Qt.WA_TranslucentBackground, True)
+    card.setAutoFillBackground(False)
+    card.setStyleSheet("QFrame#companionCard { background: transparent; border: none; }")
+
+    if not panel_pixmap.isNull():
         background = QLabel(card)
         background.setObjectName("companionCardBackground")
         background.setGeometry(0, 0, card_w, card_h)
-        pixmap = QPixmap(str(panel_path))
-        background.setPixmap(pixmap.scaled(background.size(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+        background.setPixmap(panel_pixmap.scaled(background.size(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
         background.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
     data = deepcopy(companion)
@@ -156,68 +238,82 @@ def _create_companion_card(window, parent, companion, cfg):
 
     name = QLineEdit(str(data.get("name", "")), card)
     name.setPlaceholderText("Name")
-    name.setAlignment(Qt.AlignCenter)
-    name.setStyleSheet(name.styleSheet() + "font-size: 19px; font-weight: 700; color: #f2d28b;")
-    name.setGeometry(*_rect(content_cfg, "name", (38, 50, 285, 38)))
+    _apply_control(name, _control_cfg(content_cfg, "name", (38, 50, 285, 38)), (38, 50, 285, 38), bold=True)
     type_edit = QLineEdit(str(data.get("type", "")), card)
     type_edit.setPlaceholderText("Typ / Beschreibung")
-    type_edit.setGeometry(*_rect(content_cfg, "type", (55, 94, 250, 28)))
+    _apply_control(type_edit, _control_cfg(content_cfg, "type", (35, 440, 290, 30)), (35, 440, 290, 30))
+
+    def refresh_after_portrait():
+        window.loader.save_active_character_json()
+        window.show_main_section("inventory")
+
+    def choose_portrait():
+        path, _ = QFileDialog.getOpenFileName(window, "Companion-Bild auswählen", "", "Bilder (*.png *.jpg *.jpeg *.webp)")
+        if path and window.loader.set_companion_portrait_file(data["id"], path):
+            refresh_after_portrait()
+
+    def paste_portrait():
+        image = QApplication.clipboard().image()
+        target = window.loader.get_companion_portrait_target_path(data["id"], ".png")
+        if not image.isNull() and target and image.save(target, "PNG") and window.loader.set_companion_portrait_reference(data["id"], target):
+            refresh_after_portrait()
+
+    portrait = CompanionPortraitLabel(card, choose_portrait, paste_portrait)
+    portrait.setObjectName("companionPortrait")
+    portrait.setAlignment(Qt.AlignCenter)
+    portrait.setStyleSheet("background: transparent; border: none;")
+    _apply_control(portrait, _portrait_cfg(window, content_cfg), (34, 94, 92, 135))
+    _set_portrait_pixmap(portrait, window.loader.get_companion_portrait_path(data))
 
     hp_label = QLabel("HP", card)
-    hp_label.setAlignment(Qt.AlignCenter)
-    hp_label.setStyleSheet("font-size: 20px; font-weight: 700; color: #f71937;")
-    hp_label.setGeometry(*_rect(content_cfg, "hp_label", (145, 130, 45, 30)))
+    _apply_control(hp_label, _control_cfg(content_cfg, "hp_label", (136, 130, 38, 30)), (136, 130, 38, 30), bold=True)
     hp_current = _spin(data.get("hp", {}).get("current", 0), card)
     hp_max = _spin(data.get("hp", {}).get("max", 0), card)
-    hp_current.setGeometry(*_rect(content_cfg, "hp_current", (195, 130, 58, 30)))
-    hp_max.setGeometry(*_rect(content_cfg, "hp_max", (267, 130, 58, 30)))
+    _apply_control(hp_current, _control_cfg(content_cfg, "hp_current", (174, 130, 72, 30)), (174, 130, 72, 30))
+    _apply_control(hp_max, _control_cfg(content_cfg, "hp_max", (260, 130, 72, 30)), (260, 130, 72, 30))
     hp_separator = QLabel("/", card)
-    hp_separator.setAlignment(Qt.AlignCenter)
-    hp_separator.setGeometry(*_rect(content_cfg, "hp_separator", (253, 130, 14, 30)))
+    _apply_control(hp_separator, _control_cfg(content_cfg, "hp_separator", (246, 130, 14, 30)), (246, 130, 14, 30))
 
     mp_label = QLabel("MP", card)
-    mp_label.setAlignment(Qt.AlignCenter)
-    mp_label.setStyleSheet("font-size: 20px; font-weight: 700; color: #0f95f5;")
-    mp_label.setGeometry(*_rect(content_cfg, "mp_label", (145, 180, 45, 30)))
+    _apply_control(mp_label, _control_cfg(content_cfg, "mp_label", (136, 180, 38, 30)), (136, 180, 38, 30), bold=True)
     mp_current = _spin(data.get("mp", {}).get("current", 0), card)
     mp_max = _spin(data.get("mp", {}).get("max", 0), card)
-    mp_current.setGeometry(*_rect(content_cfg, "mp_current", (195, 180, 58, 30)))
-    mp_max.setGeometry(*_rect(content_cfg, "mp_max", (267, 180, 58, 30)))
+    _apply_control(mp_current, _control_cfg(content_cfg, "mp_current", (174, 180, 72, 30)), (174, 180, 72, 30))
+    _apply_control(mp_max, _control_cfg(content_cfg, "mp_max", (260, 180, 72, 30)), (260, 180, 72, 30))
     mp_separator = QLabel("/", card)
-    mp_separator.setAlignment(Qt.AlignCenter)
-    mp_separator.setGeometry(*_rect(content_cfg, "mp_separator", (253, 180, 14, 30)))
+    _apply_control(mp_separator, _control_cfg(content_cfg, "mp_separator", (246, 180, 14, 30)), (246, 180, 14, 30))
 
     custom_edits = []
     custom_rows = content_cfg.get("custom_rows", []) if isinstance(content_cfg.get("custom_rows"), list) else []
     default_y_values = (315, 370, 425)
     for index, custom in enumerate(data.get("custom_fields", [])[:3]):
         row_cfg = custom_rows[index] if index < len(custom_rows) and isinstance(custom_rows[index], dict) else {}
-        row_y = _safe_int(row_cfg.get("y", default_y_values[index]), default_y_values[index])
         label_edit = QLineEdit(str(custom.get("label", "")), card)
         value_edit = QLineEdit(str(custom.get("value", "")), card)
         label_edit.setPlaceholderText("Feldname")
         value_edit.setPlaceholderText("Wert")
-        label_edit.setGeometry(
-            _safe_int(row_cfg.get("label_x", 35), 35), row_y,
-            _safe_int(row_cfg.get("label_w", 125), 125), _safe_int(row_cfg.get("h", 30), 30),
-        )
-        value_edit.setGeometry(
-            _safe_int(row_cfg.get("value_x", 170), 170), row_y,
-            _safe_int(row_cfg.get("value_w", 155), 155), _safe_int(row_cfg.get("h", 30), 30),
-        )
+        label_cfg = row_cfg.get("label", {}) if isinstance(row_cfg.get("label"), dict) else {"x": 35, "y": default_y_values[index], "w": 125, "h": 30}
+        value_cfg = row_cfg.get("value", {}) if isinstance(row_cfg.get("value"), dict) else {"x": 170, "y": default_y_values[index], "w": 155, "h": 30}
+        _apply_control(label_edit, label_cfg, (35, default_y_values[index], 125, 30))
+        _apply_control(value_edit, value_cfg, (170, default_y_values[index], 155, 30))
         custom_edits.append((label_edit, value_edit))
 
     can_roll = QCheckBox("Kann würfeln", card)
     can_roll.setChecked(bool(data.get("can_roll", False)))
-    can_roll.setGeometry(*_rect(content_cfg, "can_roll", (35, 475, 180, 30)))
+    _apply_control(can_roll, _control_cfg(content_cfg, "can_roll", (35, 480, 180, 30)), (35, 480, 180, 30))
     button_path = _asset_path(window, str(card_cfg.get("button_asset", "buttons/menu_button_small.png")))
     asset_url = button_path.as_posix() if button_path else ""
     rolls_button = _button("Würfe", card, asset_url)
     duplicate_button = _button("Duplizieren", card, asset_url)
     delete_button = _button("Löschen", card, asset_url)
-    rolls_button.setGeometry(*_rect(content_cfg, "rolls_button", (30, 525, 92, 34)))
-    duplicate_button.setGeometry(*_rect(content_cfg, "duplicate_button", (134, 525, 96, 34)))
-    delete_button.setGeometry(*_rect(content_cfg, "delete_button", (242, 525, 88, 34)))
+    for button, key, fallback in (
+        (rolls_button, "rolls_button", (30, 530, 92, 34)),
+        (duplicate_button, "duplicate_button", (134, 530, 96, 34)),
+        (delete_button, "delete_button", (242, 530, 88, 34)),
+    ):
+        button_cfg = _control_cfg(content_cfg, key, fallback)
+        button.setText(str(button_cfg.get("text", button.text())))
+        _apply_control(button, button_cfg, fallback, bold=True)
 
     def collect_and_save():
         data["name"] = name.text()
@@ -241,7 +337,8 @@ def _create_companion_card(window, parent, companion, cfg):
     rolls_button.clicked.connect(lambda: _edit_rolls(window, data, collect_and_save))
     duplicate_button.clicked.connect(lambda: _duplicate_companion(window, data["id"]))
     delete_button.clicked.connect(lambda: _delete_companion(window, data["id"], name.text()))
-    return card
+    card.show()
+    return wrapper
 
 
 def _spin(value, parent):

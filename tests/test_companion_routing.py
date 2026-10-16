@@ -119,6 +119,7 @@ class CompanionRoutingTests(unittest.TestCase):
             main_ui_layout_config=ui_layout,
             create_panel_text=create_panel_text,
             get_inventory_roll_options=lambda: [],
+            _safe_int=lambda value, default=0: int(value if value is not None else default),
         )
 
         def rerender(_section):
@@ -156,12 +157,22 @@ class CompanionRoutingTests(unittest.TestCase):
         background = first_card.findChild(QLabel, "companionCardBackground")
         self.assertEqual(background.size(), first_card.size())
         self.assertEqual(background.pixmap().size(), first_card.size())
+        self.assertIn("background: transparent", first_card.styleSheet())
+        self.assertIsNotNone(first_card.parentWidget().findChild(QLabel, "alphaPixmapShadow"))
+        portrait = first_card.findChild(QLabel, "companionPortrait")
+        portrait_cfg = layout["companion_screen"]["card"]["content"]["portrait"]
+        self.assertEqual((portrait.x(), portrait.y(), portrait.width(), portrait.height()), tuple(portrait_cfg[key] for key in ("x", "y", "w", "h")))
         placeholders = [editor.placeholderText() for editor in first_card.findChildren(QLineEdit)]
         self.assertIn("Name", placeholders)
         self.assertIn("Typ / Beschreibung", placeholders)
         self.assertEqual(placeholders.count("Feldname"), 3)
         self.assertEqual(placeholders.count("Wert"), 3)
-        self.assertEqual(len(first_card.findChildren(QSpinBox)), 4)
+        spin_boxes = first_card.findChildren(QSpinBox)
+        self.assertEqual(len(spin_boxes), 4)
+        self.assertTrue(all(spin.width() >= 70 and not spin.isReadOnly() for spin in spin_boxes))
+        type_editor = next(editor for editor in first_card.findChildren(QLineEdit) if editor.placeholderText() == "Typ / Beschreibung")
+        custom_values = [editor for editor in first_card.findChildren(QLineEdit) if editor.placeholderText() == "Wert"]
+        self.assertGreater(type_editor.y(), max(editor.geometry().bottom() for editor in custom_values))
         self.assertTrue(any(box.text() == "Kann würfeln" for box in first_card.findChildren(QCheckBox)))
         card_buttons = {button.text() for button in first_card.findChildren(QPushButton)}
         self.assertEqual(card_buttons, {"Würfe", "Duplizieren", "Löschen"})
@@ -174,9 +185,10 @@ class CompanionRoutingTests(unittest.TestCase):
         positions = {}
         for index in range(grid.count()):
             item = grid.itemAt(index)
-            if item.widget() in cards:
+            card = item.widget().findChild(QFrame, "companionCard") if item.widget() else None
+            if card in cards:
                 row, column, _row_span, _column_span = grid.getItemPosition(index)
-                positions[item.widget()] = (row, column)
+                positions[card] = (row, column)
         self.assertEqual(set(positions.values()), {(0, 0), (0, 1), (0, 2), (1, 0)})
         self.assertGreater(scroll_area.verticalScrollBar().maximum(), 0)
 
@@ -201,11 +213,15 @@ class CompanionRoutingTests(unittest.TestCase):
         selector_cfg = screen_cfg["view_selector"]
         category_cfg = screen_cfg["category_tabs"]
         self.assertEqual(selector_cfg["orientation"], "vertical")
-        self.assertEqual(inventory.x(), 1260)
+        self.assertEqual(selector_cfg["anchor"], "top_right")
+        self.assertEqual(inventory.x(), parent.width() - inventory.width() - selector_cfg["right_margin"])
         self.assertEqual(companions.x(), inventory.x())
         self.assertEqual(companions.y(), inventory.y() + inventory.height() + selector_cfg["gap"])
         self.assertGreaterEqual(inventory.x(), category_cfg["x"] + category_cfg["w"])
         self.assertLessEqual(inventory.x() + inventory.width(), screen_cfg["w"])
+        self.assertLessEqual(companions.geometry().bottom(), screen_cfg["view_selector"]["top"] + 2 * selector_cfg["button_h"] + selector_cfg["gap"])
+        companion_layout = json.loads((ROOT / "assets" / "themes" / "diablo" / "companion_layout.json").read_text(encoding="utf-8"))
+        self.assertLess(companions.geometry().bottom(), companion_layout["companion_screen"]["cards_area"]["y"])
         self.assertTrue(inventory.isVisible())
         self.assertTrue(companions.isVisible())
 

@@ -2,6 +2,7 @@ import json
 import hashlib
 import os
 import re
+import shutil
 import xml.etree.ElementTree as ET
 import zipfile
 from copy import deepcopy
@@ -1306,7 +1307,100 @@ class DataLoader:
             "custom_fields": custom_fields,
             "can_roll": bool(source.get("can_roll", False)),
             "rolls": self._normalize_companion_rolls(source.get("rolls", [])),
+            "portrait": os.path.basename(str(source.get("portrait", "") or "").replace("\\", "/")),
         }
+
+    def _companion_portrait_directory(self) -> str:
+        active_path = str(self.active_character_path or "").strip()
+        directory = os.path.dirname(os.path.abspath(active_path)) if active_path else self.get_character_dir()
+        os.makedirs(directory, exist_ok=True)
+        return directory
+
+    def _companion_portrait_stem(self) -> str:
+        active_path = str(self.active_character_path or "").strip()
+        if active_path:
+            stem = os.path.splitext(os.path.basename(active_path))[0]
+        else:
+            stem = self.make_character_slug(self._get_character_name_from_cache())
+        return stem or "unknown_character"
+
+    def get_companion_portrait_target_path(self, companion_id: str, extension=".png") -> str:
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(companion_id or "").strip())
+        if not safe_id:
+            return ""
+        ext = str(extension or ".png").lower()
+        if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
+            ext = ".png"
+        filename = f"{self._companion_portrait_stem()}__{safe_id}__portrait{ext}"
+        return os.path.join(self._companion_portrait_directory(), filename)
+
+    def get_companion_portrait_path(self, companion) -> str:
+        portrait = str(companion.get("portrait", "") or "") if isinstance(companion, dict) else ""
+        filename = os.path.basename(portrait.replace("\\", "/"))
+        if not filename:
+            return ""
+        companion_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(companion.get("id", "") or "").strip())
+        extension = os.path.splitext(filename)[1].lower()
+        if not companion_id or extension not in {".png", ".jpg", ".jpeg", ".webp"} or not filename.endswith(f"__{companion_id}__portrait{extension}"):
+            return ""
+        directory = os.path.abspath(self._companion_portrait_directory())
+        candidate = os.path.abspath(os.path.join(directory, filename))
+        try:
+            if os.path.commonpath([directory, candidate]) != directory:
+                return ""
+        except ValueError:
+            return ""
+        return candidate
+
+    def _remove_managed_companion_portrait(self, companion) -> bool:
+        path = self.get_companion_portrait_path(companion)
+        if not path or not os.path.isfile(path):
+            return False
+        os.remove(path)
+        return True
+
+    def set_companion_portrait_reference(self, companion_id: str, managed_path: str) -> bool:
+        target_id = str(companion_id or "").strip()
+        directory = os.path.abspath(self._companion_portrait_directory())
+        candidate = os.path.abspath(str(managed_path or ""))
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", target_id)
+        filename = os.path.basename(candidate)
+        extension = os.path.splitext(filename)[1].lower()
+        try:
+            if (
+                not candidate
+                or extension not in {".png", ".jpg", ".jpeg", ".webp"}
+                or not filename.endswith(f"__{safe_id}__portrait{extension}")
+                or os.path.commonpath([directory, candidate]) != directory
+                or not os.path.isfile(candidate)
+            ):
+                return False
+        except ValueError:
+            return False
+        items = self.get_companions()
+        for index, companion in enumerate(items):
+            if str(companion.get("id", "")) != target_id:
+                continue
+            old_path = self.get_companion_portrait_path(companion)
+            companion["portrait"] = os.path.basename(candidate)
+            items[index] = companion
+            self.set_companions(items)
+            if old_path and old_path != candidate and os.path.isfile(old_path):
+                os.remove(old_path)
+            return True
+        return False
+
+    def set_companion_portrait_file(self, companion_id: str, source_path: str) -> bool:
+        source = os.path.abspath(str(source_path or ""))
+        extension = os.path.splitext(source)[1].lower()
+        if not os.path.isfile(source) or extension not in {".png", ".jpg", ".jpeg", ".webp"}:
+            return False
+        target = self.get_companion_portrait_target_path(companion_id, extension)
+        if not target:
+            return False
+        if source != os.path.abspath(target):
+            shutil.copy2(source, target)
+        return self.set_companion_portrait_reference(companion_id, target)
 
     def _next_companion_id(self, companions=None) -> str:
         items = companions if isinstance(companions, list) else self.get_companions()
@@ -1379,10 +1473,13 @@ class DataLoader:
     def delete_companion(self, companion_id: str) -> bool:
         target_id = str(companion_id or "").strip()
         items = self.get_companions()
+        removed = next((item for item in items if str(item.get("id", "")) == target_id), None)
         remaining = [item for item in items if str(item.get("id", "")) != target_id]
         if len(remaining) == len(items):
             return False
         self.set_companions(remaining)
+        if removed is not None:
+            self._remove_managed_companion_portrait(removed)
         return True
 
     def duplicate_companion(self, companion_id: str) -> dict[str, Any] | None:
@@ -1395,8 +1492,16 @@ class DataLoader:
         duplicate["id"] = self._next_companion_id(items)
         base_name = str(duplicate.get("name", "") or "Companion").strip() or "Companion"
         duplicate["name"] = f"{base_name} (Kopie)"
+        source_portrait = self.get_companion_portrait_path(source)
+        duplicate["portrait"] = ""
         items.append(duplicate)
         self.set_companions(items)
+        if source_portrait and os.path.isfile(source_portrait):
+            extension = os.path.splitext(source_portrait)[1]
+            target = self.get_companion_portrait_target_path(duplicate["id"], extension)
+            shutil.copy2(source_portrait, target)
+            self.set_companion_portrait_reference(duplicate["id"], target)
+            duplicate["portrait"] = os.path.basename(target)
         return deepcopy(duplicate)
 
     def get_roll_capable_companions(self) -> list[dict[str, Any]]:
