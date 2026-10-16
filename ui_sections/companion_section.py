@@ -7,14 +7,12 @@ from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QGridLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
     QScrollArea,
     QSpinBox,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -51,6 +49,29 @@ def _button(text, parent, asset_url=""):
     )
     button.setCursor(Qt.PointingHandCursor)
     return button
+
+
+def _character_panel_size(window):
+    try:
+        panel_cfg = window.main_ui_layout_config["character_screen"]["panels"]["character_info_panel"]
+    except (AttributeError, KeyError, TypeError):
+        panel_cfg = {}
+    width = _safe_int(panel_cfg.get("w", 360), 360) if isinstance(panel_cfg, dict) else 360
+    height = _safe_int(panel_cfg.get("h", 600), 600) if isinstance(panel_cfg, dict) else 600
+    return (width if width > 0 else 360, height if height > 0 else 600)
+
+
+def _rect(cfg, key, fallback):
+    value = cfg.get(key, {}) if isinstance(cfg, dict) else {}
+    if not isinstance(value, dict):
+        value = {}
+    x, y, width, height = fallback
+    return (
+        _safe_int(value.get("x", x), x),
+        _safe_int(value.get("y", y), y),
+        _safe_int(value.get("w", width), width),
+        _safe_int(value.get("h", height), height),
+    )
 
 
 def render_companion_screen(window, parent, layout_config):
@@ -113,76 +134,90 @@ def render_companion_screen(window, parent, layout_config):
 
 def _create_companion_card(window, parent, companion, cfg):
     card_cfg = cfg.get("card", {}) if isinstance(cfg.get("card"), dict) else {}
+    content_cfg = card_cfg.get("content", {}) if isinstance(card_cfg.get("content"), dict) else {}
+    card_w, card_h = _character_panel_size(window)
     card = QFrame(parent)
     card.setObjectName("companionCard")
-    card.setMinimumSize(_safe_int(card_cfg.get("w", 430), 430), _safe_int(card_cfg.get("h", 390), 390))
-    card.setMaximumHeight(_safe_int(card_cfg.get("h", 390), 390))
+    card.setFixedSize(card_w, card_h)
     card.setStyleSheet("QFrame#companionCard { background: rgba(6,5,4,120); border: none; }")
 
     panel_path = _asset_path(window, str(card_cfg.get("asset", "panels/character_info_panel.png")))
     if panel_path is not None:
         background = QLabel(card)
-        background.setGeometry(0, 0, card.minimumWidth(), card.minimumHeight())
+        background.setObjectName("companionCardBackground")
+        background.setGeometry(0, 0, card_w, card_h)
         pixmap = QPixmap(str(panel_path))
         background.setPixmap(pixmap.scaled(background.size(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
         background.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
     data = deepcopy(companion)
-    layout = QVBoxLayout(card)
-    layout.setContentsMargins(30, 26, 30, 24)
-    layout.setSpacing(7)
     field_style = "QLineEdit, QSpinBox { background: rgba(5,4,3,190); color: #ffffff; border: 1px solid rgba(242,210,139,90); padding: 3px; }"
-    card.setStyleSheet(card.styleSheet() + field_style + "QCheckBox { color: #eadfca; }")
+    card.setStyleSheet(card.styleSheet() + field_style + "QLabel, QCheckBox { color: #eadfca; }")
 
     name = QLineEdit(str(data.get("name", "")), card)
     name.setPlaceholderText("Name")
     name.setAlignment(Qt.AlignCenter)
     name.setStyleSheet(name.styleSheet() + "font-size: 19px; font-weight: 700; color: #f2d28b;")
+    name.setGeometry(*_rect(content_cfg, "name", (38, 50, 285, 38)))
     type_edit = QLineEdit(str(data.get("type", "")), card)
     type_edit.setPlaceholderText("Typ / Beschreibung")
-    layout.addWidget(name)
-    layout.addWidget(type_edit)
+    type_edit.setGeometry(*_rect(content_cfg, "type", (55, 94, 250, 28)))
 
-    resource_row = QGridLayout()
-    resource_row.addWidget(QLabel("HP", card), 0, 0)
+    hp_label = QLabel("HP", card)
+    hp_label.setAlignment(Qt.AlignCenter)
+    hp_label.setStyleSheet("font-size: 20px; font-weight: 700; color: #f71937;")
+    hp_label.setGeometry(*_rect(content_cfg, "hp_label", (145, 130, 45, 30)))
     hp_current = _spin(data.get("hp", {}).get("current", 0), card)
     hp_max = _spin(data.get("hp", {}).get("max", 0), card)
-    resource_row.addWidget(hp_current, 0, 1)
-    resource_row.addWidget(QLabel("/", card), 0, 2)
-    resource_row.addWidget(hp_max, 0, 3)
-    resource_row.addWidget(QLabel("MP", card), 1, 0)
+    hp_current.setGeometry(*_rect(content_cfg, "hp_current", (195, 130, 58, 30)))
+    hp_max.setGeometry(*_rect(content_cfg, "hp_max", (267, 130, 58, 30)))
+    hp_separator = QLabel("/", card)
+    hp_separator.setAlignment(Qt.AlignCenter)
+    hp_separator.setGeometry(*_rect(content_cfg, "hp_separator", (253, 130, 14, 30)))
+
+    mp_label = QLabel("MP", card)
+    mp_label.setAlignment(Qt.AlignCenter)
+    mp_label.setStyleSheet("font-size: 20px; font-weight: 700; color: #0f95f5;")
+    mp_label.setGeometry(*_rect(content_cfg, "mp_label", (145, 180, 45, 30)))
     mp_current = _spin(data.get("mp", {}).get("current", 0), card)
     mp_max = _spin(data.get("mp", {}).get("max", 0), card)
-    resource_row.addWidget(mp_current, 1, 1)
-    resource_row.addWidget(QLabel("/", card), 1, 2)
-    resource_row.addWidget(mp_max, 1, 3)
-    layout.addLayout(resource_row)
+    mp_current.setGeometry(*_rect(content_cfg, "mp_current", (195, 180, 58, 30)))
+    mp_max.setGeometry(*_rect(content_cfg, "mp_max", (267, 180, 58, 30)))
+    mp_separator = QLabel("/", card)
+    mp_separator.setAlignment(Qt.AlignCenter)
+    mp_separator.setGeometry(*_rect(content_cfg, "mp_separator", (253, 180, 14, 30)))
 
     custom_edits = []
-    for custom in data.get("custom_fields", [])[:3]:
-        row = QHBoxLayout()
+    custom_rows = content_cfg.get("custom_rows", []) if isinstance(content_cfg.get("custom_rows"), list) else []
+    default_y_values = (315, 370, 425)
+    for index, custom in enumerate(data.get("custom_fields", [])[:3]):
+        row_cfg = custom_rows[index] if index < len(custom_rows) and isinstance(custom_rows[index], dict) else {}
+        row_y = _safe_int(row_cfg.get("y", default_y_values[index]), default_y_values[index])
         label_edit = QLineEdit(str(custom.get("label", "")), card)
         value_edit = QLineEdit(str(custom.get("value", "")), card)
         label_edit.setPlaceholderText("Feldname")
         value_edit.setPlaceholderText("Wert")
-        row.addWidget(label_edit, 2)
-        row.addWidget(value_edit, 3)
-        layout.addLayout(row)
+        label_edit.setGeometry(
+            _safe_int(row_cfg.get("label_x", 35), 35), row_y,
+            _safe_int(row_cfg.get("label_w", 125), 125), _safe_int(row_cfg.get("h", 30), 30),
+        )
+        value_edit.setGeometry(
+            _safe_int(row_cfg.get("value_x", 170), 170), row_y,
+            _safe_int(row_cfg.get("value_w", 155), 155), _safe_int(row_cfg.get("h", 30), 30),
+        )
         custom_edits.append((label_edit, value_edit))
 
     can_roll = QCheckBox("Kann würfeln", card)
     can_roll.setChecked(bool(data.get("can_roll", False)))
-    layout.addWidget(can_roll)
-    actions = QHBoxLayout()
+    can_roll.setGeometry(*_rect(content_cfg, "can_roll", (35, 475, 180, 30)))
     button_path = _asset_path(window, str(card_cfg.get("button_asset", "buttons/menu_button_small.png")))
     asset_url = button_path.as_posix() if button_path else ""
     rolls_button = _button("Würfe", card, asset_url)
     duplicate_button = _button("Duplizieren", card, asset_url)
     delete_button = _button("Löschen", card, asset_url)
-    actions.addWidget(rolls_button)
-    actions.addWidget(duplicate_button)
-    actions.addWidget(delete_button)
-    layout.addLayout(actions)
+    rolls_button.setGeometry(*_rect(content_cfg, "rolls_button", (30, 525, 92, 34)))
+    duplicate_button.setGeometry(*_rect(content_cfg, "duplicate_button", (134, 525, 96, 34)))
+    delete_button.setGeometry(*_rect(content_cfg, "delete_button", (242, 525, 88, 34)))
 
     def collect_and_save():
         data["name"] = name.text()

@@ -15,11 +15,12 @@
       "align": "center"
     },
     "view_selector": {
-      "x": 1090,
-      "y": 8,
+      "x": 1260,
+      "y": 55,
       "button_w": 140,
       "button_h": 36,
       "gap": 8,
+      "orientation": "vertical",
       "font_size": 15
     },
     "money": {

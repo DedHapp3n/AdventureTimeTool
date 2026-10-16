@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 
 from data_loader import DataLoader
 from ui_sections.companion_section import render_companion_screen
-from ui_sections.inventory_section import render_inventory_screen
+from ui_sections.inventory_section import _render_inventory_view_selector, render_inventory_screen
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,9 +85,12 @@ class CompanionRoutingTests(unittest.TestCase):
         render_inventory_screen(inventory_window)
         self.assertEqual(calls, ["inventory_data", "money", "tabs", "table"])
 
-    def test_real_renderer_shows_clickable_add_button_and_builds_three_cards(self):
+    def test_real_renderer_uses_character_panel_size_and_builds_scrollable_grid(self):
         layout = json.loads(
             (ROOT / "assets" / "themes" / "diablo" / "companion_layout.json").read_text(encoding="utf-8")
+        )
+        ui_layout = json.loads(
+            (ROOT / "assets" / "themes" / "diablo" / "ui_layout.json").read_text(encoding="utf-8")
         )
         loader = DataLoader.__new__(DataLoader)
         loader.app_meta = {}
@@ -113,6 +116,7 @@ class CompanionRoutingTests(unittest.TestCase):
             loader=loader,
             theme_asset_base_path=ROOT / "assets" / "themes" / "diablo",
             assets_dir=ROOT / "assets",
+            main_ui_layout_config=ui_layout,
             create_panel_text=create_panel_text,
             get_inventory_roll_options=lambda: [],
         )
@@ -139,7 +143,7 @@ class CompanionRoutingTests(unittest.TestCase):
         self.assertTrue(first_add.isVisible())
         self.assertTrue(first_add.isEnabled())
 
-        for expected_count in (1, 2, 3):
+        for expected_count in (1, 2, 3, 4):
             add_button().click()
             APP.processEvents()
             self.assertEqual(len(loader.get_companions()), expected_count)
@@ -147,6 +151,11 @@ class CompanionRoutingTests(unittest.TestCase):
 
         cards = parent.findChildren(QFrame, "companionCard")
         first_card = cards[0]
+        self.assertEqual(first_card.size().width(), 360)
+        self.assertEqual(first_card.size().height(), 600)
+        background = first_card.findChild(QLabel, "companionCardBackground")
+        self.assertEqual(background.size(), first_card.size())
+        self.assertEqual(background.pixmap().size(), first_card.size())
         placeholders = [editor.placeholderText() for editor in first_card.findChildren(QLineEdit)]
         self.assertIn("Name", placeholders)
         self.assertIn("Typ / Beschreibung", placeholders)
@@ -156,7 +165,9 @@ class CompanionRoutingTests(unittest.TestCase):
         self.assertTrue(any(box.text() == "Kann würfeln" for box in first_card.findChildren(QCheckBox)))
         card_buttons = {button.text() for button in first_card.findChildren(QPushButton)}
         self.assertEqual(card_buttons, {"Würfe", "Duplizieren", "Löschen"})
-        self.assertEqual(len(saves), 3)
+        self.assertEqual(len(saves), 4)
+        for child in first_card.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
+            self.assertTrue(first_card.rect().contains(child.geometry()), (type(child).__name__, child.geometry()))
 
         scroll_area = parent.findChild(QScrollArea)
         grid = scroll_area.widget().layout()
@@ -166,7 +177,37 @@ class CompanionRoutingTests(unittest.TestCase):
             if item.widget() in cards:
                 row, column, _row_span, _column_span = grid.getItemPosition(index)
                 positions[item.widget()] = (row, column)
-        self.assertEqual(set(positions.values()), {(0, 0), (0, 1), (0, 2)})
+        self.assertEqual(set(positions.values()), {(0, 0), (0, 1), (0, 2), (1, 0)})
+        self.assertGreater(scroll_area.verticalScrollBar().maximum(), 0)
+
+    def test_inventory_view_selector_is_vertical_and_right_aligned(self):
+        layout = json.loads(
+            (ROOT / "assets" / "themes" / "diablo" / "inventory_layout.json").read_text(encoding="utf-8")
+        )
+        screen_cfg = layout["inventory_screen"]
+        parent = QWidget()
+        parent.resize(screen_cfg["w"], screen_cfg["h"])
+        parent.show()
+        window = SimpleNamespace(
+            current_inventory_view="inventory",
+            _safe_int=lambda value, default: int(value if value is not None else default),
+            on_inventory_view_clicked=lambda _view: None,
+        )
+        _render_inventory_view_selector(window, parent, screen_cfg)
+        APP.processEvents()
+        buttons = {button.text(): button for button in parent.findChildren(QPushButton)}
+        inventory = buttons["Inventar"]
+        companions = buttons["Companions"]
+        selector_cfg = screen_cfg["view_selector"]
+        category_cfg = screen_cfg["category_tabs"]
+        self.assertEqual(selector_cfg["orientation"], "vertical")
+        self.assertEqual(inventory.x(), 1260)
+        self.assertEqual(companions.x(), inventory.x())
+        self.assertEqual(companions.y(), inventory.y() + inventory.height() + selector_cfg["gap"])
+        self.assertGreaterEqual(inventory.x(), category_cfg["x"] + category_cfg["w"])
+        self.assertLessEqual(inventory.x() + inventory.width(), screen_cfg["w"])
+        self.assertTrue(inventory.isVisible())
+        self.assertTrue(companions.isVisible())
 
 
 if __name__ == "__main__":

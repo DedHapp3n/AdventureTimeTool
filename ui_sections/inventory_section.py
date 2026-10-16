@@ -387,10 +387,13 @@ def _render_inventory_view_selector(window, parent, screen_cfg):
     button_h = window._safe_int(cfg.get("button_h", 36), 36)
     gap = window._safe_int(cfg.get("gap", 8), 8)
     font_size = window._safe_int(cfg.get("font_size", 15), 15)
+    orientation = str(cfg.get("orientation", "horizontal") or "horizontal").strip().lower()
     active_view = str(getattr(window, "current_inventory_view", "inventory"))
     for index, (view_id, text) in enumerate((("inventory", "Inventar"), ("companions", "Companions"))):
         button = QPushButton(text, parent)
-        button.setGeometry(x + index * (button_w + gap), y, button_w, button_h)
+        button_x = x if orientation == "vertical" else x + index * (button_w + gap)
+        button_y = y + index * (button_h + gap) if orientation == "vertical" else y
+        button.setGeometry(button_x, button_y, button_w, button_h)
         active = view_id == active_view
         button.setStyleSheet(
             "QPushButton {"
