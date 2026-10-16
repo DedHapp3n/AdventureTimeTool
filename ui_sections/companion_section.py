@@ -76,6 +76,7 @@ def render_companion_screen(window, parent, layout_config):
         _safe_int(add_cfg.get("h", 38), 38),
     )
     add_button.clicked.connect(lambda: _add_companion(window))
+    add_button.show()
 
     area_cfg = cfg.get("cards_area", {}) if isinstance(cfg.get("cards_area"), dict) else {}
     area = QScrollArea(parent)

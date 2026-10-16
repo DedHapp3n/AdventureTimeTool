@@ -1,5 +1,7 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from data_loader import DataLoader
 
@@ -49,6 +51,25 @@ class CompanionModelTests(unittest.TestCase):
 
         other.app_meta = {}
         self.assertEqual(other.get_companions(), [])
+
+    def test_character_cache_file_roundtrip_preserves_companions(self):
+        self.loader.cell_cache = {"Charakterbogen": {"G1": {"value": "Companion Test"}}}
+        self.loader.active_cache_path = ""
+        self.loader.current_character_name = "Companion Test"
+        self.loader.source_file_path = ""
+        self.loader._write_current_character_metadata = lambda *_args, **_kwargs: None
+        self.loader._remember_clean_snapshot = lambda: None
+        self.loader.add_companion({"name": "Gertrude", "type": "Zombie"})
+        self.loader.add_companion({"name": "Scout", "can_roll": True})
+
+        with tempfile.TemporaryDirectory() as directory:
+            cache_path = Path(directory) / "character.json"
+            self.assertTrue(self.loader.save_active_character_json(cache_path))
+            payload = json.loads(cache_path.read_text(encoding="utf-8"))
+
+        reloaded = DataLoader.__new__(DataLoader)
+        reloaded._load_cache_payload(payload)
+        self.assertEqual([item["name"] for item in reloaded.get_companions()], ["Gertrude", "Scout"])
 
     def test_roll_capability_filter(self):
         disabled = self.loader.add_companion({"name": "Packtier", "can_roll": False})
