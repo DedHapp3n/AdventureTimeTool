@@ -1,0 +1,38 @@
+{
+  "companion_screen": {
+    "title": {
+      "text": "Companions",
+      "x": 0,
+      "y": 0,
+      "w": 1380,
+      "h": 42,
+      "font_size": 24,
+      "color": "#f2d28b",
+      "align": "center"
+    },
+    "add_button": {
+      "text": "Companion hinzufügen",
+      "x": 20,
+      "y": 54,
+      "w": 230,
+      "h": 38,
+      "asset": "buttons/menu_button_medium.png"
+    },
+    "cards_area": {
+      "x": 18,
+      "y": 102,
+      "w": 1380,
+      "h": 690,
+      "columns": 3,
+      "column_gap": 18,
+      "row_gap": 18
+    },
+    "card": {
+      "w": 430,
+      "h": 390,
+      "asset": "panels/character_info_panel.png",
+      "button_asset": "buttons/menu_button_small.png"
+    },
+    "empty_text": "Noch keine Companions vorhanden."
+  }
+}

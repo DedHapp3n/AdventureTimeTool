@@ -1241,6 +1241,183 @@ class DataLoader:
             return True
         return False
 
+    def _normalize_companion_rolls(self, rolls) -> list[dict[str, Any]]:
+        if not isinstance(rolls, list):
+            return []
+        result = []
+        seen_ids = set()
+        for roll in rolls:
+            if not isinstance(roll, dict):
+                continue
+            roll_id = str(roll.get("roll_id", "") or "").strip()
+            roll_name = str(roll.get("roll_name", "") or "").strip()
+            if not roll_id and not roll_name:
+                continue
+            identity = roll_id or roll_name.casefold()
+            if identity in seen_ids:
+                continue
+            try:
+                value = int(roll.get("value", 0))
+            except Exception:
+                value = 0
+            seen_ids.add(identity)
+            result.append({"roll_id": roll_id, "roll_name": roll_name, "value": value})
+        return result
+
+    def _normalize_companion(self, companion, fallback_id="") -> dict[str, Any]:
+        source = companion if isinstance(companion, dict) else {}
+        companion_id = str(source.get("id", fallback_id) or fallback_id).strip()
+
+        def resource(name):
+            raw = source.get(name, {})
+            raw = raw if isinstance(raw, dict) else {}
+            try:
+                current = int(raw.get("current", 0))
+            except Exception:
+                current = 0
+            try:
+                maximum = int(raw.get("max", 0))
+            except Exception:
+                maximum = 0
+            return {"current": current, "max": maximum}
+
+        custom_fields = []
+        raw_fields = source.get("custom_fields", [])
+        if not isinstance(raw_fields, list):
+            raw_fields = []
+        for field in raw_fields[:3]:
+            field = field if isinstance(field, dict) else {}
+            custom_fields.append(
+                {
+                    "label": str(field.get("label", "") or ""),
+                    "value": str(field.get("value", "") or ""),
+                }
+            )
+        defaults = (("Rüstung", "0"), ("Zustand", "Normal"), ("Aufgabe", ""))
+        while len(custom_fields) < 3:
+            label, value = defaults[len(custom_fields)]
+            custom_fields.append({"label": label, "value": value})
+        return {
+            "id": companion_id,
+            "name": str(source.get("name", "") or ""),
+            "type": str(source.get("type", "") or ""),
+            "hp": resource("hp"),
+            "mp": resource("mp"),
+            "custom_fields": custom_fields,
+            "can_roll": bool(source.get("can_roll", False)),
+            "rolls": self._normalize_companion_rolls(source.get("rolls", [])),
+        }
+
+    def _next_companion_id(self, companions=None) -> str:
+        items = companions if isinstance(companions, list) else self.get_companions()
+        used = {str(item.get("id", "")) for item in items if isinstance(item, dict)}
+        index = 1
+        while f"companion_{index:03d}" in used:
+            index += 1
+        return f"companion_{index:03d}"
+
+    def get_companions(self) -> list[dict[str, Any]]:
+        companion_meta = self.app_meta.get("companions", {})
+        if not isinstance(companion_meta, dict):
+            return []
+        raw_items = companion_meta.get("items", [])
+        if not isinstance(raw_items, list):
+            return []
+        result = []
+        used_ids = set()
+        for raw in raw_items:
+            companion = self._normalize_companion(raw)
+            companion_id = companion["id"]
+            if not companion_id or companion_id in used_ids:
+                companion_id = self._next_companion_id(result)
+                companion["id"] = companion_id
+            used_ids.add(companion_id)
+            result.append(companion)
+        return deepcopy(result)
+
+    def set_companions(self, companions) -> list[dict[str, Any]]:
+        raw_items = companions if isinstance(companions, list) else []
+        normalized = []
+        used_ids = set()
+        for raw in raw_items:
+            companion = self._normalize_companion(raw)
+            companion_id = companion["id"]
+            if not companion_id or companion_id in used_ids:
+                companion_id = self._next_companion_id(normalized)
+                companion["id"] = companion_id
+            used_ids.add(companion_id)
+            normalized.append(companion)
+        self.app_meta["companions"] = {"items": normalized}
+        return deepcopy(normalized)
+
+    def add_companion(self, companion=None) -> dict[str, Any]:
+        items = self.get_companions()
+        source = dict(companion) if isinstance(companion, dict) else {}
+        source["id"] = self._next_companion_id(items)
+        source.setdefault("name", "Neuer Companion")
+        source.setdefault("type", "")
+        created = self._normalize_companion(source)
+        items.append(created)
+        self.set_companions(items)
+        return deepcopy(created)
+
+    def update_companion(self, companion_id: str, companion) -> bool:
+        target_id = str(companion_id or "").strip()
+        if not target_id or not isinstance(companion, dict):
+            return False
+        items = self.get_companions()
+        for index, existing in enumerate(items):
+            if str(existing.get("id", "")) != target_id:
+                continue
+            updated = dict(companion)
+            updated["id"] = target_id
+            items[index] = self._normalize_companion(updated, target_id)
+            self.set_companions(items)
+            return True
+        return False
+
+    def delete_companion(self, companion_id: str) -> bool:
+        target_id = str(companion_id or "").strip()
+        items = self.get_companions()
+        remaining = [item for item in items if str(item.get("id", "")) != target_id]
+        if len(remaining) == len(items):
+            return False
+        self.set_companions(remaining)
+        return True
+
+    def duplicate_companion(self, companion_id: str) -> dict[str, Any] | None:
+        target_id = str(companion_id or "").strip()
+        items = self.get_companions()
+        source = next((item for item in items if str(item.get("id", "")) == target_id), None)
+        if source is None:
+            return None
+        duplicate = deepcopy(source)
+        duplicate["id"] = self._next_companion_id(items)
+        base_name = str(duplicate.get("name", "") or "Companion").strip() or "Companion"
+        duplicate["name"] = f"{base_name} (Kopie)"
+        items.append(duplicate)
+        self.set_companions(items)
+        return deepcopy(duplicate)
+
+    def get_roll_capable_companions(self) -> list[dict[str, Any]]:
+        return [item for item in self.get_companions() if bool(item.get("can_roll", False))]
+
+    def get_companion_roll_value(self, companion_id: str, roll_id: str, roll_name="") -> int:
+        target_id = str(companion_id or "").strip()
+        target_roll_id = str(roll_id or "").strip()
+        target_roll_name = str(roll_name or "").strip()
+        for companion in self.get_roll_capable_companions():
+            if str(companion.get("id", "")) != target_id:
+                continue
+            for roll in companion.get("rolls", []):
+                stored_id = str(roll.get("roll_id", "") or "").strip()
+                stored_name = str(roll.get("roll_name", "") or "").strip()
+                if target_roll_id and stored_id == target_roll_id:
+                    return int(roll.get("value", 0))
+                if not stored_id and target_roll_name and stored_name == target_roll_name:
+                    return int(roll.get("value", 0))
+        return 0
+
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = str(data_path("current_character.json"))
         os.makedirs(os.path.dirname(metadata_path), exist_ok=True)

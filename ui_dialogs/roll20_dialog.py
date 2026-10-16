@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QDialog,
     QGridLayout,
     QHBoxLayout,
@@ -145,6 +146,9 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         fixed_extra_bonuses = []
     fixed_advantages = max(0, safe_int(model.get("fixed_advantages", 0), 0))
     fixed_disadvantages = max(0, safe_int(model.get("fixed_disadvantages", 0), 0))
+    roll_actors = model.get("roll_actors", [])
+    if not isinstance(roll_actors, list):
+        roll_actors = []
 
     dynamic_extra = 0
     dynamic_extra += max(0, len(specialization_items) - 6) * 14
@@ -234,6 +238,26 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     header.setText(_elided_text(header, header_text, title_rect[2]))
     header.installEventFilter(dialog._frameless_drag_filter)
     title_layout.addWidget(header)
+
+    actor_combo = None
+    if roll_actors:
+        actor_row = QHBoxLayout()
+        actor_label = QLabel("Gewürfelt als:", left_content)
+        actor_label.setStyleSheet(f"font-weight: 700; color: {section_title_color}; font-size: {section_title_font_size}px;")
+        actor_combo = QComboBox(left_content)
+        actor_combo.setObjectName("rollActorSelect")
+        actor_combo.addItem("Hauptcharakter", {"id": "main", "name": "Hauptcharakter", "type": "main", "skill_value": skill_value})
+        for actor in roll_actors:
+            if not isinstance(actor, dict) or str(actor.get("type", "")) != "companion":
+                continue
+            actor_combo.addItem(str(actor.get("name", "") or "Companion"), actor)
+        actor_combo.setStyleSheet(
+            f"QComboBox {{ background: rgba(5,4,3,210); color: {normal_text_color}; "
+            f"border: 1px solid {info_border_color}; padding: 5px; font-size: {normal_text_font_size}px; }}"
+        )
+        actor_row.addWidget(actor_label)
+        actor_row.addWidget(actor_combo, 1)
+        left_layout.addLayout(actor_row)
 
     if is_character_initiative:
         value_label = QLabel(
@@ -603,6 +627,12 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             return "kl1"
         return ""
 
+    def selected_actor():
+        if actor_combo is None:
+            return {"id": "main", "name": "Hauptcharakter", "type": "main", "skill_value": skill_value}
+        data = actor_combo.currentData()
+        return data if isinstance(data, dict) else {"id": "main", "name": "Hauptcharakter", "type": "main", "skill_value": skill_value}
+
     def adjust_spin(spinbox, delta):
         spinbox.setValue(max(spinbox.minimum(), min(spinbox.maximum(), spinbox.value() + delta)))
 
@@ -636,9 +666,11 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         return collected
 
     def update_roll_preview():
-        specialization_advantages = sum(1 for checkbox in specialization_checkboxes if checkbox.isChecked())
-        perk_effects = collect_checked_suggestion_effects(perk_suggestion_checkboxes, "perk")
-        wellbeing_effects = collect_checked_suggestion_effects(wellbeing_suggestion_checkboxes, "wellbeing")
+        actor = selected_actor()
+        is_companion = str(actor.get("type", "")) == "companion"
+        specialization_advantages = 0 if is_companion else sum(1 for checkbox in specialization_checkboxes if checkbox.isChecked())
+        perk_effects = {"advantage": 0, "disadvantage": 0, "extra_bonuses": [], "info_only": []} if is_companion else collect_checked_suggestion_effects(perk_suggestion_checkboxes, "perk")
+        wellbeing_effects = {"advantage": 0, "disadvantage": 0, "extra_bonuses": [], "info_only": []} if is_companion else collect_checked_suggestion_effects(wellbeing_suggestion_checkboxes, "wellbeing")
         dice_count = (
             1
             + advantages_spin.value()
@@ -651,16 +683,17 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         )
         if dice_count <= 0:
             dice_count = 1
-        skill_bonus = skill_value if skill_value_allowed else 0
+        skill_bonus = safe_int(actor.get("skill_value", 0), 0) if is_companion else (skill_value if skill_value_allowed else 0)
         manual_bonus = manual_bonus_spin.value()
         extra_bonuses = []
-        if paradigm_checkbox is not None and paradigm_checkbox.isChecked():
+        if not is_companion and paradigm_checkbox is not None and paradigm_checkbox.isChecked():
             paradigm_bonus = safe_int(paradigm_cfg.get("bonus", 10), 10)
             extra_bonuses.append(paradigm_bonus)
             if debug_paradigm_enabled and callable(log_debug):
                 log_debug("roll20", f"ROLL PARADIGM active=True bonus={paradigm_bonus}")
-        extra_bonuses.extend(fixed_extra_bonuses)
-        for checkbox in inventory_modifier_checkboxes:
+        if not is_companion:
+            extra_bonuses.extend(fixed_extra_bonuses)
+        for checkbox in ([] if is_companion else inventory_modifier_checkboxes):
             if checkbox is None or not checkbox.isChecked():
                 continue
             try:
@@ -684,19 +717,46 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         return names
 
     def final_roll_label():
+        actor = selected_actor()
+        is_companion = str(actor.get("type", "")) == "companion"
+        base_label = roll_label
+        if is_companion:
+            actor_name = str(actor.get("name", "") or "Companion").strip() or "Companion"
+            clean_roll_label = " ".join(str(roll_label or display_name).split())
+            base_label = f"{actor_name}: {clean_roll_label}" if clean_roll_label else actor_name
         include_specs = (
+            not is_companion
+            and
             include_specialization_label_checkbox is not None
             and include_specialization_label_checkbox.isChecked()
         )
         if not include_specs:
-            return roll_label
+            return base_label
         spec_names = selected_specialization_names()
         if not spec_names:
-            return roll_label
-        clean_label = " ".join(str(roll_label or "").split())
+            return base_label
+        clean_label = " ".join(str(base_label or "").split())
         if not clean_label:
             return ", ".join(spec_names)
         return f"{clean_label} | {', '.join(spec_names)}"
+
+    def on_actor_changed():
+        actor = selected_actor()
+        is_companion = str(actor.get("type", "")) == "companion"
+        value = safe_int(actor.get("skill_value", 0), 0) if is_companion else skill_value
+        actor_name = str(actor.get("name", "") or "Companion").strip() or "Companion"
+        value_label.setText(f"Wert: {value}")
+        attrs_label.setText("Attribute: Companion" if is_companion else f"Attribute: {attrs_text}")
+        header_text_for_actor = f"Fertigkeit: {display_name} - {actor_name}" if is_companion else header_text
+        header.setText(_elided_text(header, header_text_for_actor, title_rect[2]))
+        preview_title.setText(f"{preview_label_text} ({actor_name})" if is_companion else preview_label_text)
+        advantages_spin.setValue(0 if is_companion else fixed_advantages)
+        disadvantages_spin.setValue(0 if is_companion else fixed_disadvantages)
+        for checkbox in specialization_checkboxes + inventory_modifier_checkboxes + perk_suggestion_checkboxes + wellbeing_suggestion_checkboxes:
+            checkbox.setEnabled(not is_companion)
+        if paradigm_checkbox is not None:
+            paradigm_checkbox.setEnabled(not is_companion)
+        update_roll_preview()
 
     def final_roll_command():
         return _roll_command_with_label(roll_command_edit.text().strip(), final_roll_label())
@@ -748,6 +808,8 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     keep_low.toggled.connect(update_roll_preview)
     if paradigm_checkbox is not None:
         paradigm_checkbox.toggled.connect(update_roll_preview)
+    if actor_combo is not None:
+        actor_combo.currentIndexChanged.connect(lambda _index: on_actor_changed())
     adv_minus.clicked.connect(lambda: adjust_spin(advantages_spin, -1))
     adv_plus.clicked.connect(lambda: adjust_spin(advantages_spin, 1))
     dis_minus.clicked.connect(lambda: adjust_spin(disadvantages_spin, -1))

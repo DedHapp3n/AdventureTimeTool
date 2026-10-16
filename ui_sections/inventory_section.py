@@ -339,12 +339,6 @@ def render_inventory_screen(window):
     try:
         layout_config = window.load_inventory_layout_config()
         screen_cfg = layout_config.get("inventory_screen", {})
-        inventory_data = window.get_inventory_display_data()
-        inventory_categories = window.build_inventory_slot_categories(inventory_data.get("sections", []))
-        available_ids = [str(cat.get("id", "")) for cat in inventory_categories if isinstance(cat, dict)]
-        if window.current_inventory_category not in available_ids:
-            window.current_inventory_category = "inventory_01"
-
         screen = QFrame(window.content_layer)
         screen.setGeometry(
             window._safe_int(screen_cfg.get("x", 20), 20),
@@ -354,6 +348,17 @@ def render_inventory_screen(window):
         )
         screen.setStyleSheet("background: transparent;")
         screen.show()
+
+        if str(getattr(window, "current_inventory_view", "inventory")) == "companions":
+            window.render_companion_screen(screen, window.load_companion_layout_config())
+            _render_inventory_view_selector(window, screen, screen_cfg)
+            return
+
+        inventory_data = window.get_inventory_display_data()
+        inventory_categories = window.build_inventory_slot_categories(inventory_data.get("sections", []))
+        available_ids = [str(cat.get("id", "")) for cat in inventory_categories if isinstance(cat, dict)]
+        if window.current_inventory_category not in available_ids:
+            window.current_inventory_category = "inventory_01"
 
         title_cfg = screen_cfg.get("title", {})
         window.create_panel_text(
@@ -369,8 +374,35 @@ def render_inventory_screen(window):
         window.render_inventory_money_panel(screen, screen_cfg.get("money", {}), inventory_data["money"])
         window.render_inventory_category_tabs(screen, screen_cfg, inventory_categories)
         window.render_inventory_active_category_table(screen, screen_cfg, inventory_categories)
+        _render_inventory_view_selector(window, screen, screen_cfg)
     finally:
         window._inventory_loading = False
+
+
+def _render_inventory_view_selector(window, parent, screen_cfg):
+    cfg = screen_cfg.get("view_selector", {}) if isinstance(screen_cfg.get("view_selector"), dict) else {}
+    x = window._safe_int(cfg.get("x", 1100), 1100)
+    y = window._safe_int(cfg.get("y", 8), 8)
+    button_w = window._safe_int(cfg.get("button_w", 140), 140)
+    button_h = window._safe_int(cfg.get("button_h", 36), 36)
+    gap = window._safe_int(cfg.get("gap", 8), 8)
+    font_size = window._safe_int(cfg.get("font_size", 15), 15)
+    active_view = str(getattr(window, "current_inventory_view", "inventory"))
+    for index, (view_id, text) in enumerate((("inventory", "Inventar"), ("companions", "Companions"))):
+        button = QPushButton(text, parent)
+        button.setGeometry(x + index * (button_w + gap), y, button_w, button_h)
+        active = view_id == active_view
+        button.setStyleSheet(
+            "QPushButton {"
+            f"background: {'rgba(58,36,12,220)' if active else 'rgba(8,8,8,165)'};"
+            f"color: {'#f2d28b' if active else '#c8c0aa'};"
+            f"border: 1px solid {'#d8aa4c' if active else 'rgba(242,210,139,80)'};"
+            f"font-size: {font_size}px; font-weight: 700; padding: 0px;"
+            "} QPushButton:hover { color: #ffffff; border-color: #f2d28b; }"
+        )
+        button.setCursor(Qt.PointingHandCursor)
+        button.clicked.connect(lambda checked=False, selected=view_id: window.on_inventory_view_clicked(selected))
+        button.show()
 
 
 def on_inventory_category_clicked(window, category_id):

@@ -14,6 +14,14 @@
       "color": "#f2d28b",
       "align": "center"
     },
+    "view_selector": {
+      "x": 1090,
+      "y": 8,
+      "button_w": 140,
+      "button_h": 36,
+      "gap": 8,
+      "font_size": 15
+    },
     "money": {
       "x": 20,
       "y": 10,
