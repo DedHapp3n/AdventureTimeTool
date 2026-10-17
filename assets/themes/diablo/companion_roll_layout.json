@@ -1,36 +1,19 @@
 {
   "companion_roll_dialog": {
-    "dialog": { "w": 720, "h": 720, "background": "transparent", "frame_asset": "panels/main_Frame.png" },
-    "colors": { "text": "#ffffff", "accent": "#f2d28b", "muted": "#c8c0aa", "field": "rgba(5, 4, 3, 220)", "selection": "rgba(242, 210, 139, 45)", "grid": "rgba(242, 210, 139, 90)" },
-    "title": { "x": 70, "y": 36, "w": 580, "h": 48, "font_size": 22, "min_font_size": 6, "color": "#f2d28b", "align": "center" },
-    "close_button": { "enabled": true, "asset": "ui_elements/icons/x.jpg", "right": 24, "top": 22, "w": 28, "h": 28 },
-    "table": {
-      "x": 70, "y": 92, "w": 580, "h": 210,
-      "columns": [
-        { "text": "Fertigkeit", "w": 300 },
-        { "text": "Wert", "w": 70 },
-        { "text": "+/-", "w": 70 },
-        { "text": "V", "w": 55 },
-        { "text": "N", "w": 55 }
-      ],
-      "font_size": 14, "header_font_size": 14
-    },
-    "selector": { "label": "Roll / Fertigkeit", "label_rect": { "x": 86, "y": 318, "w": 200, "h": 24 }, "rect": { "x": 86, "y": 344, "w": 548, "h": 38 }, "font_size": 15, "frame_asset": "frames/1024x122_box.png" },
+    "table": { "x": 49, "y": 104, "w": 450, "h": 386, "columns": [
+      { "text": "Fertigkeit", "w": 230 }, { "text": "Wert", "w": 55 },
+      { "text": "+/-", "w": 55 }, { "text": "V", "w": 45 }, { "text": "N", "w": 45 }
+    ]},
+    "editor": { "x": 531, "y": 104, "w": 342, "h": 386, "spacing": 12 },
+    "selector": { "label": "Roll / Fertigkeit" },
     "counters": [
-      { "id": "value", "label": "Fertigkeitswert", "y": 400, "min": -999, "max": 999 },
-      { "id": "modifier", "label": "Bonus / Malus", "y": 448, "min": -999, "max": 999 },
-      { "id": "advantages", "label": "Vorteile", "y": 496, "min": 0, "max": 99 },
-      { "id": "disadvantages", "label": "Nachteile", "y": 544, "min": 0, "max": 99 }
+      { "id": "value", "label": "Fertigkeitswert", "min": -999, "max": 999 },
+      { "id": "modifier", "label": "Bonus / Malus", "min": -999, "max": 999 },
+      { "id": "advantages", "label": "Vorteile", "min": 0, "max": 99 },
+      { "id": "disadvantages", "label": "Nachteile", "min": 0, "max": 99 }
     ],
-    "counter": {
-      "label_x": 86, "label_w": 220, "h": 36, "font_size": 15,
-      "minus_x": 340, "value_x": 382, "value_w": 90, "plus_x": 482,
-      "frame_asset": "frames/256x122_box.png"
-    },
-    "preview": { "x": 86, "y": 594, "w": 548, "h": 46, "font_size": 18, "color": "#ffffff", "align": "center", "frame_asset": "frames/1024x122_box.png" },
-    "buttons": {
-      "asset": "buttons/menu_button_medium.png", "font_size": 15, "h": 38,
-      "delete": { "text": "Löschen", "x": 270, "y": 654, "w": 180 }
-    }
+    "preview": { "x": 49, "y": 500, "w": 722, "h": 92 },
+    "delete_button": { "x": 783, "y": 527, "text": "Löschen", "button_key": "close" },
+    "title": { "min_font_size": 5 }
   }
 }

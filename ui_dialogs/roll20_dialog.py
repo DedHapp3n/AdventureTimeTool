@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
+from ui_dialogs.roll_dialog_ui import add_roll_main_frame, create_roll_close_button, create_roll_counter, create_roll_menu_button, framed_box_style as shared_framed_box_style
 
 
 def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
@@ -182,14 +183,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
     )
 
     if main_frame_enabled:
-        frame_rect = _rect_from_cfg(main_frame_cfg, 0, 0, dialog_w, dialog_h, safe_int)
-        frame_label = QLabel(dialog)
-        frame_label.setGeometry(*frame_rect)
-        frame_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        frame_pixmap = _asset_pixmap(str(main_frame_cfg.get("asset", "") or ""), resolve_roll_asset_path)
-        if frame_pixmap is not None:
-            frame_label.setPixmap(frame_pixmap.scaled(frame_rect[2], frame_rect[3], Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-        frame_label.lower()
+        add_roll_main_frame(dialog, dialog_cfg, resolve_roll_asset_path)
 
     root = QWidget(dialog)
     root.setObjectName("roll20Root")
@@ -213,14 +207,7 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
 
     custom_close_button = None
     if bool(close_button_cfg.get("enabled", False)):
-        custom_close_button = QPushButton(root)
-        custom_close_button.setGeometry(*_anchored_rect_from_cfg(close_button_cfg, dialog_w, 20, 32, 32, safe_int))
-        close_icon_path = resolve_roll_asset_path(str(close_button_cfg.get("asset", "") or "")) if callable(resolve_roll_asset_path) else None
-        if close_icon_path is not None:
-            custom_close_button.setIcon(QIcon(str(close_icon_path)))
-            custom_close_button.setIconSize(custom_close_button.size())
-        custom_close_button.setStyleSheet("QPushButton { background: transparent; border: none; padding: 0px; }")
-        custom_close_button.setCursor(Qt.PointingHandCursor)
+        custom_close_button = create_roll_close_button(root, close_button_cfg, resolve_roll_asset_path)
 
     header_text = f"Fertigkeit: {display_name}"
     if is_character_initiative:
@@ -465,68 +452,19 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
             inventory_modifier_checkboxes.append(checkbox)
 
     controls = QVBoxLayout()
-    advantages_spin = QSpinBox(dialog)
-    advantages_spin.setRange(0, 99)
-    advantages_spin.setValue(fixed_advantages)
-    advantages_spin.setButtonSymbols(QSpinBox.NoButtons)
-    disadvantages_spin = QSpinBox(dialog)
-    disadvantages_spin.setRange(0, 99)
-    disadvantages_spin.setValue(fixed_disadvantages)
-    disadvantages_spin.setButtonSymbols(QSpinBox.NoButtons)
-    manual_bonus_spin = QSpinBox(dialog)
-    manual_bonus_spin.setRange(-999, 999)
-    manual_bonus_spin.setValue(0)
-    manual_bonus_spin.setButtonSymbols(QSpinBox.NoButtons)
-
-    counter_value_w = safe_int(counter_cfg.get("value_w", 42), 42)
-    counter_value_h = safe_int(counter_cfg.get("value_h", 34), 34)
-    manual_value_w = safe_int(counter_cfg.get("manual_value_w", 64), 64)
-    advantages_spin.setFixedSize(counter_value_w, counter_value_h)
-    disadvantages_spin.setFixedSize(counter_value_w, counter_value_h)
-    manual_bonus_spin.setFixedSize(manual_value_w, counter_value_h)
-    for object_name, spinbox in (
-        ("rollAdvantages", advantages_spin),
-        ("rollDisadvantages", disadvantages_spin),
-        ("rollManualBonus", manual_bonus_spin),
-    ):
-        spinbox.setObjectName(object_name)
-
-    adv_minus = create_step_button(dialog, "-")
-    adv_plus = create_step_button(dialog, "+")
-    dis_minus = create_step_button(dialog, "-")
-    dis_plus = create_step_button(dialog, "+")
-    manual_minus = create_step_button(dialog, "-")
-    manual_plus = create_step_button(dialog, "+")
-
-    advantages_label = QLabel("Vorteile:")
-    advantages_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
-    disadvantages_label = QLabel("Nachteile:")
-    disadvantages_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
-    manual_label = QLabel("Manueller Bonus/Malus:")
-    manual_label.setStyleSheet(f"color: {normal_text_color}; font-size: {normal_text_font_size}px;")
-    spinbox_style = _spinbox_style(preview_cfg, counter_cfg, normal_text_font_size, resolve_roll_asset_path)
-    advantages_spin.setStyleSheet(spinbox_style)
-    disadvantages_spin.setStyleSheet(spinbox_style)
-    manual_bonus_spin.setStyleSheet(spinbox_style)
-    for spinbox in (advantages_spin, disadvantages_spin, manual_bonus_spin):
-        _style_spinbox_line_edit(spinbox, preview_cfg, counter_cfg, normal_text_font_size)
     controls.setContentsMargins(0, 0, 0, 0)
     controls.setSpacing(6)
-    for label, minus_button, spinbox, plus_button in (
-        (advantages_label, adv_minus, advantages_spin, adv_plus),
-        (disadvantages_label, dis_minus, disadvantages_spin, dis_plus),
-        (manual_label, manual_minus, manual_bonus_spin, manual_plus),
+    counter_rows = []
+    for label_text, minimum, maximum, object_name, initial, width in (
+        ("Vorteile:", 0, 99, "rollAdvantages", fixed_advantages, None),
+        ("Nachteile:", 0, 99, "rollDisadvantages", fixed_disadvantages, None),
+        ("Manueller Bonus/Malus:", -999, 999, "rollManualBonus", 0, safe_int(counter_cfg.get("manual_value_w", 64), 64)),
     ):
-        row = QHBoxLayout()
-        row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(6)
-        label.setFixedWidth(safe_int(counter_cfg.get("label_w", 150), 150))
-        row.addWidget(label)
-        row.addWidget(minus_button)
-        row.addWidget(spinbox)
-        row.addWidget(plus_button)
-        row.addStretch()
+        row, spinbox, minus_button, plus_button = create_roll_counter(dialog, label_text, minimum, maximum, counter_cfg, preview_cfg, labels_cfg, resolve_roll_asset_path, object_name, width, False)
+        spinbox.setValue(initial)
         controls.addLayout(row)
+        counter_rows.append((spinbox, minus_button, plus_button))
+    (advantages_spin, adv_minus, adv_plus), (disadvantages_spin, dis_minus, dis_plus), (manual_bonus_spin, manual_minus, manual_plus) = counter_rows
     right_layout.insertLayout(0, controls)
 
     keep_layout = QHBoxLayout()
@@ -1005,22 +943,7 @@ def _info_label_style(text_color, font_size, background, border_color):
 
 
 def _framed_box_style(background, border_color, text_color, font_size, frame_cfg, resolve_asset_path, padding=8, bold=False):
-    weight = "700" if bold else "500"
-    style = (
-        f"font-size: {font_size}px; font-weight: {weight}; "
-        f"color: {text_color}; background: {background}; "
-        f"border: 1px solid {border_color}; padding: {max(0, int(padding))}px;"
-    )
-    if bool(frame_cfg.get("enabled", False)):
-        border_width = _safe_int(frame_cfg.get("border_width", 10), 10)
-        image_style = _border_image_style(frame_cfg, resolve_asset_path)
-        if image_style:
-            style = (
-                f"font-size: {font_size}px; font-weight: {weight}; color: {text_color}; "
-                f"background: {background}; border: {border_width}px solid transparent; "
-                f"padding: {max(0, int(padding))}px; {image_style}"
-            )
-    return style
+    return shared_framed_box_style(background, border_color, text_color, font_size, frame_cfg, resolve_asset_path, padding, bold)
 
 
 def _small_button_style(background, text_color, border_color):
@@ -1131,6 +1054,8 @@ def _marker_checkbox_style(indicator_cfg, resolve_asset_path, text_color, font_s
 
 
 def _make_dialog_button(text, parent, buttons_cfg, resolve_asset_path, safe_int, button_key="copy"):
+    if bool(buttons_cfg.get("use_assets", False)) and str(buttons_cfg.get("visual_mode", "")).strip().lower() == "menu_asset":
+        return create_roll_menu_button(text, parent, buttons_cfg, resolve_asset_path, button_key)
     background = str(buttons_cfg.get("background", "rgba(52, 56, 60, 190)"))
     text_color = str(buttons_cfg.get("text_color", "#f2d28b"))
     hover_text_color = str(buttons_cfg.get("hover_text_color", "#ffffff"))

@@ -8,6 +8,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QAbstractSpinBox, QPushButton, QSpinBox
 
 from ui_dialogs.companion_roll_dialog import CompanionRollDialog
+from ui_dialogs.roll_dialog_ui import RollAssetButton
 
 
 APP = QApplication.instance() or QApplication([])
@@ -44,8 +45,12 @@ class CompanionRollDialogTests(unittest.TestCase):
         self.assertFalse(dialog._background.pixmap().isNull())
         self.assertTrue(dialog.windowFlags() & Qt.FramelessWindowHint)
         self.assertIsNotNone(dialog._frameless_drag_filter)
-        self.assertIn("menu_button_medium.png", dialog.delete_button.styleSheet())
-        self.assertIn("x.jpg", dialog.window_close_button.styleSheet())
+        self.assertIsInstance(dialog.delete_button, RollAssetButton)
+        self.assertFalse(dialog.window_close_button.icon().isNull())
+        self.assertEqual((dialog.width(), dialog.height()), (922, 622))
+        self.assertGreater(dialog.width() / dialog.height(), 1.4)
+        self.assertLess(dialog.table.x(), dialog.editor_panel.x())
+        self.assertGreater(dialog.preview.y(), dialog.table.y())
         self.assertNotIn("QDialog {", dialog.styleSheet())
         button_texts = {button.text() for button in dialog.findChildren(QPushButton)}
         self.assertNotIn("Speichern", button_texts)
@@ -84,7 +89,7 @@ class CompanionRollDialogTests(unittest.TestCase):
         dialog = CompanionRollDialog(None, name, [], [])
         self.assertEqual(dialog.title_label.text(), name)
         self.assertLess(dialog.title_label.font().pixelSize(), 22)
-        self.assertGreaterEqual(dialog.title_label.font().pixelSize(), 6)
+        self.assertGreaterEqual(dialog.title_label.font().pixelSize(), 5)
         self.assertLessEqual(dialog.title_label.fontMetrics().horizontalAdvance(name), dialog.title_label.width() - 8)
 
 

@@ -1,13 +1,13 @@
 import json
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFontMetrics, QPixmap
-from PySide6.QtWidgets import QAbstractItemView, QAbstractSpinBox, QComboBox, QDialog, QLabel, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem
+from PySide6.QtGui import QFontMetrics
+from PySide6.QtWidgets import QAbstractItemView, QComboBox, QDialog, QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 from app_paths import resource_path
-from ui_controls import create_step_button
 from ui_roll_math import advantage_dice_expression
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
+from ui_dialogs.roll_dialog_ui import add_roll_main_frame, create_roll_close_button, create_roll_counter, create_roll_menu_button, framed_box_style
 
 
 def _int(value, default=0):
@@ -27,22 +27,26 @@ class CompanionRollDialog(QDialog):
         super().__init__(parent)
         self._on_change = on_change
         self._loading = False
-        self._cfg = self._load_layout(parent)
-        self._colors = self._cfg.get("colors", {})
-        dialog_cfg = self._cfg.get("dialog", {})
+        self._roll_cfg, self._cfg = self._load_layout(parent)
+        dialog_cfg = self._roll_cfg.get("dialog", {})
+        self._resolve_asset = lambda relative: self._asset_path(parent, relative)
         self.setWindowTitle(f"Companion-Würfe: {companion_name}")
         self.setModal(True)
         install_frameless_dialog_chrome(self)
-        self.setFixedSize(_int(dialog_cfg.get("w", 720), 720), _int(dialog_cfg.get("h", 720), 720))
+        self.setFixedSize(_int(dialog_cfg.get("w", 922), 922), _int(dialog_cfg.get("h", 622), 622))
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setStyleSheet(f"background: {dialog_cfg.get('background', 'transparent')};")
-        self._background = self._add_frame(self, {"x": 0, "y": 0, "w": self.width(), "h": self.height()}, dialog_cfg.get("frame_asset", "panels/main_Frame.png"))
-        self._background.lower()
+        self.setStyleSheet("background: transparent;")
+        self._background = add_roll_main_frame(self, dialog_cfg, self._resolve_asset)
 
-        title_cfg = self._cfg.get("title", {})
-        self.title_label = self._label(str(companion_name or "Companion"), title_cfg, bold=True, fit=True)
+        title_cfg = {**self._roll_cfg.get("title", {}), **self._cfg.get("title", {})}
+        self.title_label = QLabel(str(companion_name or "Companion"), self)
+        self.title_label.setGeometry(*self._rect(title_cfg))
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self._fit_title(title_cfg)
         self.title_label.installEventFilter(self._frameless_drag_filter)
-        self._build_close_button()
+        self.window_close_button = create_roll_close_button(self, self._roll_cfg.get("close_button", {}), self._resolve_asset)
+        self.window_close_button.setObjectName("companionRollWindowClose")
+        self.window_close_button.clicked.connect(self.reject)
         self._build_table()
         self._build_selector(roll_options)
         self._build_counters()
@@ -70,17 +74,22 @@ class CompanionRollDialog(QDialog):
         if base is not None:
             candidates.extend((base / "companion_roll_layout.json", base.parent / "companion_roll_layout.json"))
         candidates.append(resource_path("assets/themes/diablo/companion_roll_layout.json"))
+        companion_cfg = {}
         for path in candidates:
             try:
                 if path.exists():
-                    return json.loads(path.read_text(encoding="utf-8")).get("companion_roll_dialog", {})
+                    companion_cfg = json.loads(path.read_text(encoding="utf-8")).get("companion_roll_dialog", {})
+                    break
             except (OSError, ValueError, TypeError):
                 continue
-        return {}
+        roll_path = resource_path("assets/themes/diablo/roll_dialog_layout.json")
+        base = getattr(parent, "theme_asset_base_path", None)
+        if base is not None:
+            roll_path = next((path for path in (base / "roll_dialog_layout.json", base.parent / "roll_dialog_layout.json") if path.exists()), roll_path)
+        return json.loads(roll_path.read_text(encoding="utf-8")), companion_cfg
 
-    def _asset(self, relative):
+    def _asset_path(self, parent, relative):
         rel = str(relative or "").replace("\\", "/").lstrip("/")
-        parent = self.parent()
         base = getattr(parent, "theme_asset_base_path", None)
         candidates = []
         if base is not None:
@@ -92,55 +101,27 @@ class CompanionRollDialog(QDialog):
     def _rect(self, cfg):
         return tuple(_int(cfg.get(key, 0), 0) for key in ("x", "y", "w", "h"))
 
-    def _add_frame(self, parent, rect, asset):
-        frame = QLabel(parent)
-        frame.setGeometry(*self._rect(rect))
-        path = self._asset(asset)
-        pixmap = QPixmap(str(path)) if path else QPixmap()
-        if not pixmap.isNull():
-            frame.setPixmap(pixmap.scaled(frame.size(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-        frame.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        return frame
-
-    def _label(self, text, cfg, bold=False, fit=False):
-        label = QLabel(text, self)
-        label.setGeometry(*self._rect(cfg))
-        alignment = str(cfg.get("align", "left"))
-        label.setAlignment(Qt.AlignVCenter | (Qt.AlignCenter if alignment == "center" else Qt.AlignRight if alignment == "right" else Qt.AlignLeft))
+    def _fit_title(self, cfg):
+        label = self.title_label
         font_size = _int(cfg.get("font_size", 14), 14)
         font = label.font()
         font.setPixelSize(font_size)
-        font.setBold(bold)
-        if fit:
-            minimum = _int(cfg.get("min_font_size", font_size), font_size)
-            while font.pixelSize() > minimum and QFontMetrics(font).horizontalAdvance(label.text()) > max(1, label.width() - 8):
-                font.setPixelSize(font.pixelSize() - 1)
+        font.setBold(True)
+        minimum = _int(cfg.get("min_font_size", font_size), font_size)
+        while font.pixelSize() > minimum and QFontMetrics(font).horizontalAdvance(label.text()) > max(1, label.width() - 8):
+            font.setPixelSize(font.pixelSize() - 1)
         label.setFont(font)
-        label.setStyleSheet(f"background: transparent; color: {cfg.get('color', self._colors.get('accent', '#f2d28b'))};")
-        return label
-
-    def _build_close_button(self):
-        cfg = self._cfg.get("close_button", {})
-        self.window_close_button = None
-        if not cfg.get("enabled", True):
-            return
-        width = _int(cfg.get("w", 28), 28)
-        height = _int(cfg.get("h", 28), 28)
-        x = self.width() - _int(cfg.get("right", 24), 24) - width
-        y = _int(cfg.get("top", 22), 22)
-        button = QPushButton("", self)
-        button.setObjectName("companionRollWindowClose")
-        button.setGeometry(x, y, width, height)
-        path = self._asset(cfg.get("asset", "ui_elements/icons/x.jpg"))
-        button.setStyleSheet(f"QPushButton {{ border: none; background: transparent; border-image: url({path.as_posix() if path else ''}) 0 0 0 0 stretch stretch; }}")
-        button.clicked.connect(self.reject)
-        self.window_close_button = button
+        label.setStyleSheet(f"background: transparent; color: {cfg.get('color', '#f2d28b')};")
 
     def _build_table(self):
         cfg = self._cfg.get("table", {})
+        panel = QLabel(self)
+        panel.setGeometry(*self._rect(cfg))
+        panel.setStyleSheet(framed_box_style("rgba(0, 0, 0, 70)", "rgba(242, 210, 139, 75)", "#ffffff", 13, self._roll_cfg.get("boxes", {}).get("info_frame", {}), self._resolve_asset, 4))
         columns = cfg.get("columns", [])
         self.table = QTableWidget(0, len(columns), self)
-        self.table.setGeometry(*self._rect(cfg))
+        x, y, w, h = self._rect(cfg)
+        self.table.setGeometry(x + 8, y + 8, w - 16, h - 16)
         self.table.setHorizontalHeaderLabels([str(column.get("text", "")) for column in columns])
         for index, column in enumerate(columns):
             self.table.setColumnWidth(index, _int(column.get("w", 70), 70))
@@ -149,19 +130,28 @@ class CompanionRollDialog(QDialog):
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setStyleSheet(
-            f"QTableWidget {{ background: {self._colors.get('field')}; color: {self._colors.get('text')}; gridline-color: {self._colors.get('grid')}; font-size: {_int(cfg.get('font_size', 14), 14)}px; border: none; selection-background-color: {self._colors.get('selection')}; }}"
-            f"QHeaderView::section {{ background: transparent; color: {self._colors.get('accent')}; font-size: {_int(cfg.get('header_font_size', 14), 14)}px; border: 1px solid {self._colors.get('grid')}; padding: 4px; }}"
+            "QTableWidget { background: rgba(5, 4, 3, 180); color: #f2f2f2; gridline-color: rgba(242, 210, 139, 75); font-size: 13px; border: none; selection-background-color: rgba(242, 210, 139, 45); }"
+            "QHeaderView::section { background: transparent; color: #f2d28b; font-size: 13px; border: 1px solid rgba(242, 210, 139, 75); padding: 4px; }"
         )
         self.table.itemSelectionChanged.connect(self._load_selected_roll)
 
     def _build_selector(self, roll_options):
         cfg = self._cfg.get("selector", {})
-        self._label(str(cfg.get("label", "Roll / Fertigkeit")), cfg.get("label_rect", {}), bold=True)
-        rect = cfg.get("rect", {})
-        self._add_frame(self, rect, cfg.get("frame_asset"))
-        self.roll_combo = QComboBox(self)
-        self.roll_combo.setGeometry(*self._rect(rect))
-        self.roll_combo.setStyleSheet(f"QComboBox {{ background: transparent; color: {self._colors.get('text')}; border: none; padding: 5px 12px; font-size: {_int(cfg.get('font_size', 15), 15)}px; }} QComboBox QAbstractItemView {{ background: {self._colors.get('field')}; color: {self._colors.get('text')}; selection-background-color: {self._colors.get('selection')}; }}")
+        editor_cfg = self._cfg.get("editor", {})
+        self.editor_panel = QWidget(self)
+        self.editor_panel.setGeometry(*self._rect(editor_cfg))
+        self.editor_layout = QVBoxLayout(self.editor_panel)
+        self.editor_layout.setContentsMargins(0, 0, 0, 0)
+        self.editor_layout.setSpacing(_int(editor_cfg.get("spacing", 12), 12))
+        label = QLabel(str(cfg.get("label", "Roll / Fertigkeit")), self.editor_panel)
+        label.setStyleSheet("color: #f2d28b; font-size: 13px; font-weight: 700;")
+        self.editor_layout.addWidget(label)
+        self.roll_combo = QComboBox(self.editor_panel)
+        frame_cfg = self._roll_cfg.get("boxes", {}).get("info_frame", {})
+        style = framed_box_style("rgba(0, 0, 0, 70)", "#8a6a32", "#f2f2f2", 13, frame_cfg, self._resolve_asset, 5)
+        self.roll_combo.setStyleSheet(f"QComboBox {{{style}}}")
+        self.roll_combo.setFixedHeight(40)
+        self.editor_layout.addWidget(self.roll_combo)
         for option in roll_options if isinstance(roll_options, list) else []:
             if isinstance(option, dict):
                 roll_id = str(option.get("roll_id", "") or "").strip()
@@ -170,28 +160,14 @@ class CompanionRollDialog(QDialog):
                     self.roll_combo.addItem(roll_name or roll_id, {"roll_id": roll_id, "roll_name": roll_name})
 
     def _build_counters(self):
-        common = self._cfg.get("counter", {})
+        common = self._roll_cfg.get("counter", {})
         self._spins = {}
         for counter in self._cfg.get("counters", []):
             key = str(counter.get("id", ""))
-            y = _int(counter.get("y", 0), 0)
-            self._label(str(counter.get("label", key)), {"x": common.get("label_x"), "y": y, "w": common.get("label_w"), "h": common.get("h"), "font_size": common.get("font_size"), "color": self._colors.get("accent")}, bold=True)
-            minus = create_step_button(self, "-", f"{counter.get('label', key)} verringern")
-            minus.move(_int(common.get("minus_x", 340), 340), y + 2)
-            value_rect = {"x": common.get("value_x"), "y": y, "w": common.get("value_w"), "h": common.get("h")}
-            self._add_frame(self, value_rect, common.get("frame_asset"))
-            spin = QSpinBox(self)
-            spin.setObjectName(f"companionRoll{key.title()}")
-            spin.setGeometry(*self._rect(value_rect))
-            spin.setRange(_int(counter.get("min", 0), 0), _int(counter.get("max", 99), 99))
-            spin.setButtonSymbols(QAbstractSpinBox.NoButtons)
-            spin.setAlignment(Qt.AlignCenter)
-            spin.setStyleSheet(f"background: transparent; color: {self._colors.get('text')}; border: none; font-size: {_int(common.get('font_size', 15), 15)}px;")
-            plus = create_step_button(self, "+", f"{counter.get('label', key)} erhöhen")
-            plus.move(_int(common.get("plus_x", 482), 482), y + 2)
-            minus.clicked.connect(lambda checked=False, editor=spin: editor.setValue(editor.value() - 1))
-            plus.clicked.connect(lambda checked=False, editor=spin: editor.setValue(editor.value() + 1))
+            row, spin, _minus, _plus = create_roll_counter(self.editor_panel, str(counter.get("label", key)), _int(counter.get("min", 0)), _int(counter.get("max", 99)), common, self._roll_cfg.get("roll_preview", {}), self._roll_cfg.get("labels", {}), self._resolve_asset, f"companionRoll{key.title()}")
+            self.editor_layout.addLayout(row)
             self._spins[key] = spin
+        self.editor_layout.addStretch()
         self.value_spin = self._spins["value"]
         self.modifier_spin = self._spins["modifier"]
         self.advantages_spin = self._spins["advantages"]
@@ -199,21 +175,19 @@ class CompanionRollDialog(QDialog):
 
     def _build_preview(self):
         cfg = self._cfg.get("preview", {})
-        self._add_frame(self, cfg, cfg.get("frame_asset"))
-        self.preview = self._label("Wurf: 1d20", cfg, bold=True)
+        preview_cfg = self._roll_cfg.get("roll_preview", {})
+        frame_cfg = self._roll_cfg.get("boxes", {}).get("preview_frame", {})
+        self.preview = QLineEdit("Wurf: 1d20", self)
+        self.preview.setReadOnly(True)
+        self.preview.setGeometry(*self._rect(cfg))
+        self.preview.setAlignment(Qt.AlignCenter)
+        self.preview.setStyleSheet(framed_box_style(preview_cfg.get("background", "#101214"), preview_cfg.get("border_color", "#8a6a32"), preview_cfg.get("text_color", "#f2d28b"), _int(preview_cfg.get("font_size", 22), 22), frame_cfg, self._resolve_asset, frame_cfg.get("padding", 4), True))
         self.preview.setObjectName("companionRollPreview")
 
-    def _themed_button(self, cfg):
-        common = self._cfg.get("buttons", {})
-        button = QPushButton(str(cfg.get("text", "")), self)
-        button.setGeometry(_int(cfg.get("x")), _int(cfg.get("y")), _int(cfg.get("w")), _int(common.get("h", 38), 38))
-        path = self._asset(common.get("asset"))
-        button.setStyleSheet(f"QPushButton {{ color: {self._colors.get('accent')}; font-size: {_int(common.get('font_size', 15), 15)}px; font-weight: 700; border: none; background: transparent; border-image: url({path.as_posix() if path else ''}) 0 0 0 0 stretch stretch; }} QPushButton:hover {{ color: #ffffff; }}")
-        return button
-
     def _build_actions(self):
-        cfg = self._cfg.get("buttons", {})
-        self.delete_button = self._themed_button(cfg.get("delete", {}))
+        cfg = self._cfg.get("delete_button", {})
+        self.delete_button = create_roll_menu_button(str(cfg.get("text", "Löschen")), self, self._roll_cfg.get("buttons", {}), self._resolve_asset, str(cfg.get("button_key", "close")))
+        self.delete_button.move(_int(cfg.get("x", 783)), _int(cfg.get("y", 527)))
         self.delete_button.setObjectName("companionRollDelete")
 
     def rolls(self):
