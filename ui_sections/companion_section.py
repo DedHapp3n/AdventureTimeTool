@@ -267,15 +267,23 @@ def _delete_companion(window, companion_id, name):
 
 
 def _edit_rolls(window, data, save_callback):
+    companion_id = str(data.get("id", "") or "")
+    current = window.loader.get_companion(companion_id) or data
+
     def rolls_changed(rolls):
         data["rolls"] = rolls
-        save_callback()
+        current["rolls"] = rolls
+        if companion_id:
+            window.loader.update_companion(companion_id, current)
+            window.loader.save_active_character_json()
+        else:
+            save_callback()
 
     dialog = CompanionRollDialog(
         window,
-        data.get("name", "Companion"),
+        current.get("name", "Companion"),
         window.get_inventory_roll_options(),
-        data.get("rolls", []),
+        current.get("rolls", []),
         on_change=rolls_changed,
     )
     dialog.exec()

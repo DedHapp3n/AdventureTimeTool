@@ -1448,6 +1448,10 @@ class DataLoader:
             result.append(companion)
         return deepcopy(result)
 
+    def get_companion(self, companion_id: str) -> dict[str, Any] | None:
+        target_id = str(companion_id or "").strip()
+        return next((item for item in self.get_companions() if str(item.get("id", "")) == target_id), None)
+
     def set_companions(self, companions) -> list[dict[str, Any]]:
         raw_items = companions if isinstance(companions, list) else []
         normalized = []

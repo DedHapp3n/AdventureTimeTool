@@ -27,6 +27,8 @@ class CompanionModelTests(unittest.TestCase):
         )
         self.assertEqual(created["id"], "companion_001")
         self.assertEqual(created["rolls"][0]["value"], 3)
+        self.assertEqual(self.loader.get_companion(created["id"])["name"], "Gertrude")
+        self.assertIsNone(self.loader.get_companion("missing"))
         self.assertEqual(len(created["rolls"]), 1)
         self.assertEqual(len(created["custom_fields"]), 4)
         self.assertEqual(created["custom_fields"][0]["value"], "0")

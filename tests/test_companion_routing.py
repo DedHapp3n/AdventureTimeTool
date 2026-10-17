@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -24,7 +25,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtTest import QTest
 
 from data_loader import DataLoader
-from ui_sections.companion_section import render_companion_screen
+from ui_sections.companion_section import _edit_rolls, render_companion_screen
 from ui_sections.inventory_section import _render_inventory_view_selector, render_inventory_screen
 
 
@@ -87,6 +88,29 @@ class CompanionRoutingTests(unittest.TestCase):
         inventory_window = SimpleNamespace(**base, current_inventory_view="inventory")
         render_inventory_screen(inventory_window)
         self.assertEqual(calls, ["inventory_data", "money", "tabs", "table"])
+
+    def test_roll_dialog_resolves_current_companion_name_by_id(self):
+        loader = DataLoader.__new__(DataLoader)
+        loader.app_meta = {}
+        companion = loader.add_companion({"name": "Alter Name", "rolls": []})
+        renamed = dict(companion)
+        renamed["name"] = "Aktueller Name"
+        loader.update_companion(companion["id"], renamed)
+        loader.save_active_character_json = lambda: True
+        captured = {}
+
+        class DialogProbe:
+            def __init__(self, _parent, name, _options, rolls, on_change=None):
+                captured.update(name=name, rolls=rolls, on_change=on_change)
+
+            def exec(self):
+                return 0
+
+        window = SimpleNamespace(loader=loader, get_inventory_roll_options=lambda: [])
+        with patch("ui_sections.companion_section.CompanionRollDialog", DialogProbe):
+            _edit_rolls(window, companion, lambda: self.fail("stale save callback used"))
+
+        self.assertEqual(captured["name"], "Aktueller Name")
 
     def test_real_renderer_uses_character_panel_size_and_builds_scrollable_grid(self):
         layout = json.loads(

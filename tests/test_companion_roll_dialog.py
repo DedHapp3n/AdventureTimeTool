@@ -3,6 +3,8 @@ import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QAbstractSpinBox, QPushButton, QSpinBox
 
 from ui_dialogs.companion_roll_dialog import CompanionRollDialog
@@ -40,13 +42,16 @@ class CompanionRollDialogTests(unittest.TestCase):
         self.assertEqual(len(step_buttons), 8)
         self.assertEqual(dialog.preview.text(), "Wurf: 2d20kh1+5-2")
         self.assertFalse(dialog._background.pixmap().isNull())
+        self.assertTrue(dialog.windowFlags() & Qt.FramelessWindowHint)
+        self.assertIsNotNone(dialog._frameless_drag_filter)
         self.assertIn("menu_button_medium.png", dialog.delete_button.styleSheet())
+        self.assertIn("x.jpg", dialog.window_close_button.styleSheet())
         self.assertNotIn("QDialog {", dialog.styleSheet())
         button_texts = {button.text() for button in dialog.findChildren(QPushButton)}
         self.assertNotIn("Speichern", button_texts)
         self.assertNotIn("Abbrechen", button_texts)
         self.assertNotIn("Übernehmen", button_texts)
-        self.assertIn("Schließen", button_texts)
+        self.assertNotIn("Schließen", button_texts)
 
         dialog.value_spin.setValue(6)
         self.assertEqual(changes[-1][0]["value"], 6)
@@ -69,6 +74,18 @@ class CompanionRollDialogTests(unittest.TestCase):
 
         dialog.findChild(QPushButton, "companionRollDelete").click()
         self.assertEqual(len(changes[-1]), 1)
+
+        QTest.mouseClick(dialog.window_close_button, Qt.LeftButton)
+        APP.processEvents()
+        self.assertFalse(dialog.isVisible())
+
+    def test_long_current_name_is_complete_and_shrinks_to_fit(self):
+        name = "Sir Konstantin von der außerordentlich langen Companion-Gesellschaft zu Abenteuerstadt"
+        dialog = CompanionRollDialog(None, name, [], [])
+        self.assertEqual(dialog.title_label.text(), name)
+        self.assertLess(dialog.title_label.font().pixelSize(), 22)
+        self.assertGreaterEqual(dialog.title_label.font().pixelSize(), 6)
+        self.assertLessEqual(dialog.title_label.fontMetrics().horizontalAdvance(name), dialog.title_label.width() - 8)
 
 
 if __name__ == "__main__":

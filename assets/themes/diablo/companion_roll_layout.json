@@ -2,7 +2,8 @@
   "companion_roll_dialog": {
     "dialog": { "w": 720, "h": 720, "background": "transparent", "frame_asset": "panels/main_Frame.png" },
     "colors": { "text": "#ffffff", "accent": "#f2d28b", "muted": "#c8c0aa", "field": "rgba(5, 4, 3, 220)", "selection": "rgba(242, 210, 139, 45)", "grid": "rgba(242, 210, 139, 90)" },
-    "title": { "x": 90, "y": 42, "w": 540, "h": 36, "font_size": 22, "color": "#f2d28b", "align": "center" },
+    "title": { "x": 70, "y": 36, "w": 580, "h": 48, "font_size": 22, "min_font_size": 6, "color": "#f2d28b", "align": "center" },
+    "close_button": { "enabled": true, "asset": "ui_elements/icons/x.jpg", "right": 24, "top": 22, "w": 28, "h": 28 },
     "table": {
       "x": 70, "y": 92, "w": 580, "h": 210,
       "columns": [
@@ -29,8 +30,7 @@
     "preview": { "x": 86, "y": 594, "w": 548, "h": 46, "font_size": 18, "color": "#ffffff", "align": "center", "frame_asset": "frames/1024x122_box.png" },
     "buttons": {
       "asset": "buttons/menu_button_medium.png", "font_size": 15, "h": 38,
-      "delete": { "text": "Löschen", "x": 86, "y": 654, "w": 180 },
-      "close": { "text": "Schließen", "x": 454, "y": 654, "w": 180 }
+      "delete": { "text": "Löschen", "x": 270, "y": 654, "w": 180 }
     }
   }
 }
