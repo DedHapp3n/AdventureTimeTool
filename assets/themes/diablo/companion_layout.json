@@ -6,7 +6,7 @@
     "card": {
       "button_asset": "buttons/menu_button_small.png",
       "content": {
-        "portrait": { "fit_mode": "contain", "inset": { "left": 5, "top": 5, "right": 5, "bottom": 5 } },
+        "portrait": { "fit_mode": "contain", "inset": { "left": 5, "top": 15, "right": 5, "bottom": 5 } },
         "custom_slots": [
           { "field_index": 0, "label": { "x": 68, "y": 315, "w": 112, "h": 30, "font_size": 18, "color": "#f0e6c8" }, "value": { "x": 190, "y": 315, "w": 140, "h": 30, "font_size": 18, "color": "#ffffff", "bold": true } },
           { "field_index": 1, "label": { "x": 33, "y": 370, "w": 86, "h": 24, "font_size": 16, "color": "#f0e6c8" }, "value": { "x": 126, "y": 370, "w": 36, "h": 24, "font_size": 15, "color": "#ffffff", "bold": true, "align": "center" } },
