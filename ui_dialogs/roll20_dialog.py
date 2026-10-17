@@ -686,6 +686,8 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         skill_bonus = safe_int(actor.get("skill_value", 0), 0) if is_companion else (skill_value if skill_value_allowed else 0)
         manual_bonus = manual_bonus_spin.value()
         extra_bonuses = []
+        if is_companion:
+            extra_bonuses.append(safe_int(actor.get("roll_modifier", 0), 0))
         if not is_companion and paradigm_checkbox is not None and paradigm_checkbox.isChecked():
             paradigm_bonus = safe_int(paradigm_cfg.get("bonus", 10), 10)
             extra_bonuses.append(paradigm_bonus)

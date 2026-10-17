@@ -267,7 +267,15 @@ def _delete_companion(window, companion_id, name):
 
 
 def _edit_rolls(window, data, save_callback):
-    dialog = CompanionRollDialog(window, data.get("name", "Companion"), window.get_inventory_roll_options(), data.get("rolls", []))
-    if dialog.exec() == QDialog.Accepted:
-        data["rolls"] = dialog.rolls()
+    def rolls_changed(rolls):
+        data["rolls"] = rolls
         save_callback()
+
+    dialog = CompanionRollDialog(
+        window,
+        data.get("name", "Companion"),
+        window.get_inventory_roll_options(),
+        data.get("rolls", []),
+        on_change=rolls_changed,
+    )
+    dialog.exec()

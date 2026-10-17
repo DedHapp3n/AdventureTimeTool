@@ -1261,8 +1261,12 @@ class DataLoader:
                 value = int(roll.get("value", 0))
             except Exception:
                 value = 0
+            try:
+                modifier = int(roll.get("modifier", 0))
+            except Exception:
+                modifier = 0
             seen_ids.add(identity)
-            result.append({"roll_id": roll_id, "roll_name": roll_name, "value": value})
+            result.append({"roll_id": roll_id, "roll_name": roll_name, "value": value, "modifier": modifier})
         return result
 
     def _normalize_companion(self, companion, fallback_id="") -> dict[str, Any]:
@@ -1508,6 +1512,9 @@ class DataLoader:
         return [item for item in self.get_companions() if bool(item.get("can_roll", False))]
 
     def get_companion_roll_value(self, companion_id: str, roll_id: str, roll_name="") -> int:
+        return self.get_companion_roll_config(companion_id, roll_id, roll_name)["value"]
+
+    def get_companion_roll_config(self, companion_id: str, roll_id: str, roll_name="") -> dict[str, int]:
         target_id = str(companion_id or "").strip()
         target_roll_id = str(roll_id or "").strip()
         target_roll_name = str(roll_name or "").strip()
@@ -1518,10 +1525,10 @@ class DataLoader:
                 stored_id = str(roll.get("roll_id", "") or "").strip()
                 stored_name = str(roll.get("roll_name", "") or "").strip()
                 if target_roll_id and stored_id == target_roll_id:
-                    return int(roll.get("value", 0))
+                    return {"value": int(roll.get("value", 0)), "modifier": int(roll.get("modifier", 0))}
                 if not stored_id and target_roll_name and stored_name == target_roll_name:
-                    return int(roll.get("value", 0))
-        return 0
+                    return {"value": int(roll.get("value", 0)), "modifier": int(roll.get("modifier", 0))}
+        return {"value": 0, "modifier": 0}
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = str(data_path("current_character.json"))

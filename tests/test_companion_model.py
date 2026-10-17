@@ -49,7 +49,7 @@ class CompanionModelTests(unittest.TestCase):
             {
                 "name": "Scout",
                 "can_roll": True,
-                "rolls": [{"roll_id": "allgemein/klettern", "roll_name": "Klettern", "value": 5}],
+                "rolls": [{"roll_id": "allgemein/klettern", "roll_name": "Klettern", "value": 5, "modifier": -2}],
             }
         )
         payload = json.loads(json.dumps(self.loader.app_meta))
@@ -59,6 +59,7 @@ class CompanionModelTests(unittest.TestCase):
         other = DataLoader.__new__(DataLoader)
         other.app_meta = payload
         self.assertEqual(other.get_companion_roll_value(companion["id"], "allgemein/klettern"), 5)
+        self.assertEqual(other.get_companion_roll_config(companion["id"], "allgemein/klettern"), {"value": 5, "modifier": -2})
         self.assertEqual(other.get_companions()[0]["custom_fields"][3], {"label": "Hunger", "value": "3"})
 
         other.app_meta = {}
@@ -88,6 +89,13 @@ class CompanionModelTests(unittest.TestCase):
         enabled = self.loader.add_companion({"name": "Späher", "can_roll": True})
         self.assertEqual([item["id"] for item in self.loader.get_roll_capable_companions()], [enabled["id"]])
         self.assertNotEqual(disabled["id"], enabled["id"])
+
+    def test_legacy_roll_defaults_modifier_and_duplicate_ids_are_removed(self):
+        normalized = self.loader._normalize_companion_rolls([
+            {"roll_id": "skill/a", "roll_name": "A", "value": 3},
+            {"roll_id": "skill/a", "roll_name": "A duplicate", "value": 9, "modifier": 4},
+        ])
+        self.assertEqual(normalized, [{"roll_id": "skill/a", "roll_name": "A", "value": 3, "modifier": 0}])
 
     def test_managed_portrait_normalize_duplicate_and_delete_lifecycle(self):
         with tempfile.TemporaryDirectory() as directory:

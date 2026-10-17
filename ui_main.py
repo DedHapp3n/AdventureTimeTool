@@ -3943,12 +3943,14 @@ class MainWindow(QMainWindow):
                 companion_id = str(companion.get("id", "") or "").strip()
                 if not companion_id:
                     continue
+                companion_roll = self.loader.get_companion_roll_config(companion_id, source_key, display_name)
                 roll_actors.append(
                     {
                         "id": companion_id,
                         "name": str(companion.get("name", "") or "Companion").strip() or "Companion",
                         "type": "companion",
-                        "skill_value": self.loader.get_companion_roll_value(companion_id, source_key, display_name),
+                        "skill_value": companion_roll["value"],
+                        "roll_modifier": companion_roll["modifier"],
                     }
                 )
         except Exception as exc:

@@ -192,7 +192,7 @@ class RollDialogRuntimeTests(unittest.TestCase):
                 "fixed_advantages": 2,
                 "inventory_modifiers": [{"label": "Seil +4", "modifier": 4}],
                 "roll_actors": [
-                    {"id": "companion_001", "name": "Gertrude", "type": "companion", "skill_value": 3}
+                    {"id": "companion_001", "name": "Gertrude", "type": "companion", "skill_value": 5, "roll_modifier": -2}
                 ],
             }
         )
@@ -201,10 +201,10 @@ class RollDialogRuntimeTests(unittest.TestCase):
         self.assertIsNotNone(actor)
         self.assertEqual(command.text(), "/r 3d20kh1+7+9")
         actor.setCurrentIndex(1)
-        self.assertEqual(command.text(), "/r 1d20+3")
+        self.assertEqual(command.text(), "/r 1d20+5-2")
         manual = dialog.findChild(QSpinBox, "rollManualBonus")
         manual.setValue(2)
-        self.assertEqual(command.text(), "/r 1d20+3+2")
+        self.assertEqual(command.text(), "/r 1d20+5-2+2")
 
     def test_actor_selector_is_absent_without_roll_capable_companions(self):
         dialog = self._open_dialog({"display_name": "Klettern", "skill_value": 7, "roll_actors": []})
