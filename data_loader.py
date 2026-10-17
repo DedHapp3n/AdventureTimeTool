@@ -1265,8 +1265,23 @@ class DataLoader:
                 modifier = int(roll.get("modifier", 0))
             except Exception:
                 modifier = 0
+            try:
+                advantages = max(0, int(roll.get("advantages", 0)))
+            except Exception:
+                advantages = 0
+            try:
+                disadvantages = max(0, int(roll.get("disadvantages", 0)))
+            except Exception:
+                disadvantages = 0
             seen_ids.add(identity)
-            result.append({"roll_id": roll_id, "roll_name": roll_name, "value": value, "modifier": modifier})
+            result.append({
+                "roll_id": roll_id,
+                "roll_name": roll_name,
+                "value": value,
+                "modifier": modifier,
+                "advantages": advantages,
+                "disadvantages": disadvantages,
+            })
         return result
 
     def _normalize_companion(self, companion, fallback_id="") -> dict[str, Any]:
@@ -1525,10 +1540,19 @@ class DataLoader:
                 stored_id = str(roll.get("roll_id", "") or "").strip()
                 stored_name = str(roll.get("roll_name", "") or "").strip()
                 if target_roll_id and stored_id == target_roll_id:
-                    return {"value": int(roll.get("value", 0)), "modifier": int(roll.get("modifier", 0))}
+                    return self._companion_roll_numbers(roll)
                 if not stored_id and target_roll_name and stored_name == target_roll_name:
-                    return {"value": int(roll.get("value", 0)), "modifier": int(roll.get("modifier", 0))}
-        return {"value": 0, "modifier": 0}
+                    return self._companion_roll_numbers(roll)
+        return {"value": 0, "modifier": 0, "advantages": 0, "disadvantages": 0}
+
+    @staticmethod
+    def _companion_roll_numbers(roll) -> dict[str, int]:
+        return {
+            "value": int(roll.get("value", 0)),
+            "modifier": int(roll.get("modifier", 0)),
+            "advantages": max(0, int(roll.get("advantages", 0))),
+            "disadvantages": max(0, int(roll.get("disadvantages", 0))),
+        }
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = str(data_path("current_character.json"))

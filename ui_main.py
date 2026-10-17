@@ -43,6 +43,7 @@ from ui_sections import skills_section
 from ui_sections import character_section
 from ui_sections import start_section
 from ui_sections.editable_panel_text import create_editable_panel_text
+from ui_roll_math import dice_expression
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -3205,14 +3206,7 @@ class MainWindow(QMainWindow):
             dice_count = 1
         if dice_count <= 1:
             dice_count = 1
-        dice_part = "1d20"
-        if dice_count > 1:
-            if keep_mode == "kh1":
-                dice_part = f"{dice_count}d20kh1"
-            elif keep_mode == "kl1":
-                dice_part = f"{dice_count}d20kl1"
-            else:
-                dice_part = f"{dice_count}d20"
+        dice_part = dice_expression(dice_count, keep_mode)
 
         bonus_parts = []
         values_to_add = [skill_bonus]
@@ -3951,6 +3945,8 @@ class MainWindow(QMainWindow):
                         "type": "companion",
                         "skill_value": companion_roll["value"],
                         "roll_modifier": companion_roll["modifier"],
+                        "advantages": companion_roll["advantages"],
+                        "disadvantages": companion_roll["disadvantages"],
                     }
                 )
         except Exception as exc:

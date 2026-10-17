@@ -752,8 +752,12 @@ def open_roll20_dialog(parent, model, callbacks=None, style_context=None):
         header_text_for_actor = f"Fertigkeit: {display_name} - {actor_name}" if is_companion else header_text
         header.setText(_elided_text(header, header_text_for_actor, title_rect[2]))
         preview_title.setText(f"{preview_label_text} ({actor_name})" if is_companion else preview_label_text)
-        advantages_spin.setValue(0 if is_companion else fixed_advantages)
-        disadvantages_spin.setValue(0 if is_companion else fixed_disadvantages)
+        advantages_spin.setValue(safe_int(actor.get("advantages", 0), 0) if is_companion else fixed_advantages)
+        disadvantages_spin.setValue(safe_int(actor.get("disadvantages", 0), 0) if is_companion else fixed_disadvantages)
+        if is_companion and disadvantages_spin.value() > advantages_spin.value():
+            keep_low.setChecked(True)
+        else:
+            keep_high.setChecked(True)
         for checkbox in specialization_checkboxes + inventory_modifier_checkboxes + perk_suggestion_checkboxes + wellbeing_suggestion_checkboxes:
             checkbox.setEnabled(not is_companion)
         if paradigm_checkbox is not None:
