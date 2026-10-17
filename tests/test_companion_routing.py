@@ -1,6 +1,7 @@
 import ast
 import json
 import os
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -8,6 +9,7 @@ from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QImage
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -95,6 +97,10 @@ class CompanionRoutingTests(unittest.TestCase):
         )
         loader = DataLoader.__new__(DataLoader)
         loader.app_meta = {}
+        temp_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_directory.cleanup)
+        loader.active_cache_path = str(Path(temp_directory.name) / "Runtime.json")
+        loader.current_character_name = "Runtime"
         saves = []
         loader.save_active_character_json = lambda: saves.append(True) or True
 
@@ -149,6 +155,17 @@ class CompanionRoutingTests(unittest.TestCase):
         for expected_count in (1, 2, 3, 4):
             add_button().click()
             APP.processEvents()
+            if expected_count == 1:
+                first = loader.get_companions()[0]
+                first["custom_fields"][3] = {"label": "Hunger", "value": "3"}
+                first["can_roll"] = True
+                loader.update_companion(first["id"], first)
+                portrait_source = Path(temp_directory.name) / "source.png"
+                image = QImage(40, 80, QImage.Format_ARGB32)
+                image.fill(QColor("#cc3344"))
+                self.assertTrue(image.save(str(portrait_source), "PNG"))
+                self.assertTrue(loader.set_companion_portrait_file(first["id"], str(portrait_source)))
+                rerender("inventory")
             self.assertEqual(len(loader.get_companions()), expected_count)
             self.assertEqual(len(parent.findChildren(QFrame, "companionCard")), expected_count)
 
@@ -163,12 +180,23 @@ class CompanionRoutingTests(unittest.TestCase):
         self.assertIsNotNone(first_card.parentWidget().findChild(QLabel, "alphaPixmapShadow"))
         portrait = first_card.findChild(QLabel, "companionPortrait")
         portrait_cfg = ui_layout["character_screen"]["text_layout"]["character_info_panel"]["portrait"]
-        self.assertEqual((portrait.x(), portrait.y(), portrait.width(), portrait.height()), tuple(portrait_cfg[key] for key in ("x", "y", "w", "h")))
+        inset = layout["companion_screen"]["card"]["content"]["portrait"]["inset"]
+        self.assertEqual((portrait.x(), portrait.y(), portrait.width(), portrait.height()), (
+            portrait_cfg["x"] + inset["left"], portrait_cfg["y"] + inset["top"],
+            portrait_cfg["w"] - inset["left"] - inset["right"], portrait_cfg["h"] - inset["top"] - inset["bottom"],
+        ))
+        self.assertEqual(portrait.property("portrait_fit_mode"), "contain")
+        self.assertFalse(portrait.pixmap().isNull())
+        self.assertLessEqual(portrait.pixmap().width(), portrait.width())
+        self.assertLessEqual(portrait.pixmap().height(), portrait.height())
         self.assertEqual(first_card.findChildren(QLineEdit), [])
         self.assertEqual(first_card.findChildren(QSpinBox), [])
         self.assertEqual(first_card.findChildren(QCheckBox), [])
         editable_labels = [label for label in first_card.findChildren(QLabel) if label.property("panel_text_editable")]
-        self.assertEqual(len(editable_labels), 12)
+        self.assertEqual(len(editable_labels), 14)
+        custom_slot = next(slot for slot in layout["companion_screen"]["card"]["content"]["custom_slots"] if slot["field_index"] == 3)
+        custom_label = next(label for label in editable_labels if label.text() == "Hunger")
+        self.assertEqual((custom_label.x(), custom_label.y(), custom_label.width(), custom_label.height()), tuple(custom_slot["label"][key] for key in ("x", "y", "w", "h")))
         character_info = ui_layout["character_screen"]["text_layout"]["character_info_panel"]
         title_rect = character_info["title"]
         title_label = next(label for label in editable_labels if label.text().startswith("Neuer Companion"))
@@ -183,7 +211,9 @@ class CompanionRoutingTests(unittest.TestCase):
                 self.assertTrue(any((item.x(), item.y(), item.width(), item.height()) == tuple(expected[name] for name in ("x", "y", "w", "h")) for item in editable_labels))
         roll_marker = first_card.findChild(QPushButton, "companionCanRollMarker")
         self.assertIsNotNone(roll_marker)
-        self.assertIn("checkmark_false.png", roll_marker.styleSheet())
+        self.assertGreater(roll_marker.width(), 28)
+        self.assertGreater(roll_marker.height(), 28)
+        self.assertIn("checkmark_true.png", roll_marker.styleSheet())
         card_buttons = {button.text() for button in first_card.findChildren(QPushButton) if button.objectName() != "companionCanRollMarker"}
         self.assertEqual(card_buttons, {"Würfe", "Duplizieren", "Löschen"})
         self.assertEqual(len(saves), 4)
@@ -202,6 +232,11 @@ class CompanionRoutingTests(unittest.TestCase):
         self.assertEqual(set(positions.values()), {(0, 0), (0, 1), (0, 2), (1, 0)})
         self.assertGreater(scroll_area.verticalScrollBar().maximum(), 0)
 
+        QTest.mouseDClick(custom_label, Qt.LeftButton)
+        APP.processEvents()
+        self.assertEqual(loader.get_companions()[0]["custom_fields"][3]["label"], "Bearbeiteter Companion")
+        first_card = parent.findChildren(QFrame, "companionCard")[0]
+        title_label = next(label for label in first_card.findChildren(QLabel) if label.property("panel_text_editable") and label.text().startswith("Neuer Companion"))
         QTest.mouseDClick(title_label, Qt.LeftButton)
         APP.processEvents()
         self.assertEqual(loader.get_companions()[0]["name"], "Bearbeiteter Companion")
@@ -218,6 +253,9 @@ class CompanionRoutingTests(unittest.TestCase):
             current_inventory_view="inventory",
             _safe_int=lambda value, default: int(value if value is not None else default),
             on_inventory_view_clicked=lambda _view: None,
+            theme_asset_base_path=ROOT / "assets" / "themes" / "diablo" / "ui",
+            assets_dir=ROOT / "assets",
+            resolve_ui_asset_path=lambda asset: ROOT / "assets" / "themes" / "diablo" / "ui" / asset,
         )
         _render_inventory_view_selector(window, parent, screen_cfg)
         APP.processEvents()
@@ -228,6 +266,10 @@ class CompanionRoutingTests(unittest.TestCase):
         category_cfg = screen_cfg["category_tabs"]
         self.assertEqual(selector_cfg["orientation"], "vertical")
         self.assertEqual(selector_cfg["anchor"], "top_right")
+        self.assertTrue(selector_cfg["use_asset_buttons"])
+        self.assertIn("border-image:", inventory.styleSheet())
+        self.assertIn("menu_button_small.png", inventory.styleSheet())
+        self.assertNotIn("background-color:", inventory.styleSheet())
         self.assertEqual(inventory.x(), parent.width() - inventory.width() - selector_cfg["right_margin"])
         self.assertEqual(companions.x(), inventory.x())
         self.assertEqual(companions.y(), inventory.y() + inventory.height() + selector_cfg["gap"])

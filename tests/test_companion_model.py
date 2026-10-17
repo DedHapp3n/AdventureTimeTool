@@ -28,6 +28,12 @@ class CompanionModelTests(unittest.TestCase):
         self.assertEqual(created["id"], "companion_001")
         self.assertEqual(created["rolls"][0]["value"], 3)
         self.assertEqual(len(created["rolls"]), 1)
+        self.assertEqual(len(created["custom_fields"]), 4)
+        self.assertEqual(created["custom_fields"][0]["value"], "0")
+        self.assertTrue(created["custom_fields"][0]["label"])
+        self.assertEqual(created["custom_fields"][1], {"label": "Zustand", "value": "Normal"})
+        self.assertEqual(created["custom_fields"][2], {"label": "Aufgabe", "value": ""})
+        self.assertEqual(created["custom_fields"][3], {"label": "", "value": ""})
 
         created["hp"] = {"current": 18, "max": 24}
         self.assertTrue(self.loader.update_companion(created["id"], created))
@@ -47,9 +53,13 @@ class CompanionModelTests(unittest.TestCase):
             }
         )
         payload = json.loads(json.dumps(self.loader.app_meta))
+        companion["custom_fields"][3] = {"label": "Hunger", "value": "3"}
+        self.loader.update_companion(companion["id"], companion)
+        payload = json.loads(json.dumps(self.loader.app_meta))
         other = DataLoader.__new__(DataLoader)
         other.app_meta = payload
         self.assertEqual(other.get_companion_roll_value(companion["id"], "allgemein/klettern"), 5)
+        self.assertEqual(other.get_companions()[0]["custom_fields"][3], {"label": "Hunger", "value": "3"})
 
         other.app_meta = {}
         self.assertEqual(other.get_companions(), [])

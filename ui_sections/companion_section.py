@@ -65,13 +65,16 @@ class CompanionPortraitLabel(QLabel):
         super().keyPressEvent(event)
 
 
-def _set_portrait_pixmap(label, path):
+def _set_portrait_pixmap(label, path, fit_mode="contain"):
     pixmap = QPixmap(str(path)) if path else QPixmap()
     if pixmap.isNull():
         label.setText("Bild")
         return
-    scaled = pixmap.scaled(label.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
-    label.setPixmap(scaled.copy(max(0, (scaled.width() - label.width()) // 2), max(0, (scaled.height() - label.height()) // 2), label.width(), label.height()))
+    aspect_mode = Qt.KeepAspectRatioByExpanding if str(fit_mode).lower() == "cover" else Qt.KeepAspectRatio
+    scaled = pixmap.scaled(label.size(), aspect_mode, Qt.SmoothTransformation)
+    if aspect_mode == Qt.KeepAspectRatioByExpanding:
+        scaled = scaled.copy(max(0, (scaled.width() - label.width()) // 2), max(0, (scaled.height() - label.height()) // 2), label.width(), label.height())
+    label.setPixmap(scaled)
 
 
 def render_companion_screen(window, parent, layout_config):
@@ -179,12 +182,21 @@ def _create_companion_card(window, parent, companion, cfg):
             refresh_portrait()
 
     portrait_cfg = character_layout.get("portrait", {})
+    portrait_display_cfg = content_cfg.get("portrait", {})
+    inset = portrait_display_cfg.get("inset", {}) if isinstance(portrait_display_cfg.get("inset"), dict) else {}
+    outer_x, outer_y, outer_w, outer_h = _rect(portrait_cfg, (34, 94, 92, 135))
+    inset_left = _safe_int(inset.get("left", 0), 0)
+    inset_top = _safe_int(inset.get("top", 0), 0)
+    inset_right = _safe_int(inset.get("right", 0), 0)
+    inset_bottom = _safe_int(inset.get("bottom", 0), 0)
     portrait = CompanionPortraitLabel(card, choose_portrait, paste_portrait)
     portrait.setObjectName("companionPortrait")
-    portrait.setGeometry(*_rect(portrait_cfg, (34, 94, 92, 135)))
+    portrait.setGeometry(outer_x + inset_left, outer_y + inset_top, max(1, outer_w - inset_left - inset_right), max(1, outer_h - inset_top - inset_bottom))
+    portrait.setProperty("portrait_fit_mode", str(portrait_display_cfg.get("fit_mode", "contain")))
+    portrait.setProperty("portrait_frame_rect", (outer_x, outer_y, outer_w, outer_h))
     portrait.setAlignment(Qt.AlignCenter)
     portrait.setStyleSheet("background: transparent; border: none; color: #9d9585; font-size: 12px;")
-    _set_portrait_pixmap(portrait, window.loader.get_companion_portrait_path(data))
+    _set_portrait_pixmap(portrait, window.loader.get_companion_portrait_path(data), portrait.property("portrait_fit_mode"))
 
     fields_cfg = character_layout.get("fields", {})
     rows = {str(row.get("id", "")): row for row in fields_cfg.get("rows", []) if isinstance(row, dict)}
@@ -196,8 +208,12 @@ def _create_companion_card(window, parent, companion, cfg):
         for key in ("current", "max"):
             create_editable_panel_text(window, card, row.get(f"{key}_rect", {}), data.get(resource, {}).get(key, 0), _safe_int(row.get("value_font_size", font_size), font_size), str(row.get("value_color", color)), lambda value, field=f"{resource}_{key}": persist(field, value), title=f"{resource.upper()} {key} bearbeiten", bold=bool(row.get("bold_value", fields_cfg.get("bold_values", True))), align=str(row.get("value_align", "left")))
 
-    for index, custom in enumerate(data.get("custom_fields", [])[:3]):
-        row_cfg = content_cfg.get("custom_rows", [])[index]
+    custom_fields = data.get("custom_fields", [])
+    for row_cfg in content_cfg.get("custom_slots", []):
+        index = _safe_int(row_cfg.get("field_index", -1), -1)
+        if index < 0 or index >= len(custom_fields):
+            continue
+        custom = custom_fields[index]
         for key in ("label", "value"):
             text_cfg = row_cfg.get(key, {})
             create_editable_panel_text(window, card, text_cfg, custom.get(key, ""), _safe_int(text_cfg.get("font_size", 17), 17), str(text_cfg.get("color", "#f0e6c8")), lambda value, field=f"custom_{index}_{key}": persist(field, value), title=f"{custom.get('label', 'Feld')} bearbeiten", bold=bool(text_cfg.get("bold", key == "value")), align=str(text_cfg.get("align", "left")))

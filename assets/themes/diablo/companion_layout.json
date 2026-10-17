@@ -6,18 +6,20 @@
     "card": {
       "button_asset": "buttons/menu_button_small.png",
       "content": {
-        "custom_rows": [
-          { "label": { "x": 68, "y": 315, "w": 112, "h": 30, "font_size": 18, "color": "#f0e6c8" }, "value": { "x": 190, "y": 315, "w": 140, "h": 30, "font_size": 18, "color": "#ffffff", "bold": true } },
-          { "label": { "x": 33, "y": 370, "w": 90, "h": 24, "font_size": 17, "color": "#f0e6c8" }, "value": { "x": 133, "y": 370, "w": 90, "h": 24, "font_size": 17, "color": "#ffffff", "bold": true } },
-          { "label": { "x": 33, "y": 420, "w": 90, "h": 24, "font_size": 17, "color": "#f0e6c8" }, "value": { "x": 133, "y": 420, "w": 90, "h": 24, "font_size": 17, "color": "#ffffff", "bold": true } }
+        "portrait": { "fit_mode": "contain", "inset": { "left": 5, "top": 5, "right": 5, "bottom": 5 } },
+        "custom_slots": [
+          { "field_index": 0, "label": { "x": 68, "y": 315, "w": 112, "h": 30, "font_size": 18, "color": "#f0e6c8" }, "value": { "x": 190, "y": 315, "w": 140, "h": 30, "font_size": 18, "color": "#ffffff", "bold": true } },
+          { "field_index": 1, "label": { "x": 33, "y": 370, "w": 86, "h": 24, "font_size": 16, "color": "#f0e6c8" }, "value": { "x": 126, "y": 370, "w": 36, "h": 24, "font_size": 15, "color": "#ffffff", "bold": true, "align": "center" } },
+          { "field_index": 3, "label": { "x": 218, "y": 370, "w": 76, "h": 24, "font_size": 15, "color": "#f0e6c8", "align": "center" }, "value": { "x": 300, "y": 370, "w": 31, "h": 24, "font_size": 15, "color": "#ffffff", "bold": true, "align": "center" } },
+          { "field_index": 2, "label": { "x": 33, "y": 420, "w": 90, "h": 24, "font_size": 17, "color": "#f0e6c8" }, "value": { "x": 133, "y": 420, "w": 90, "h": 24, "font_size": 17, "color": "#ffffff", "bold": true } }
         ],
         "type": { "x": 222, "y": 420, "w": 108, "h": 24, "font_size": 15, "color": "#f0e6c8", "align": "center" },
         "can_roll": {
           "text": "Kann würfeln",
           "font_size": 15,
           "color": "#eadfca",
-          "label": { "x": 68, "y": 472, "w": 180, "h": 28 },
-          "marker": { "x": 285, "y": 472, "w": 28, "h": 28 }
+          "label": { "x": 33, "y": 472, "w": 86, "h": 38 },
+          "marker": { "x": 124, "y": 472, "w": 38, "h": 38 }
         },
         "rolls_button": { "text": "Würfe", "x": 30, "y": 530, "w": 92, "h": 34 },
         "duplicate_button": { "text": "Duplizieren", "x": 134, "y": 530, "w": 96, "h": 34 },

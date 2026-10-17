@@ -1286,7 +1286,7 @@ class DataLoader:
         raw_fields = source.get("custom_fields", [])
         if not isinstance(raw_fields, list):
             raw_fields = []
-        for field in raw_fields[:3]:
+        for field in raw_fields[:4]:
             field = field if isinstance(field, dict) else {}
             custom_fields.append(
                 {
@@ -1294,8 +1294,8 @@ class DataLoader:
                     "value": str(field.get("value", "") or ""),
                 }
             )
-        defaults = (("Rüstung", "0"), ("Zustand", "Normal"), ("Aufgabe", ""))
-        while len(custom_fields) < 3:
+        defaults = (("Rüstung", "0"), ("Zustand", "Normal"), ("Aufgabe", ""), ("", ""))
+        while len(custom_fields) < 4:
             label, value = defaults[len(custom_fields)]
             custom_fields.append({"label": label, "value": value})
         return {

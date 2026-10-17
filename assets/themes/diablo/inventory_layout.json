@@ -22,7 +22,22 @@
       "button_h": 36,
       "gap": 8,
       "orientation": "vertical",
-      "font_size": 15
+      "font_size": 15,
+      "use_asset_buttons": true,
+      "asset": "buttons/menu_button_small.png",
+      "active_asset": "buttons/menu_button_small.png",
+      "inactive_asset": "buttons/menu_button_small.png",
+      "active_color": "#f2d28b",
+      "inactive_color": "#9a8560",
+      "hover_color": "#ffffff",
+      "button_shadow": {
+        "enabled": true,
+        "mode": "alpha_pixmap",
+        "x": 2,
+        "y": 3,
+        "blur_radius": 10,
+        "color": "rgba(0, 0, 0, 115)"
+      }
     },
     "money": {
       "x": 20,

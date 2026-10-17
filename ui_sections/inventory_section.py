@@ -399,17 +399,35 @@ def _render_inventory_view_selector(window, parent, screen_cfg):
         button_y = y + index * (button_h + gap) if orientation == "vertical" else y
         button.setGeometry(button_x, button_y, button_w, button_h)
         active = view_id == active_view
-        button.setStyleSheet(
-            "QPushButton {"
-            f"background: {'rgba(58,36,12,220)' if active else 'rgba(8,8,8,165)'};"
-            f"color: {'#f2d28b' if active else '#c8c0aa'};"
-            f"border: 1px solid {'#d8aa4c' if active else 'rgba(242,210,139,80)'};"
-            f"font-size: {font_size}px; font-weight: 700; padding: 0px;"
-            "} QPushButton:hover { color: #ffffff; border-color: #f2d28b; }"
-        )
+        _apply_inventory_asset_button(window, parent, button, cfg, active, button_x, button_y, button_w, button_h, font_size)
         button.setCursor(Qt.PointingHandCursor)
         button.clicked.connect(lambda checked=False, selected=view_id: window.on_inventory_view_clicked(selected))
         button.show()
+
+
+def _apply_inventory_asset_button(window, parent, button, cfg, is_active, x, y, width, height, font_size):
+    active_color = str(cfg.get("active_color", "#f2d28b"))
+    inactive_color = str(cfg.get("inactive_color", "#9a8560"))
+    hover_color = str(cfg.get("hover_color", "#ffffff"))
+    use_asset = bool(cfg.get("use_asset_buttons", False))
+    default_asset = str(cfg.get("asset", "buttons/menu_button_small.png") or "").strip()
+    asset_name = str(cfg.get("active_asset" if is_active else "inactive_asset", default_asset) or "").strip()
+    asset_path = window.resolve_ui_asset_path(asset_name) if use_asset and asset_name else None
+    pixmap = _optional_inventory_ui_pixmap(window, asset_name) if use_asset and asset_name else None
+    has_asset = bool(asset_path is not None and asset_path.exists() and pixmap is not None)
+    if has_asset:
+        shadow_cfg = cfg.get("button_shadow", {}) if isinstance(cfg.get("button_shadow"), dict) else {}
+        _create_inventory_alpha_pixmap_shadow(window, parent, pixmap, x, y, width, height, shadow_cfg)
+        button.setStyleSheet(
+            "QPushButton {"
+            f"color: {active_color if is_active else inactive_color};"
+            f"font-size: {font_size}px; font-weight: 700; padding: 0px; border: none;"
+            f"border-image: url({asset_path.as_posix()}) 0 0 0 0 stretch stretch; background: transparent;"
+            f"}} QPushButton:hover {{ color: {hover_color}; }}"
+        )
+        return True
+    button.setStyleSheet(f"QPushButton {{ color: {active_color if is_active else inactive_color}; font-size: {font_size}px; font-weight: 700; }}")
+    return False
 
 
 def on_inventory_category_clicked(window, category_id):
@@ -481,11 +499,6 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
     active_color = str(tabs_cfg.get("active_color", "#f2d28b"))
     inactive_color = str(tabs_cfg.get("inactive_color", "#9a8560"))
     hover_color = str(tabs_cfg.get("hover_color", "#ffffff"))
-    use_asset_buttons = bool(tabs_cfg.get("use_asset_buttons", False))
-    default_asset = str(tabs_cfg.get("asset", "buttons/menu_button_small.png") or "").strip()
-    active_asset = str(tabs_cfg.get("active_asset", default_asset) or "").strip()
-    inactive_asset = str(tabs_cfg.get("inactive_asset", default_asset) or "").strip()
-    shadow_cfg = tabs_cfg.get("button_shadow", {}) if isinstance(tabs_cfg.get("button_shadow", {}), dict) else {}
 
     for index, category in enumerate(categories):
         if not isinstance(category, dict):
@@ -501,39 +514,16 @@ def render_inventory_category_tabs(window, parent, screen_cfg, categories):
         else:
             button_x = index * (button_w + button_gap)
             button_y = 0
-        color = active_color if is_active else inactive_color
         border = "#b88a35" if is_active else "rgba(180, 140, 70, 90)"
         bg = "rgba(35, 24, 12, 185)" if is_active else "rgba(8, 8, 8, 125)"
-        asset_for_state = active_asset if is_active else inactive_asset
-        asset_path = window.resolve_ui_asset_path(asset_for_state) if asset_for_state else None
-        asset_pixmap = _optional_inventory_ui_pixmap(window, asset_for_state) if asset_for_state else None
-        has_asset = bool(use_asset_buttons and asset_path is not None and asset_path.exists() and asset_pixmap is not None)
-        if has_asset:
-            _create_inventory_alpha_pixmap_shadow(
-                window, tabs_container, asset_pixmap, button_x, button_y, button_w, button_h, shadow_cfg
-            )
         button = QPushButton(tabs_container)
         button.setGeometry(button_x, button_y, button_w, button_h)
         button.setText(title)
         button.setCursor(Qt.PointingHandCursor)
         button.setProperty("inventory_category_id", category_id)
         button.installEventFilter(window)
-        if has_asset:
-            button.setStyleSheet(
-                "QPushButton {"
-                f"color: {color};"
-                f"font-size: {tab_font_size}px;"
-                "font-weight: 700;"
-                "padding: 0px;"
-                "border: none;"
-                f"border-image: url({asset_path.as_posix()}) 0 0 0 0 stretch stretch;"
-                "background: transparent;"
-                "}"
-                "QPushButton:hover {"
-                f"color: {hover_color};"
-                "}"
-            )
-        else:
+        asset_cfg = {**tabs_cfg, "active_color": active_color, "inactive_color": inactive_color, "hover_color": hover_color}
+        if not _apply_inventory_asset_button(window, tabs_container, button, asset_cfg, is_active, button_x, button_y, button_w, button_h, tab_font_size):
             button.setStyleSheet(
                 "QPushButton {"
                 f"background-color: {bg};"
