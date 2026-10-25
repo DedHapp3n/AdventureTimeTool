@@ -59,7 +59,7 @@ class StartupWindowLifecycleTests(unittest.TestCase):
 
     def test_update_no_starts_main_window_and_keeps_app_alive(self):
         events = self.run_scenario("update_no")
-        self.assertIn("APP START version=1.3.4", events)
+        self.assertIn("APP START version=1.4.0", events)
         self.assert_order(
             events,
             "UPDATE DIALOG OPEN",

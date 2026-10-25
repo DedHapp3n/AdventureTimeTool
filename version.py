@@ -1,7 +1,7 @@
 import re
 
 
-APP_VERSION = "1.3.4"
+APP_VERSION = "1.4.0"
 
 
 def parse_version(value):
