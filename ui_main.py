@@ -35,12 +35,15 @@ from ui_dialogs.roll20_dialog import open_roll20_dialog
 from ui_dialogs.window_chrome import install_frameless_dialog_chrome
 from ui_sections.equipment_section import render_equipment_section
 from ui_sections import inventory_section
+from ui_sections import companion_section
 from ui_sections.magic_section import render_magic_section
 from ui_sections.notes_section import notes_debug_enabled, render_notes_section
 from ui_sections import settings_section
 from ui_sections import skills_section
 from ui_sections import character_section
 from ui_sections import start_section
+from ui_sections.editable_panel_text import create_editable_panel_text
+from ui_roll_math import dice_expression
 
 
 class ReferenceBorderDelegate(QStyledItemDelegate):
@@ -155,6 +158,7 @@ class MainWindow(QMainWindow):
         self.current_skill_category = "allgemein"
         self._skills_se_loading = False
         self.current_inventory_category = "inventory_01"
+        self.current_inventory_view = "inventory"
         self.skill_source_infos = {}
         self.skills_debug_sources = False
         self.skill_sheet_mapping_config = None
@@ -1235,6 +1239,31 @@ class MainWindow(QMainWindow):
                 continue
         log_debug("inventory", "layout fallback: internal default")
         return self.get_default_inventory_layout_config()
+
+    def get_default_companion_layout_config(self):
+        return {
+            "companion_screen": {
+                "title": {"text": "Companions", "x": 0, "y": 0, "w": 1380, "h": 42, "font_size": 24, "color": "#f2d28b", "align": "center"},
+                "add_button": {"text": "Companion hinzufügen", "x": 20, "y": 54, "w": 230, "h": 38, "asset": "buttons/menu_button_medium.png"},
+                "cards_area": {"x": 18, "y": 102, "w": 1380, "h": 690, "columns": 3, "column_gap": 18, "row_gap": 18},
+                "card": {"w": 430, "h": 390, "asset": "panels/character_info_panel.png", "button_asset": "buttons/menu_button_small.png"},
+                "empty_text": "Noch keine Companions vorhanden.",
+            }
+        }
+
+    def load_companion_layout_config(self):
+        active_theme = self.get_active_theme()
+        for layout_path in layout_candidates(active_theme, "companion_layout.json", "companion_layout.json"):
+            try:
+                if not layout_path.exists():
+                    continue
+                with open(layout_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and isinstance(data.get("companion_screen"), dict):
+                    return data
+            except Exception:
+                continue
+        return self.get_default_companion_layout_config()
 
     def get_default_equipment_layout_config(self):
         return {
@@ -3177,14 +3206,7 @@ class MainWindow(QMainWindow):
             dice_count = 1
         if dice_count <= 1:
             dice_count = 1
-        dice_part = "1d20"
-        if dice_count > 1:
-            if keep_mode == "kh1":
-                dice_part = f"{dice_count}d20kh1"
-            elif keep_mode == "kl1":
-                dice_part = f"{dice_count}d20kl1"
-            else:
-                dice_part = f"{dice_count}d20"
+        dice_part = dice_expression(dice_count, keep_mode)
 
         bonus_parts = []
         values_to_add = [skill_bonus]
@@ -3909,6 +3931,27 @@ class MainWindow(QMainWindow):
             return style
 
         checkbox_style = build_checkbox_style()
+        roll_actors = []
+        try:
+            for companion in self.loader.get_roll_capable_companions():
+                companion_id = str(companion.get("id", "") or "").strip()
+                if not companion_id:
+                    continue
+                companion_roll = self.loader.get_companion_roll_config(companion_id, source_key, display_name)
+                roll_actors.append(
+                    {
+                        "id": companion_id,
+                        "name": str(companion.get("name", "") or "Companion").strip() or "Companion",
+                        "type": "companion",
+                        "skill_value": companion_roll["value"],
+                        "roll_modifier": companion_roll["modifier"],
+                        "advantages": companion_roll["advantages"],
+                        "disadvantages": companion_roll["disadvantages"],
+                    }
+                )
+        except Exception as exc:
+            roll_actors = []
+            log_warning("roll20", f"companion actor collection failed: {exc}")
         return open_roll20_dialog(
             self,
             {
@@ -3932,6 +3975,7 @@ class MainWindow(QMainWindow):
                 "fixed_extra_bonuses": fixed_extra_bonuses,
                 "fixed_advantages": fixed_advantages,
                 "fixed_disadvantages": fixed_disadvantages,
+                "roll_actors": roll_actors,
             },
             {
                 "safe_int": self._safe_int,
@@ -4662,6 +4706,14 @@ class MainWindow(QMainWindow):
         )
     def render_inventory_screen(self):
         return inventory_section.render_inventory_screen(self)
+
+    def render_companion_screen(self, parent, layout_config):
+        return companion_section.render_companion_screen(self, parent, layout_config)
+
+    def on_inventory_view_clicked(self, view_id):
+        view = str(view_id or "").strip().lower()
+        self.current_inventory_view = view if view in {"inventory", "companions"} else "inventory"
+        self.show_main_section("inventory")
     def render_notes_screen(self):
         if self.content_layer is None:
             return
@@ -6008,8 +6060,14 @@ class MainWindow(QMainWindow):
 
         edit_on = str((self._character_edit_cfg or {}).get("edit_on", "double_click"))
         if edit_on == "double_click":
-            label = self.create_panel_text(
-                parent, rect_cfg, value_text, font_size, color, bold=bold, align=align
+            def save_value(new_value):
+                tag = "CHARACTER BASIC EDIT" if section_key == "basic_fields" else "CHARACTER EDIT"
+                self._on_character_field_edited(field_key, sheet_name, cell_ref, new_value, tag=tag)
+                self.show_main_section("character")
+
+            label = create_editable_panel_text(
+                self, parent, rect_cfg, value_text, font_size, color, save_value,
+                title=f"{field_key} bearbeiten", bold=bold, align=align,
             )
             label.setProperty("character_editable", True)
             label.setProperty("character_field_key", field_key)
@@ -6019,7 +6077,6 @@ class MainWindow(QMainWindow):
             label.setProperty("character_section_key", section_key)
             label.setProperty("character_multiline", False)
             label.setProperty("character_dialog_title", f"{field_key} bearbeiten")
-            label.installEventFilter(self)
             return label
 
         editor = QLineEdit(parent)

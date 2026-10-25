@@ -2,6 +2,7 @@ import json
 import hashlib
 import os
 import re
+import shutil
 import xml.etree.ElementTree as ET
 import zipfile
 from copy import deepcopy
@@ -1240,6 +1241,322 @@ class DataLoader:
                 rows[index].pop("roll_modifiers", None)
             return True
         return False
+
+    def _normalize_companion_rolls(self, rolls) -> list[dict[str, Any]]:
+        if not isinstance(rolls, list):
+            return []
+        result = []
+        seen_ids = set()
+        for roll in rolls:
+            if not isinstance(roll, dict):
+                continue
+            roll_id = str(roll.get("roll_id", "") or "").strip()
+            roll_name = str(roll.get("roll_name", "") or "").strip()
+            if not roll_id and not roll_name:
+                continue
+            identity = roll_id or roll_name.casefold()
+            if identity in seen_ids:
+                continue
+            try:
+                value = int(roll.get("value", 0))
+            except Exception:
+                value = 0
+            try:
+                modifier = int(roll.get("modifier", 0))
+            except Exception:
+                modifier = 0
+            try:
+                advantages = max(0, int(roll.get("advantages", 0)))
+            except Exception:
+                advantages = 0
+            try:
+                disadvantages = max(0, int(roll.get("disadvantages", 0)))
+            except Exception:
+                disadvantages = 0
+            seen_ids.add(identity)
+            result.append({
+                "roll_id": roll_id,
+                "roll_name": roll_name,
+                "value": value,
+                "modifier": modifier,
+                "advantages": advantages,
+                "disadvantages": disadvantages,
+            })
+        return result
+
+    def _normalize_companion(self, companion, fallback_id="") -> dict[str, Any]:
+        source = companion if isinstance(companion, dict) else {}
+        companion_id = str(source.get("id", fallback_id) or fallback_id).strip()
+
+        def resource(name):
+            raw = source.get(name, {})
+            raw = raw if isinstance(raw, dict) else {}
+            try:
+                current = int(raw.get("current", 0))
+            except Exception:
+                current = 0
+            try:
+                maximum = int(raw.get("max", 0))
+            except Exception:
+                maximum = 0
+            return {"current": current, "max": maximum}
+
+        custom_fields = []
+        raw_fields = source.get("custom_fields", [])
+        if not isinstance(raw_fields, list):
+            raw_fields = []
+        for field in raw_fields[:4]:
+            field = field if isinstance(field, dict) else {}
+            custom_fields.append(
+                {
+                    "label": str(field.get("label", "") or ""),
+                    "value": str(field.get("value", "") or ""),
+                }
+            )
+        defaults = (("Rüstung", "0"), ("Zustand", "Normal"), ("Aufgabe", ""), ("", ""))
+        while len(custom_fields) < 4:
+            label, value = defaults[len(custom_fields)]
+            custom_fields.append({"label": label, "value": value})
+        return {
+            "id": companion_id,
+            "name": str(source.get("name", "") or ""),
+            "type": str(source.get("type", "") or ""),
+            "hp": resource("hp"),
+            "mp": resource("mp"),
+            "custom_fields": custom_fields,
+            "can_roll": bool(source.get("can_roll", False)),
+            "rolls": self._normalize_companion_rolls(source.get("rolls", [])),
+            "portrait": os.path.basename(str(source.get("portrait", "") or "").replace("\\", "/")),
+        }
+
+    def _companion_portrait_directory(self) -> str:
+        active_path = str(self.active_character_path or "").strip()
+        directory = os.path.dirname(os.path.abspath(active_path)) if active_path else self.get_character_dir()
+        os.makedirs(directory, exist_ok=True)
+        return directory
+
+    def _companion_portrait_stem(self) -> str:
+        active_path = str(self.active_character_path or "").strip()
+        if active_path:
+            stem = os.path.splitext(os.path.basename(active_path))[0]
+        else:
+            stem = self.make_character_slug(self._get_character_name_from_cache())
+        return stem or "unknown_character"
+
+    def get_companion_portrait_target_path(self, companion_id: str, extension=".png") -> str:
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(companion_id or "").strip())
+        if not safe_id:
+            return ""
+        ext = str(extension or ".png").lower()
+        if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
+            ext = ".png"
+        filename = f"{self._companion_portrait_stem()}__{safe_id}__portrait{ext}"
+        return os.path.join(self._companion_portrait_directory(), filename)
+
+    def get_companion_portrait_path(self, companion) -> str:
+        portrait = str(companion.get("portrait", "") or "") if isinstance(companion, dict) else ""
+        filename = os.path.basename(portrait.replace("\\", "/"))
+        if not filename:
+            return ""
+        companion_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(companion.get("id", "") or "").strip())
+        extension = os.path.splitext(filename)[1].lower()
+        if not companion_id or extension not in {".png", ".jpg", ".jpeg", ".webp"} or not filename.endswith(f"__{companion_id}__portrait{extension}"):
+            return ""
+        directory = os.path.abspath(self._companion_portrait_directory())
+        candidate = os.path.abspath(os.path.join(directory, filename))
+        try:
+            if os.path.commonpath([directory, candidate]) != directory:
+                return ""
+        except ValueError:
+            return ""
+        return candidate
+
+    def _remove_managed_companion_portrait(self, companion) -> bool:
+        path = self.get_companion_portrait_path(companion)
+        if not path or not os.path.isfile(path):
+            return False
+        os.remove(path)
+        return True
+
+    def set_companion_portrait_reference(self, companion_id: str, managed_path: str) -> bool:
+        target_id = str(companion_id or "").strip()
+        directory = os.path.abspath(self._companion_portrait_directory())
+        candidate = os.path.abspath(str(managed_path or ""))
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", target_id)
+        filename = os.path.basename(candidate)
+        extension = os.path.splitext(filename)[1].lower()
+        try:
+            if (
+                not candidate
+                or extension not in {".png", ".jpg", ".jpeg", ".webp"}
+                or not filename.endswith(f"__{safe_id}__portrait{extension}")
+                or os.path.commonpath([directory, candidate]) != directory
+                or not os.path.isfile(candidate)
+            ):
+                return False
+        except ValueError:
+            return False
+        items = self.get_companions()
+        for index, companion in enumerate(items):
+            if str(companion.get("id", "")) != target_id:
+                continue
+            old_path = self.get_companion_portrait_path(companion)
+            companion["portrait"] = os.path.basename(candidate)
+            items[index] = companion
+            self.set_companions(items)
+            if old_path and old_path != candidate and os.path.isfile(old_path):
+                os.remove(old_path)
+            return True
+        return False
+
+    def set_companion_portrait_file(self, companion_id: str, source_path: str) -> bool:
+        source = os.path.abspath(str(source_path or ""))
+        extension = os.path.splitext(source)[1].lower()
+        if not os.path.isfile(source) or extension not in {".png", ".jpg", ".jpeg", ".webp"}:
+            return False
+        target = self.get_companion_portrait_target_path(companion_id, extension)
+        if not target:
+            return False
+        if source != os.path.abspath(target):
+            shutil.copy2(source, target)
+        return self.set_companion_portrait_reference(companion_id, target)
+
+    def _next_companion_id(self, companions=None) -> str:
+        items = companions if isinstance(companions, list) else self.get_companions()
+        used = {str(item.get("id", "")) for item in items if isinstance(item, dict)}
+        index = 1
+        while f"companion_{index:03d}" in used:
+            index += 1
+        return f"companion_{index:03d}"
+
+    def get_companions(self) -> list[dict[str, Any]]:
+        companion_meta = self.app_meta.get("companions", {})
+        if not isinstance(companion_meta, dict):
+            return []
+        raw_items = companion_meta.get("items", [])
+        if not isinstance(raw_items, list):
+            return []
+        result = []
+        used_ids = set()
+        for raw in raw_items:
+            companion = self._normalize_companion(raw)
+            companion_id = companion["id"]
+            if not companion_id or companion_id in used_ids:
+                companion_id = self._next_companion_id(result)
+                companion["id"] = companion_id
+            used_ids.add(companion_id)
+            result.append(companion)
+        return deepcopy(result)
+
+    def get_companion(self, companion_id: str) -> dict[str, Any] | None:
+        target_id = str(companion_id or "").strip()
+        return next((item for item in self.get_companions() if str(item.get("id", "")) == target_id), None)
+
+    def set_companions(self, companions) -> list[dict[str, Any]]:
+        raw_items = companions if isinstance(companions, list) else []
+        normalized = []
+        used_ids = set()
+        for raw in raw_items:
+            companion = self._normalize_companion(raw)
+            companion_id = companion["id"]
+            if not companion_id or companion_id in used_ids:
+                companion_id = self._next_companion_id(normalized)
+                companion["id"] = companion_id
+            used_ids.add(companion_id)
+            normalized.append(companion)
+        self.app_meta["companions"] = {"items": normalized}
+        return deepcopy(normalized)
+
+    def add_companion(self, companion=None) -> dict[str, Any]:
+        items = self.get_companions()
+        source = dict(companion) if isinstance(companion, dict) else {}
+        source["id"] = self._next_companion_id(items)
+        source.setdefault("name", "Neuer Companion")
+        source.setdefault("type", "")
+        created = self._normalize_companion(source)
+        items.append(created)
+        self.set_companions(items)
+        return deepcopy(created)
+
+    def update_companion(self, companion_id: str, companion) -> bool:
+        target_id = str(companion_id or "").strip()
+        if not target_id or not isinstance(companion, dict):
+            return False
+        items = self.get_companions()
+        for index, existing in enumerate(items):
+            if str(existing.get("id", "")) != target_id:
+                continue
+            updated = dict(companion)
+            updated["id"] = target_id
+            items[index] = self._normalize_companion(updated, target_id)
+            self.set_companions(items)
+            return True
+        return False
+
+    def delete_companion(self, companion_id: str) -> bool:
+        target_id = str(companion_id or "").strip()
+        items = self.get_companions()
+        removed = next((item for item in items if str(item.get("id", "")) == target_id), None)
+        remaining = [item for item in items if str(item.get("id", "")) != target_id]
+        if len(remaining) == len(items):
+            return False
+        self.set_companions(remaining)
+        if removed is not None:
+            self._remove_managed_companion_portrait(removed)
+        return True
+
+    def duplicate_companion(self, companion_id: str) -> dict[str, Any] | None:
+        target_id = str(companion_id or "").strip()
+        items = self.get_companions()
+        source = next((item for item in items if str(item.get("id", "")) == target_id), None)
+        if source is None:
+            return None
+        duplicate = deepcopy(source)
+        duplicate["id"] = self._next_companion_id(items)
+        base_name = str(duplicate.get("name", "") or "Companion").strip() or "Companion"
+        duplicate["name"] = f"{base_name} (Kopie)"
+        source_portrait = self.get_companion_portrait_path(source)
+        duplicate["portrait"] = ""
+        items.append(duplicate)
+        self.set_companions(items)
+        if source_portrait and os.path.isfile(source_portrait):
+            extension = os.path.splitext(source_portrait)[1]
+            target = self.get_companion_portrait_target_path(duplicate["id"], extension)
+            shutil.copy2(source_portrait, target)
+            self.set_companion_portrait_reference(duplicate["id"], target)
+            duplicate["portrait"] = os.path.basename(target)
+        return deepcopy(duplicate)
+
+    def get_roll_capable_companions(self) -> list[dict[str, Any]]:
+        return [item for item in self.get_companions() if bool(item.get("can_roll", False))]
+
+    def get_companion_roll_value(self, companion_id: str, roll_id: str, roll_name="") -> int:
+        return self.get_companion_roll_config(companion_id, roll_id, roll_name)["value"]
+
+    def get_companion_roll_config(self, companion_id: str, roll_id: str, roll_name="") -> dict[str, int]:
+        target_id = str(companion_id or "").strip()
+        target_roll_id = str(roll_id or "").strip()
+        target_roll_name = str(roll_name or "").strip()
+        for companion in self.get_roll_capable_companions():
+            if str(companion.get("id", "")) != target_id:
+                continue
+            for roll in companion.get("rolls", []):
+                stored_id = str(roll.get("roll_id", "") or "").strip()
+                stored_name = str(roll.get("roll_name", "") or "").strip()
+                if target_roll_id and stored_id == target_roll_id:
+                    return self._companion_roll_numbers(roll)
+                if not stored_id and target_roll_name and stored_name == target_roll_name:
+                    return self._companion_roll_numbers(roll)
+        return {"value": 0, "modifier": 0, "advantages": 0, "disadvantages": 0}
+
+    @staticmethod
+    def _companion_roll_numbers(roll) -> dict[str, int]:
+        return {
+            "value": int(roll.get("value", 0)),
+            "modifier": int(roll.get("modifier", 0)),
+            "advantages": max(0, int(roll.get("advantages", 0))),
+            "disadvantages": max(0, int(roll.get("disadvantages", 0))),
+        }
 
     def _write_current_character_metadata(self, active_cache_path: str, character_name: str, saved: bool = False) -> None:
         metadata_path = str(data_path("current_character.json"))

@@ -1,0 +1,19 @@
+{
+  "companion_roll_dialog": {
+    "table": { "x": 49, "y": 104, "w": 450, "h": 386, "columns": [
+      { "text": "Fertigkeit", "w": 230 }, { "text": "Wert", "w": 55 },
+      { "text": "+/-", "w": 55 }, { "text": "V", "w": 45 }, { "text": "N", "w": 45 }
+    ]},
+    "editor": { "x": 531, "y": 104, "w": 342, "h": 386, "spacing": 12 },
+    "selector": { "label": "Roll / Fertigkeit" },
+    "counters": [
+      { "id": "value", "label": "Fertigkeitswert", "min": -999, "max": 999 },
+      { "id": "modifier", "label": "Bonus / Malus", "min": -999, "max": 999 },
+      { "id": "advantages", "label": "Vorteile", "min": 0, "max": 99 },
+      { "id": "disadvantages", "label": "Nachteile", "min": 0, "max": 99 }
+    ],
+    "preview": { "x": 49, "y": 500, "w": 722, "h": 92 },
+    "delete_button": { "x": 783, "y": 527, "text": "Löschen", "button_key": "close" },
+    "title": { "min_font_size": 5 }
+  }
+}

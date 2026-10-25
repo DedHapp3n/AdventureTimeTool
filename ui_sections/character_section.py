@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit, QPushButton, QWidget
 
 from app_paths import ui_icon_path
+from ui_sections.pixmap_shadow import create_alpha_pixmap_shadow
 
 from game_rules_loader import get_selectable_perks_by_type, load_perk_catalog
 
@@ -209,53 +210,7 @@ def _create_alpha_pixmap_shadow(window, parent, panel_cfg, shadow_cfg):
     if src is None:
         return None
 
-    x = window._safe_int(panel_cfg.get("x", 0), 0)
-    y = window._safe_int(panel_cfg.get("y", 0), 0)
-    w = max(1, window._safe_int(panel_cfg.get("w", 1), 1))
-    h = max(1, window._safe_int(panel_cfg.get("h", 1), 1))
-    offset_x = window._safe_int(shadow_cfg.get("offset_x", shadow_cfg.get("x", 3)), 3)
-    offset_y = window._safe_int(shadow_cfg.get("offset_y", shadow_cfg.get("y", 4)), 4)
-    blur_radius = max(0, window._safe_int(shadow_cfg.get("blur_radius", 18), 18))
-    spread = max(1, blur_radius // 3)
-    scaled = src.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-
-    mask = QPixmap(w, h)
-    mask.fill(Qt.transparent)
-    mask_painter = QPainter(mask)
-    mask_painter.drawPixmap(0, 0, scaled)
-    mask_painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
-    mask_painter.fillRect(mask.rect(), _character_shadow_color(window, shadow_cfg))
-    mask_painter.end()
-
-    pad_left = max(spread, spread - offset_x)
-    pad_top = max(spread, spread - offset_y)
-    pad_right = max(spread, spread + offset_x)
-    pad_bottom = max(spread, spread + offset_y)
-    shadow_w = w + pad_left + pad_right
-    shadow_h = h + pad_top + pad_bottom
-    rendered = QPixmap(shadow_w, shadow_h)
-    rendered.fill(Qt.transparent)
-    painter = QPainter(rendered)
-    if blur_radius > 0:
-        for distance in range(spread, 0, -1):
-            opacity = 0.10 * (spread - distance + 1) / spread
-            painter.setOpacity(opacity)
-            for dx, dy in ((-distance, 0), (distance, 0), (0, -distance), (0, distance), (-distance, -distance), (distance, -distance), (-distance, distance), (distance, distance)):
-                painter.drawPixmap(pad_left + offset_x + dx, pad_top + offset_y + dy, mask)
-    painter.setOpacity(0.55)
-    painter.drawPixmap(pad_left + offset_x, pad_top + offset_y, mask)
-    painter.end()
-
-    shadow = QLabel(parent)
-    shadow.setGeometry(x - pad_left, y - pad_top, shadow_w, shadow_h)
-    shadow.setAttribute(Qt.WA_TranslucentBackground, True)
-    shadow.setAutoFillBackground(False)
-    shadow.setStyleSheet("background: transparent; border: none;")
-    shadow.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-    shadow.setPixmap(rendered)
-    shadow.show()
-    shadow.lower()
-    return shadow
+    return create_alpha_pixmap_shadow(window, parent, src, panel_cfg, shadow_cfg)
 
 
 def _create_character_image_panel(window, parent, panel_cfg):
