@@ -5619,6 +5619,11 @@ class MainWindow(QMainWindow):
 
     def open_character_resource_dialog(self, resource_id):
         resource_id = str(resource_id or "").strip().lower()
+        tierform_hp = None
+        if resource_id == "hp" and str(getattr(self, "_character_view_mode", "normal")) == "tierform":
+            candidate = getattr(self, "_character_tierform_hp", None)
+            if isinstance(candidate, dict):
+                tierform_hp = candidate
         data = self._get_character_resource_data(resource_id)
         if not data:
             QMessageBox.information(self, "Ressource", "Ressourcenfeld nicht gefunden.")
@@ -5628,6 +5633,10 @@ class MainWindow(QMainWindow):
         label = str(cfg.get("label", resource_id.upper()))
 
         def save_current(new_value, reason, reduce_lifeforce=False):
+            if tierform_hp is not None:
+                tierform_hp["current"] = max(0, min(int(new_value), int(tierform_hp.get("max", 0))))
+                self.show_main_section("character")
+                return
             updates = [(data["current_sheet"], data["current_cell"], int(new_value))]
             if reduce_lifeforce:
                 lifeforce_data = self._get_character_resource_data("lifeforce")
@@ -5646,9 +5655,9 @@ class MainWindow(QMainWindow):
             {
                 "resource_id": resource_id,
                 "label": label,
-                "title": str(cfg.get("title", f"{label} verwalten")),
-                "current": int(data["current"]),
-                "max": int(data["max"]),
+                "title": "Tierform HP verwalten" if tierform_hp is not None else str(cfg.get("title", f"{label} verwalten")),
+                "current": int(tierform_hp.get("current", 0)) if tierform_hp is not None else int(data["current"]),
+                "max": int(tierform_hp.get("max", 0)) if tierform_hp is not None else int(data["max"]),
                 "roll_title": str(cfg.get("roll_title", "Roll")),
                 "roll_command": self._character_resource_roll_command(resource_id, cfg),
             },

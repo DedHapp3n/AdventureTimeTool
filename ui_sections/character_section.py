@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QLineEdit, QPushButton, QWidget
 
 from app_paths import ui_icon_path
+from ui_sections.editable_panel_text import create_editable_panel_text
 from ui_sections.pixmap_shadow import create_alpha_pixmap_shadow
 
 from game_rules_loader import get_selectable_perks_by_type, load_perk_catalog
@@ -1223,6 +1224,71 @@ def render_character_section(window):
         "int",
     )
 
+    tierform_hp = None
+    if is_tierform_view:
+        attributes_map = data_map.get("attributes", {}) if isinstance(data_map, dict) else {}
+        body_cfg = attributes_map.get("body", {}) if isinstance(attributes_map, dict) else {}
+        mind_cfg = attributes_map.get("mind", {}) if isinstance(attributes_map, dict) else {}
+
+        def tierform_attribute_value(attribute_cfg):
+            source = attribute_cfg.get("value", attribute_cfg.get("header", "")) if isinstance(attribute_cfg, dict) else ""
+            sheet_name, cell_ref = window._resolve_data_map_cell_ref(source, default_sheet)
+            if not sheet_name or not cell_ref:
+                return 0
+            return window._character_int_value(sheet_name, cell_ref, 0)
+
+        calculated_hp = max(0, (tierform_attribute_value(body_cfg) + tierform_attribute_value(mind_cfg)) * 5)
+        character_key = str(name_value or "").strip()
+        tierform_hp = getattr(window, "_character_tierform_hp", None)
+        formula_version = 3
+        if (
+            not isinstance(tierform_hp, dict)
+            or tierform_hp.get("character_key") != character_key
+            or tierform_hp.get("formula_version") != formula_version
+        ):
+            tierform_hp = {
+                "character_key": character_key,
+                "formula_version": formula_version,
+                "base": calculated_hp,
+                "current": calculated_hp,
+                "max": calculated_hp,
+            }
+        elif tierform_hp.get("base") != calculated_hp:
+            previous_base = tierform_hp.get("base")
+            if tierform_hp.get("current") == previous_base:
+                tierform_hp["current"] = calculated_hp
+            if tierform_hp.get("max") == previous_base:
+                tierform_hp["max"] = calculated_hp
+            tierform_hp["base"] = calculated_hp
+        window._character_tierform_hp = tierform_hp
+
+    def create_tierform_hp_editor(rect_cfg, value_key, font_size, color, bold=True, align="left"):
+        value = tierform_hp.get(value_key, 0)
+
+        def save_value(new_value):
+            try:
+                normalized = max(0, int(float(str(new_value).strip().replace(",", "."))))
+            except (TypeError, ValueError):
+                window.show_main_section("character")
+                return
+            tierform_hp[value_key] = normalized
+            if value_key == "max" and tierform_hp.get("current", 0) > normalized:
+                tierform_hp["current"] = normalized
+            window.show_main_section("character")
+
+        return create_editable_panel_text(
+            window,
+            character_panel,
+            rect_cfg,
+            value,
+            font_size,
+            color,
+            save_value,
+            title=f"Tierform HP {value_key} bearbeiten",
+            bold=bold,
+            align=align,
+        )
+
     info_layout = text_layout.get("character_info_panel", text_layout.get("info", {}))
     title_cfg = info_layout.get("title", {})
     window._create_character_value_editor(
@@ -1310,7 +1376,8 @@ def render_character_section(window):
                     mode,
                 )
                 if is_tierform_view and row_id == "hp":
-                    current, maximum = "20", "20"
+                    current = str(tierform_hp.get("current", 0))
+                    maximum = str(tierform_hp.get("max", 0))
             else:
                 source = field_single_sources.get(row_id)
                 value_text = window.format_character_display_value(
@@ -1371,35 +1438,44 @@ def render_character_section(window):
                         f"{'same_cell_as_current' if max_cell else 'no_cell_ref'}"
                     )
                 if current_enabled:
-                    window._create_character_value_editor(
-                        character_panel,
-                        current_rect,
-                        f"{row_id}_current",
-                        current_src,
-                        default_sheet,
-                        current,
-                        value_font,
-                        value_color,
-                        bold=value_bold,
-                        align=value_align,
-                        editable=not (is_tierform_view and row_id == "hp"),
-                        section_key="basic_fields",
-                    )
+                    if is_tierform_view and row_id == "hp":
+                        create_tierform_hp_editor(
+                            current_rect, "current", value_font, value_color, bold=value_bold, align=value_align
+                        )
+                    else:
+                        window._create_character_value_editor(
+                            character_panel,
+                            current_rect,
+                            f"{row_id}_current",
+                            current_src,
+                            default_sheet,
+                            current,
+                            value_font,
+                            value_color,
+                            bold=value_bold,
+                            align=value_align,
+                            section_key="basic_fields",
+                        )
                 if max_enabled:
-                    window._create_character_value_editor(
-                        character_panel,
-                        max_rect,
-                        f"{row_id}_max",
-                        max_src,
-                        default_sheet,
-                        maximum,
-                        value_font,
-                        value_color,
-                        bold=value_bold,
-                        align=value_align,
-                        editable=max_editable and not (is_tierform_view and row_id == "hp"),
-                        section_key="basic_fields",
-                    )
+                    if is_tierform_view and row_id == "hp":
+                        create_tierform_hp_editor(
+                            max_rect, "max", value_font, value_color, bold=value_bold, align=value_align
+                        )
+                    else:
+                        window._create_character_value_editor(
+                            character_panel,
+                            max_rect,
+                            f"{row_id}_max",
+                            max_src,
+                            default_sheet,
+                            maximum,
+                            value_font,
+                            value_color,
+                            bold=value_bold,
+                            align=value_align,
+                            editable=max_editable,
+                            section_key="basic_fields",
+                        )
             else:
                 window._character_debug(f"[CHARACTER BASIC LEGACY] id={row_id} value_rect used")
                 if bool(row.get("value_enabled", True)):
@@ -1495,7 +1571,11 @@ def render_character_section(window):
         stats_rows_cfg = info_layout.get("stat_rows", {})
         stats_rows = stats_rows_cfg.get("rows", [])
         stats_values = {
-            "hp": "20 / 20" if is_tierform_view else f"{hp_current} / {hp_max}",
+            "hp": (
+                f"{tierform_hp.get('current', 0)} / {tierform_hp.get('max', 0)}"
+                if is_tierform_view
+                else f"{hp_current} / {hp_max}"
+            ),
             "mp": f"{mp_current} / {mp_max}",
             "exp": f"{exp_current} / {exp_max}",
         }
@@ -1526,7 +1606,8 @@ def render_character_section(window):
                         window._read_data_map_cell(max_src, default_sheet), "int"
                     )
                     if is_tierform_view and row_id == "hp":
-                        current_value, max_value = "20", "20"
+                        current_value = str(tierform_hp.get("current", 0))
+                        max_value = str(tierform_hp.get("max", 0))
                     current_rect = row.get("current_rect", row.get("value_rect", {}))
                     max_rect = row.get("max_rect", row.get("value_rect", {}))
                     vx = window._safe_int(current_rect.get("x", 0), 0)
@@ -1540,34 +1621,36 @@ def render_character_section(window):
                     vf = window._safe_int(row.get("value_font_size", stats_rows_cfg.get("value_font_size", 26)), 26)
                     vc = str(row.get("value_color", stats_rows_cfg.get("value_color", "#ffffff")))
                     va = str(row.get("value_align", "left"))
-                    window._create_character_value_editor(
-                        character_panel,
-                        current_rect,
-                        f"{row_id}_current",
-                        current_src,
-                        default_sheet,
-                        current_value,
-                        vf,
-                        vc,
-                        bold=True,
-                        align=va,
-                        editable=not (is_tierform_view and row_id == "hp"),
-                        section_key="basic_fields",
-                    )
-                    window._create_character_value_editor(
-                        character_panel,
-                        max_rect,
-                        f"{row_id}_max",
-                        max_src,
-                        default_sheet,
-                        max_value,
-                        vf,
-                        vc,
-                        bold=True,
-                        align=va,
-                        editable=not (is_tierform_view and row_id == "hp"),
-                        section_key="basic_fields",
-                    )
+                    if is_tierform_view and row_id == "hp":
+                        create_tierform_hp_editor(current_rect, "current", vf, vc, bold=True, align=va)
+                        create_tierform_hp_editor(max_rect, "max", vf, vc, bold=True, align=va)
+                    else:
+                        window._create_character_value_editor(
+                            character_panel,
+                            current_rect,
+                            f"{row_id}_current",
+                            current_src,
+                            default_sheet,
+                            current_value,
+                            vf,
+                            vc,
+                            bold=True,
+                            align=va,
+                            section_key="basic_fields",
+                        )
+                        window._create_character_value_editor(
+                            character_panel,
+                            max_rect,
+                            f"{row_id}_max",
+                            max_src,
+                            default_sheet,
+                            max_value,
+                            vf,
+                            vc,
+                            bold=True,
+                            align=va,
+                            section_key="basic_fields",
+                        )
                 else:
                     window.create_panel_text(
                         character_panel,
@@ -1591,7 +1674,14 @@ def render_character_section(window):
             exp_label_font = window._safe_int(stats_cfg.get("exp_label_font_size", 18), 18)
             exp_value_font = window._safe_int(stats_cfg.get("exp_value_font_size", 22), 22)
             stat_rows = [
-                ("HP", "20 / 20" if is_tierform_view else f"{hp_current} / {hp_max}", hp_label_font, hp_value_font),
+                (
+                    "HP",
+                    f"{tierform_hp.get('current', 0)} / {tierform_hp.get('max', 0)}"
+                    if is_tierform_view
+                    else f"{hp_current} / {hp_max}",
+                    hp_label_font,
+                    hp_value_font,
+                ),
                 ("MP", f"{mp_current} / {mp_max}", mp_label_font, mp_value_font),
                 ("EXP", f"{exp_current} / {exp_max}", exp_label_font, exp_value_font),
             ]
